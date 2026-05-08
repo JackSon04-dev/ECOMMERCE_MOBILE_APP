@@ -1,0 +1,668 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../../../config/routes.dart';
+import '../../../models/order_model.dart';
+import '../../../providers/cart_provider.dart';
+import '../../../providers/order_provider.dart';
+import '../../../services/order_service.dart';
+import '../../../services/payment_service.dart';
+import '../../../utils/date_helper.dart';
+import '../../../widgets/common_widgets.dart';
+import '../../../widgets/reorder_result_sheet.dart';
+
+/// 📦 Order Detail Page - Trang chi tiết đơn hàng
+class OrderDetailPage extends ConsumerStatefulWidget {
+  final String? orderId;
+  final Order? order;
+
+  const OrderDetailPage({
+    super.key,
+    this.orderId,
+    this.order,
+  });
+
+  @override
+  ConsumerState<OrderDetailPage> createState() => _OrderDetailPageState();
+}
+
+class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
+  bool _isLoading = false;
+  Order? _order;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.order != null) {
+      _order = widget.order;
+    } else if (widget.orderId != null) {
+      _loadOrderDetail();
+    }
+  }
+
+  Future<void> _loadOrderDetail() async {
+    final orderId = widget.orderId ?? _order?.id;
+    if (orderId == null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final order = await OrderService.getOrderById(orderId);
+      setState(() {
+        _order = order;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi tải đơn hàng: $e')),
+        );
+      }
+    }
+  }
+
+  String _formatCurrency(double amount) {
+    return NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(amount);
+  }
+
+  String _formatDate(DateTime? date) {
+    return DateHelper.formatDateTime(date);
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Chờ xác nhận': return Colors.orange;
+      case 'Đã xác nhận': return Colors.blue;
+      case 'Đang giao': return Colors.purple;
+      case 'Đã giao':
+      case 'Thành công': return Colors.green;
+      case 'Đã hủy': return Colors.red;
+      default: return Colors.grey;
+    }
+  }
+
+  IconData _getStatusIcon(String status) {
+    switch (status) {
+      case 'Chờ xác nhận': return Icons.schedule;
+      case 'Đã xác nhận': return Icons.check_circle_outline;
+      case 'Đang giao': return Icons.local_shipping_outlined;
+      case 'Đã giao':
+      case 'Thành công': return Icons.check_circle;
+      case 'Đã hủy': return Icons.cancel;
+      default: return Icons.info_outline;
+    }
+  }
+
+  Future<void> _cancelOrder() async {
+    if (_order == null) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hủy đơn hàng'),
+        content: const Text('Bạn có chắc muốn hủy đơn hàng này?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Không'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hủy đơn', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      try {
+        final updatedOrder = await OrderService.cancelOrder(_order!.id);
+        if (mounted) {
+          Navigator.pop(context);
+          if (updatedOrder != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Đã hủy đơn hàng thành công'), backgroundColor: Colors.green),
+            );
+            // Cập nhật RAM thông qua Riverpod bằng cách Invalidate Family
+            ref.invalidate(orderProvider);
+            Navigator.pop(context); // Trở về danh sách
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Không thể hủy đơn hàng. Vui lòng thử lại!'), backgroundColor: Colors.red),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Lỗi: ${e.toString()}'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _reorder() async {
+    if (_order == null) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B35))),
+    );
+
+    final result = await ref.read(cartProvider.notifier).reorder(_order!.orderItems);
+
+    if (!mounted) return;
+    Navigator.pop(context);
+
+    final added = result['added'] ?? [];
+    final outOfStock = result['outOfStock'] ?? [];
+    final failed = result['failed'] ?? [];
+
+    await ReorderResultSheet.show(
+      context,
+      added: added,
+      outOfStock: outOfStock,
+      failed: failed,
+    );
+  }
+
+  Future<void> _handleVnpayPayment() async {
+    if (_order == null) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B35))),
+    );
+
+    try {
+      final paymentUrl = await PaymentService.createVnpayPaymentUrl(_order!.id);
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      if (paymentUrl != null) {
+        final result = await Navigator.pushNamed(
+          context,
+          AppRoutes.vnpayPayment,
+          arguments: {
+            'orderId': _order!.id,
+            'paymentUrl': paymentUrl,
+          },
+        );
+
+        if (result == true && mounted) {
+            _refreshOrder();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleZalopayPayment() async {
+    if (_order == null) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B35))),
+    );
+
+    try {
+      final result = await PaymentService.createZalopayPayment(_order!.id);
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      if (result != null) {
+        final paymentResult = await Navigator.pushNamed(
+          context,
+          AppRoutes.zalopayPayment,
+          arguments: {
+            'orderId': _order!.id,
+            'orderUrl': result['orderUrl'],
+            'amount': _order!.totalPrice,
+            'zpTransToken': result['zpTransToken'],
+          },
+        );
+
+        if (paymentResult == true && mounted) {
+          _refreshOrder();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _refreshOrder() async {
+    final updatedOrder = await OrderService.getOrderById(_order!.id);
+    ref.invalidate(orderProvider);
+    
+    setState(() {
+      _order = updatedOrder;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('✅ Thanh toán thành công!'), backgroundColor: Colors.green),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: LoadingWidget());
+    }
+
+    if (_order == null) {
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios, color: Colors.black87),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: const Text('Chi tiết đơn hàng', style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.w600)),
+        ),
+        body: const Center(
+          child: EmptyStateWidget(
+            icon: Icons.receipt_long_outlined,
+            title: 'Không tìm thấy đơn hàng',
+            subtitle: 'Đơn hàng không tồn tại hoặc đã bị xóa',
+          ),
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('Chi tiết đơn hàng', style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.w600)),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildStatusSection(),
+            const SizedBox(height: 12),
+            _buildDeliveryInfo(),
+            const SizedBox(height: 12),
+            _buildProductsSection(),
+            const SizedBox(height: 12),
+            _buildPaymentInfo(),
+            const SizedBox(height: 12),
+            _buildPriceBreakdown(),
+            const SizedBox(height: 80),
+          ],
+        ),
+      ),
+      bottomNavigationBar: _buildBottomActions(),
+    );
+  }
+
+  Widget _buildStatusSection() {
+    final statusColor = _getStatusColor(_order!.status);
+    final shortId = '#${_order!.id.substring(_order!.id.length - 8).toUpperCase()}';
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(color: Colors.grey.withValues(alpha: 0.1), spreadRadius: 1, blurRadius: 5),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+            decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.08)),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.15), shape: BoxShape.circle),
+                  child: Icon(_getStatusIcon(_order!.status), size: 32, color: statusColor),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_order!.status, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: statusColor)),
+                      const SizedBox(height: 4),
+                      Text(_getStatusDescription(_order!.status), style: TextStyle(fontSize: 12, color: statusColor.withValues(alpha: 0.8))),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildDateInfoTile(
+                    icon: Icons.receipt_outlined,
+                    label: 'Mã đơn',
+                    value: shortId,
+                    valueStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black87, letterSpacing: 0.5),
+                  ),
+                ),
+                _buildVerticalDivider(),
+                Expanded(child: _buildDateInfoTile(icon: Icons.calendar_today_outlined, label: 'Ngày đặt', value: _order!.createdAt != null ? _formatDate(_order!.createdAt) : '—')),
+                _buildVerticalDivider(),
+                Expanded(child: _buildDateInfoTile(icon: Icons.update_outlined, label: 'Cập nhật', value: _order!.updatedAt != null ? _formatDate(_order!.updatedAt) : '—')),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateInfoTile({required IconData icon, required String label, required String value, TextStyle? valueStyle}) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 18, color: const Color(0xFFFF6B35)),
+        const SizedBox(height: 4),
+        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        const SizedBox(height: 3),
+        Text(value, textAlign: TextAlign.center, style: valueStyle ?? const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87)),
+      ],
+    );
+  }
+
+  Widget _buildVerticalDivider() {
+    return Container(width: 1, height: 48, color: Colors.grey[200], margin: const EdgeInsets.symmetric(horizontal: 4));
+  }
+
+  String _getStatusDescription(String status) {
+    switch (status) {
+      case 'Chờ xác nhận': return 'Đơn hàng đang chờ được xác nhận';
+      case 'Đã xác nhận': return 'Đơn hàng đã được xác nhận';
+      case 'Đang giao': return 'Đơn hàng đang trên đường giao';
+      case 'Đã giao': return 'Đơn hàng đã được giao thành công';
+      case 'Thành công': return 'Giao dịch hoàn tất';
+      case 'Đã hủy': return 'Đơn hàng đã bị hủy';
+      default: return '';
+    }
+  }
+
+  Widget _buildDeliveryInfo() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 1, blurRadius: 5)]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(children: [Icon(Icons.local_shipping_outlined, size: 20, color: Color(0xFFFF6B35)), SizedBox(width: 8), Text('Thông tin giao hàng', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))]),
+          const SizedBox(height: 12),
+          _buildInfoRow(Icons.person, 'Người nhận', _order!.userInfo.username),
+          const SizedBox(height: 8),
+          _buildInfoRow(Icons.phone, 'Số điện thoại', _order!.userInfo.phoneNumber),
+          const SizedBox(height: 8),
+          _buildInfoRow(Icons.location_on, 'Địa chỉ', _order!.userInfo.address),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: Colors.grey),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              const SizedBox(height: 2),
+              Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProductsSection() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 1, blurRadius: 5)]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(children: [Icon(Icons.shopping_bag_outlined, size: 20, color: Color(0xFFFF6B35)), SizedBox(width: 8), Text('Sản phẩm đã đặt', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))]),
+          const SizedBox(height: 12),
+          ..._order!.orderItems.map((item) => _buildProductItem(item)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductItem(OrderItem item) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              item.variant.colorImage, width: 70, height: 70, fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(width: 70, height: 70, color: Colors.grey[300], child: const Icon(Icons.image, color: Colors.grey)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.productName, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 4),
+                Text('Phân loại: ${item.variant.color} - ${item.variant.size}', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                const SizedBox(height: 4),
+                Text('x${item.variant.quantity}', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(_formatCurrency(item.finalPrice), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFFFF6B35))),
+              const SizedBox(height: 4),
+              Text(_formatCurrency(item.itemTotal), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentInfo() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.grey.withValues(alpha: 0.1), spreadRadius: 1, blurRadius: 5)]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(children: [Icon(Icons.payment, size: 20, color: Color(0xFFFF6B35)), SizedBox(width: 8), Text('Thanh toán', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))]),
+          const SizedBox(height: 12),
+          _buildInfoRow(Icons.payment, 'Phương thức', _order!.paymentMethod),
+          const SizedBox(height: 8),
+          _buildInfoRow(Icons.check_circle_outline, 'Trạng thái', _order!.isPaid ? 'Đã thanh toán' : 'Chưa thanh toán'),
+          if (_order!.paidAt != null) ...[
+            const SizedBox(height: 8),
+            _buildInfoRow(Icons.access_time, 'Thời gian thanh toán', _formatDate(_order!.paidAt)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriceBreakdown() {
+     return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white),
+      child: Column(
+        children: [
+          _buildPriceRow('Tạm tính', _order!.totalPrice + (_order!.voucher.discountAmount ?? 0) - (_order!.shippingPrice ?? 0)),
+          const SizedBox(height: 8),
+          _buildPriceRow('Phí vận chuyển', _order!.shippingPrice ?? 0),
+          const SizedBox(height: 8),
+          _buildPriceRow('Giảm giá', -(_order!.voucher.discountAmount ?? 0), color: Colors.green),
+          const Divider(height: 24),
+          _buildPriceRow('Tổng cộng', _order!.totalPrice, isBold: true, color: const Color(0xFFFF6B35), fontSize: 18),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriceRow(String label, double amount, {bool isBold = false, Color? color, double fontSize = 14}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(fontSize: fontSize, fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
+        Text(_formatCurrency(amount), style: TextStyle(fontSize: fontSize, fontWeight: isBold ? FontWeight.bold : FontWeight.w600, color: color)),
+      ],
+    );
+  }
+
+  Widget? _buildBottomActions() {
+    if (_order == null) return null;
+    
+    final canCancel = _order!.status == 'Chờ xác nhận';
+    final canPay = !_order!.isPaid && (_order!.paymentMethod == 'VNPay' || _order!.paymentMethod == 'ZaloPay') && _order!.status != 'Đã hủy';
+    final canReview = _order!.status == 'Thành công';
+
+    if (!canCancel && !canPay && !canReview) return null;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))]),
+      child: Row(
+        children: [
+          if (canCancel)
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _cancelOrder,
+                style: OutlinedButton.styleFrom(foregroundColor: Colors.red, side: const BorderSide(color: Colors.red), padding: const EdgeInsets.symmetric(vertical: 12)),
+                child: const Text('Hủy đơn hàng'),
+              ),
+            ),
+          if (canPay) ...[
+            if (canCancel) const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _order!.paymentMethod == 'VNPay' ? _handleVnpayPayment : _handleZalopayPayment,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _order!.paymentMethod == 'VNPay' ? const Color(0xFF2196F3) : const Color(0xFF007DFE), 
+                  foregroundColor: Colors.white, 
+                  padding: const EdgeInsets.symmetric(vertical: 12)
+                ),
+                child: const Text('Thanh toán ngay'),
+              ),
+            ),
+          ],
+          if (canReview) ...[
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _reorder,
+                style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFFF6B35), side: const BorderSide(color: Color(0xFFFF6B35)), padding: const EdgeInsets.symmetric(vertical: 12)),
+                child: const Text('Mua lại'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pushNamed(
+                    context,
+                    '/create-review',
+                    arguments: _order,
+                  ).then((result) {
+                    if (result == true && mounted) {
+                      _loadOrderDetail();
+                    }
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _order!.isRated
+                      ? Colors.grey[100]
+                      : _order!.hasAnyRated
+                          ? const Color(0xFFFF8F60)
+                          : const Color(0xFFFF6B35),
+                  foregroundColor: _order!.isRated
+                      ? Colors.grey[600]
+                      : Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      _order!.isRated
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          _order!.isRated
+                              ? 'Xem đánh giá'
+                              : 'Đánh giá',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}

@@ -1,0 +1,47 @@
+/* 1. Thiết lập cơ bản cho toàn bộ trang */
+:root {
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light; /* Ưu tiên giao diện sáng cho Admin */
+  background-color: #f9fafb; /* Màu nền xám nhạt gray-50 cho toàn app */
+  color: #111827;
+}
+
+/* 2. Quan trọng: Reset Body để chiếm hết màn hình */
+body {
+  margin: 0;
+  padding: 0;
+  display: block; /* Xóa flex và place-items cũ */
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden; /* Ngăn cuộn toàn trang để dùng cuộn riêng trong main */
+}
+
+/* 3. Reset App Container */
+#app {
+  width: 100%;
+  height: 100%;
+  text-align: left; /* Trả về căn lề trái mặc định */
+}
+
+/* 4. Định dạng chung cho các thẻ (Giữ lại một phần style của bạn) */
+a {
+  font-weight: 500;
+  color: #10b981; /* Đổi sang màu Emerald cho đồng bộ */
+  text-decoration: inherit;
+}
+
+button {
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+/* 5. Loại bỏ hiệu ứng cuộn ngang gây ra bởi margin/padding thừa */
+* {
+  box-sizing: border-box;
+}
