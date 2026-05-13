@@ -30,10 +30,8 @@ class ChatMessage {
 }
 
 class ChatbotService {
-  // Lấy IP chung từ .env và port riêng của chatbot
-  static final String ip = dotenv.env['APP_IP'] ?? '10.0.2.2';
-  static final String port = dotenv.env['CHATBOT_PORT'] ?? '8000';
-  static final String apiUrl = 'http://$ip:$port/api/chat'; 
+  static final String baseUrl = dotenv.env['CHATBOT_URL'] ?? '';
+  static final String apiUrl = '$baseUrl/api/chat'; 
 
   static Future<ChatMessage> sendMessage(String message) async {
     try {

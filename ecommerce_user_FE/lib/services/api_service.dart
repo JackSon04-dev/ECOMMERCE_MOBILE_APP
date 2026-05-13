@@ -6,10 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// 🌐 API Service - Quản lý tất cả API calls
 class ApiService {
-  // static final String ip = dotenv.env['APP_IP'] ?? '10.0.2.2';
-  // static final String port = dotenv.env['API_PORT'] ?? '5000';
-  // static final String baseUrl = 'http://$ip:$port/api';
-  static final String baseUrl = 'https://evolutionary-unhusbanded-lawana.ngrok-free.dev/api';
+  static final String baseUrl = dotenv.env['BASE_URL'] ?? '';
   static final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   /// Lấy access token từ storage

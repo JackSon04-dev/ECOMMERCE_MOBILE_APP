@@ -4,6 +4,9 @@ import App from './App.vue'
 import router from './router'
 import axios from 'axios'
 
+// Cấu hình baseURL cho API (Lấy từ .env hoặc mặc định là /api)
+axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || '';
+
 // Cấu hình axios để tự động gửi token trong headers
 axios.interceptors.request.use(
   (config) => {
