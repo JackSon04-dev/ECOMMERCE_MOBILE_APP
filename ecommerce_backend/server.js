@@ -3,6 +3,7 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import connectDB from './config/db.js'
+import { connectRedis } from './config/redis.js'
 import authRoutes from './routes/authRoute.js'
 // Admin routes
 import adminProductRoutes from './routes/admin/productRoutes.js'
@@ -33,6 +34,8 @@ app.use(cors())
 
 // Ket noi DB
 connectDB()
+// Ket noi Redis
+connectRedis()
 
 // Auth Routes admin hoac nguoi dung, tat ca route bat dau bang /api/auth
 app.use('/api/auth', authRoutes)
