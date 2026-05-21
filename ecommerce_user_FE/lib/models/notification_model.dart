@@ -7,6 +7,7 @@ class NotificationModel {
   final String type; // promo, system
   final bool isRead;
   final DateTime? createdAt;
+  final String? referenceId;
 
   NotificationModel({
     required this.id,
@@ -15,6 +16,7 @@ class NotificationModel {
     required this.type,
     this.isRead = false,
     this.createdAt,
+    this.referenceId,
   });
 
   NotificationModel copyWith({bool? isRead}) {
@@ -25,20 +27,28 @@ class NotificationModel {
       type: type,
       isRead: isRead ?? this.isRead,
       createdAt: createdAt,
+      referenceId: referenceId,
     );
   }
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
+    String parsedType = (json['type'] ?? 'SYSTEM').toString().toUpperCase();
+    if (parsedType == 'PROMO') {
+      parsedType = 'PROMOTION';
+    }
     return NotificationModel(
       id: json['_id'] is Map ? json['_id']['\$oid'] : json['_id'] ?? '',
       title: json['title'] ?? '',
       message: json['message'] ?? '',
-      type: json['type'] ?? 'system',
+      type: parsedType,
       isRead: json['isRead'] ?? false,
       createdAt: DateHelper.parseUtc(
           json['createdAt'] is Map
               ? json['createdAt']['\$date']
               : json['createdAt']?.toString()),
+      referenceId: json['referenceId'] is Map
+          ? json['referenceId']['\$oid']
+          : json['referenceId'],
     );
   }
 
@@ -49,6 +59,7 @@ class NotificationModel {
       'message': message,
       'type': type,
       'isRead': isRead,
+      'referenceId': referenceId,
     };
   }
 }

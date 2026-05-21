@@ -20,5 +20,16 @@ class NotificationService {
       print('❌ Get notifications error: $e');
       return [];
     }
+  } 
+
+  // Đánh dấu thông báo đã đọc hoặc xóa (gọi API DELETE)
+  static Future<bool> markAsRead(String id) async {
+    try {
+      final response = await ApiService.delete('/notifications/$id');
+      return response.statusCode == 200;
+    } catch (e) {
+      print('❌ Mark notification read error: $e');
+      return false;
+    }
   }
 }

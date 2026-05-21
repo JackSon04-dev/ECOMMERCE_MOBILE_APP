@@ -1,4 +1,16 @@
 import Order from '../../models/orderModel.js'
+import User from '../../models/userModel.js'
+import Notification from '../../models/notification.js'
+import { sendPushNotification } from '../../services/fcmService.js'
+
+// Map trạng thái sang nội dung thông báo tiếng Việt
+const statusMessages = {
+  'Đã xác nhận': 'Đơn hàng của bạn đã được xác nhận và đang chuẩn bị',
+  'Đang giao': 'Đơn hàng của bạn đang được giao đến bạn',
+  'Đã giao': 'Đơn hàng của bạn đã được giao thành công',
+  'Thành công': 'Đơn hàng của bạn đã hoàn thành. Cảm ơn bạn đã mua sắm!',
+  'Đã hủy': 'Đơn hàng của bạn đã bị hủy'
+}
 
 // @desc    Lấy danh sách tất cả đơn hàng
 // @route   GET /api/admin/orders
@@ -57,7 +69,7 @@ export const getOrderById = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params
-    const { status } = req.body
+    const { status, note } = req.body
 
     // Validate status
     const validStatuses = [
@@ -104,7 +116,15 @@ export const updateOrderStatus = async (req, res) => {
     // Luôn cho phép chuyển sang trạng thái "Đã hủy" từ bất kỳ trạng thái nào
     if (status === 'Đã hủy') {
       order.status = status
+      // Ghi nhận mốc thời gian vào statusHistory
+      order.statusHistory.push({
+        status,
+        note: note || 'Đơn hàng đã bị hủy'
+      })
       await order.save()
+
+      // === TRIGGER FCM PUSH NOTIFICATION ===
+      await _sendOrderNotification(order, status)
 
       return res.status(200).json({
         success: true,
@@ -136,12 +156,21 @@ export const updateOrderStatus = async (req, res) => {
     // Cập nhật trạng thái
     order.status = status
 
+    // Ghi nhận mốc thời gian vào statusHistory
+    order.statusHistory.push({
+      status,
+      note: note || ''
+    })
+
     // Nếu đơn hàng thành công và là COD -> đánh dấu đã thanh toán
     if (status === 'Thành công' && order.paymentMethod === 'COD') {
       order.isPaid = true
     }
 
     await order.save()
+
+    // === TRIGGER FCM PUSH NOTIFICATION ===
+    await _sendOrderNotification(order, status)
 
     res.status(200).json({
       success: true,
@@ -155,6 +184,56 @@ export const updateOrderStatus = async (req, res) => {
       message: 'Lỗi khi cập nhật trạng thái đơn hàng',
       error: error.message
     })
+  }
+}
+
+/**
+ * Hàm nội bộ: Tạo Notification trong DB + Gửi FCM Push Notification
+ * Chạy song song, không block response của Admin
+ */
+const _sendOrderNotification = async (order, status) => {
+  try {
+    const orderId = order._id.toString()
+    const orderCode = orderId.slice(-6).toUpperCase()
+    const title = '📦 Cập nhật đơn hàng'
+    const body = statusMessages[status] || `Đơn hàng #${orderCode} đã chuyển sang: ${status}`
+
+    // 1. Tạo Notification trong DB (để User xem lại trong App)
+    const notification = await Notification.create({
+      userId: order.user,
+      title,
+      message: body,
+      type: 'ORDER',
+      referenceId: order._id
+    })
+
+    // 2. Lấy FCM tokens của User để gửi Push Notification
+    const user = await User.findById(order.user).select('fcmTokens').lean()
+    if (!user || !user.fcmTokens || user.fcmTokens.length === 0) {
+      console.log(`⚠️ User ${order.user} không có FCM token, bỏ qua push notification`)
+      return
+    }
+
+    // Trích xuất danh sách token string từ mảng fcmTokens
+    const tokens = user.fcmTokens.map(t => t.token)
+
+    // Lấy ảnh của sản phẩm đầu tiên để hiển thị trên thông báo (nếu có)
+    let imageUrl = null;
+    if (order.orderItems && order.orderItems.length > 0) {
+      imageUrl = order.orderItems[0].variant?.colorImage || order.orderItems[0].productImage;
+    }
+
+    // 3. Gửi Push Notification qua FCM
+    await sendPushNotification(tokens, title, body, {
+      type: 'ORDER', // Trùng khớp với type Flutter đang kiểm tra
+      referenceId: orderId, // Trùng khớp với key Flutter lấy ra
+      status: status,
+      notificationId: notification._id.toString(),
+      imageUrl: imageUrl || ''
+    }, imageUrl)
+  } catch (error) {
+    // Lỗi gửi thông báo không ảnh hưởng đến logic cập nhật đơn hàng
+    console.error('❌ Lỗi gửi thông báo đơn hàng:', error.message)
   }
 }
 

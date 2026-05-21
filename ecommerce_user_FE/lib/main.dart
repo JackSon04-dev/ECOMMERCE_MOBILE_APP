@@ -3,15 +3,21 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:provider/provider.dart' as legacy_provider;
+import 'package:firebase_core/firebase_core.dart';
 import 'config/route_generator.dart';
 import 'config/routes.dart';
 import 'providers/notification_provider.dart';
+import 'services/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
   // Khởi tạo SharedPreferences trước để CartProvider load cart ngay lập tức
   await SharedPreferences.getInstance();
+  // Khởi tạo Firebase (BẮT BUỘC trước khi dùng bất kỳ dịch vụ Firebase nào)
+  await Firebase.initializeApp();
+  // Khởi tạo FCM (Đăng ký listeners cho 3 trạng thái nhận thông báo)
+  await FcmService.initialize();
   runApp( 
     const ProviderScope( 
       child: MyApp(),
@@ -32,6 +38,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
       title: 'E-Commerce App',
       debugShowCheckedModeBanner: false,
+      navigatorKey: RouteGenerator.navigatorKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFFFF6B35),
@@ -62,4 +69,3 @@ class MyApp extends StatelessWidget {
   );
   }
 }
-

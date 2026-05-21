@@ -393,3 +393,74 @@ export const googleLogin = async (req, res) => {
       .json({ msg: 'Google Token không hợp lệ', error: err.message })
   }
 }
+
+// --- QUẢN LÝ FCM TOKEN (Push Notification) ---
+
+// @desc    Đăng ký FCM Token cho thiết bị (gọi khi user đăng nhập)
+// @route   POST /api/auth/fcm-token
+// @access  User (cần đăng nhập)
+export const registerFcmToken = async (req, res) => {
+  try {
+    const { fcmToken, deviceName } = req.body
+    const userId = req.user.id
+
+    if (!fcmToken) {
+      return res.status(400).json({ msg: 'Thiếu FCM Token' })
+    }
+
+    const user = await User.findById(userId)
+    if (!user) {
+      return res.status(404).json({ msg: 'Không tìm thấy user' })
+    }
+
+    // Kiểm tra xem token này đã tồn tại chưa (tránh trùng lặp)
+    const existingToken = user.fcmTokens.find(t => t.token === fcmToken)
+    if (existingToken) {
+      // Cập nhật thời gian và tên thiết bị
+      existingToken.device = deviceName || existingToken.device
+      existingToken.updatedAt = new Date()
+    } else {
+      // Thêm token mới
+      user.fcmTokens.push({
+        token: fcmToken,
+        device: deviceName || 'Unknown'
+      })
+    }
+
+    await user.save()
+
+    res.status(200).json({
+      msg: 'Đăng ký FCM Token thành công',
+      tokenCount: user.fcmTokens.length
+    })
+  } catch (error) {
+    console.error('Error in registerFcmToken:', error)
+    res.status(500).json({ msg: 'Lỗi server', error: error.message })
+  }
+}
+
+// @desc    Hủy đăng ký FCM Token (gọi khi user đăng xuất)
+// @route   DELETE /api/auth/fcm-token
+// @access  User (cần đăng nhập)
+export const unregisterFcmToken = async (req, res) => {
+  try {
+    const { fcmToken } = req.body
+    const userId = req.user.id
+
+    if (!fcmToken) {
+      return res.status(400).json({ msg: 'Thiếu FCM Token' })
+    }
+
+    // Xóa token ra khỏi mảng fcmTokens
+    await User.findByIdAndUpdate(userId, {
+      $pull: { fcmTokens: { token: fcmToken } }
+    })
+
+    res.status(200).json({
+      msg: 'Hủy đăng ký FCM Token thành công'
+    })
+  } catch (error) {
+    console.error('Error in unregisterFcmToken:', error)
+    res.status(500).json({ msg: 'Lỗi server', error: error.message })
+  }
+}

@@ -147,6 +147,41 @@ class UserInfo {
   }
 }
 
+class OrderStatusHistory {
+  final String id;
+  final String status;
+  final String note;
+  final DateTime? updatedAt;
+
+  OrderStatusHistory({
+    required this.id,
+    required this.status,
+    required this.note,
+    this.updatedAt,
+  });
+
+  factory OrderStatusHistory.fromJson(Map<String, dynamic> json) {
+    return OrderStatusHistory(
+      id: json['_id'] is Map ? json['_id']['\$oid'] : json['_id'] ?? '',
+      status: json['status'] ?? '',
+      note: json['note'] ?? '',
+      updatedAt: DateHelper.parseUtc(
+          json['updatedAt'] is Map
+              ? json['updatedAt']['\$date']
+              : json['updatedAt']?.toString()),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      '_id': id,
+      'status': status,
+      'note': note,
+      if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+    };
+  }
+}
+
 class Order {
   final String id;
   final String userId;
@@ -162,6 +197,7 @@ class Order {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final DateTime? paidAt;
+  final List<OrderStatusHistory> statusHistory;
 
   /// isRated giờ là computed property: true khi TẤT CẢ orderItems đã được đánh giá
   bool get isRated {
@@ -196,6 +232,7 @@ class Order {
     this.createdAt,
     this.updatedAt,
     this.paidAt,
+    this.statusHistory = const [],
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
@@ -226,6 +263,10 @@ class Order {
           json['paidAt'] is Map
               ? json['paidAt']['\$date']
               : json['paidAt']?.toString()),
+      statusHistory: (json['statusHistory'] as List?)
+              ?.map((e) => OrderStatusHistory.fromJson(e))
+              .toList() ??
+          const [],
     );
   }
 
@@ -245,6 +286,7 @@ class Order {
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
       if (paidAt != null) 'paidAt': paidAt!.toIso8601String(),
+      'statusHistory': statusHistory.map((e) => e.toJson()).toList(),
     };
   }
 

@@ -17,13 +17,7 @@ class NotificationProvider extends ChangeNotifier {
 
     try {
       final results = await NotificationService.getNotifications();
-      
-      // Áp dụng logic: 2 thông báo đầu tiên mặc định là chưa đọc (index 0, 1)
-      _notifications = results.asMap().entries.map<NotificationModel>((entry) {
-        int index = entry.key;
-        NotificationModel node = entry.value;
-        return node.copyWith(isRead: index >= 1);
-      }).toList();
+      _notifications = results;
     } catch (e) {
       print('❌ [Notification] Fetch error: $e');
       _notifications = [];
@@ -33,26 +27,45 @@ class NotificationProvider extends ChangeNotifier {
     }
   }
 
-  void markAsRead(String id) {
+  Future<void> markAsRead(String id) async {
     final index = _notifications.indexWhere((n) => n.id == id);
-    if (index >= 0 && !_notifications[index].isRead) {
-      _notifications[index] = _notifications[index].copyWith(isRead: true);
-      notifyListeners();
+    if (index >= 0) {
+      final notification = _notifications[index];
+      // Chỉ gọi API nếu chưa đọc (hoặc là ORDER - ORDER luôn gọi xóa)
+      if (!notification.isRead || notification.type == 'ORDER') {
+        final success = await NotificationService.markAsRead(id);
+        if (success) {
+          if (notification.type == 'ORDER') {
+            _notifications.removeAt(index);
+          } else {
+            _notifications[index] = notification.copyWith(isRead: true);
+          }
+          notifyListeners();
+        }
+      }
+    } else {
+      // Gọi API khi click từ FCM push notification nằm ngoài danh sách cục bộ
+      await NotificationService.markAsRead(id);
     }
   }
 
-  void markAllAsRead() {
-    bool changed = false;
-    _notifications = _notifications.map<NotificationModel>((n) {
-      if (!n.isRead) {
-        changed = true;
-        return n.copyWith(isRead: true);
-      }
-      return n;
-    }).toList();
-    
-    if (changed) {
-      notifyListeners();
-    }
+  Future<void> markAllAsRead() async {
+    final unreadNotifications = _notifications.where((n) => !n.isRead).toList();
+    if (unreadNotifications.isEmpty) return;
+
+    // Gọi API cho tất cả các thông báo chưa đọc song song
+    final futures = unreadNotifications.map((n) => NotificationService.markAsRead(n.id));
+    await Future.wait(futures);
+
+    // Cập nhật state cục bộ:
+    // - Lọc bỏ thông báo ORDER chưa đọc (vì đã bị xóa)
+    // - Chuyển trạng thái các loại khác sang isRead = true
+    _notifications = _notifications.map<NotificationModel?>((n) {
+      if (n.isRead) return n;
+      if (n.type == 'ORDER') return null;
+      return n.copyWith(isRead: true);
+    }).whereType<NotificationModel>().toList();
+
+    notifyListeners();
   }
 }

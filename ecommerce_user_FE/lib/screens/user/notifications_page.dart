@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../models/notification_model.dart';
 import '../../providers/notification_provider.dart';
 import '../../widgets/common_widgets.dart';
+import 'order/order_detail_page.dart';
 
 /// 🔔 Notifications Page - Trang thông báo (Sử dụng Provider)
 class NotificationsPage extends StatefulWidget {
@@ -14,13 +15,19 @@ class NotificationsPage extends StatefulWidget {
 }
 
 class _NotificationsPageState extends State<NotificationsPage> {
+  bool? _isOrderExpanded;
+  bool _isPromoExpanded = false;
+  bool _isSystemExpanded = false;
 
   IconData _getNotificationIcon(String type) {
     switch (type) {
-      case 'promo':
+      case 'PROMOTION':
         return Icons.local_offer_outlined;
-      case 'system':
-        return Icons.info_outline;
+      case 'SYSTEM':
+      case 'GENERAL':
+        return Icons.campaign_outlined;
+      case 'ORDER':
+        return Icons.local_shipping_outlined;
       default:
         return Icons.notifications_outlined;
     }
@@ -28,10 +35,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   Color _getNotificationColor(String type) {
     switch (type) {
-      case 'promo':
+      case 'PROMOTION':
         return Colors.orange;
-      case 'system':
-        return Colors.grey;
+      case 'SYSTEM':
+      case 'GENERAL':
+        return Colors.blue;
+      case 'ORDER':
+        return Colors.green;
       default:
         return Colors.grey;
     }
@@ -58,7 +68,23 @@ class _NotificationsPageState extends State<NotificationsPage> {
     return Consumer<NotificationProvider>(
       builder: (context, provider, child) {
         final notifications = provider.notifications;
-        final unreadCount = provider.unreadCount;
+
+        // Group notifications
+        final orderNotifications = notifications.where((n) => n.type == 'ORDER').toList();
+        final promoNotifications = notifications.where((n) => n.type == 'PROMOTION').toList();
+        final systemNotifications = notifications.where((n) => n.type == 'SYSTEM' || n.type == 'GENERAL').toList();
+
+        // Calculate unread counts
+        final unreadOrders = orderNotifications.where((n) => !n.isRead).length;
+        final unreadPromos = promoNotifications.where((n) => !n.isRead).length;
+        final unreadSystems = systemNotifications.where((n) => !n.isRead).length;
+
+        // Auto-expand ORDER if there are unread notifications and user hasn't interacted
+        if (_isOrderExpanded == null && notifications.isNotEmpty) {
+          _isOrderExpanded = unreadOrders > 0;
+        }
+
+        final bool orderExpanded = _isOrderExpanded ?? false;
 
         return Scaffold(
           backgroundColor: Colors.grey[50],
@@ -74,12 +100,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
               ),
             ),
             actions: [
-              if (unreadCount > 0)
+              if (provider.unreadCount > 0)
                 TextButton(
                   onPressed: () => provider.markAllAsRead(),
                   child: const Text(
                     'Đọc tất cả',
-                    style: TextStyle(color: Color(0xFFFF6B35)),
+                    style: TextStyle(color: Color(0xFFFF6B35), fontWeight: FontWeight.w600),
                   ),
                 ),
             ],
@@ -94,13 +120,58 @@ class _NotificationsPageState extends State<NotificationsPage> {
                     )
                   : RefreshIndicator(
                       onRefresh: () => provider.fetchNotifications(),
-                      child: ListView.builder(
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: notifications.length,
-                        itemBuilder: (context, index) {
-                          final notification = notifications[index];
-                          return _buildNotificationItem(notification, provider);
-                        },
+                        children: [
+                          // --- MỤC 1: ĐƠN HÀNG ---
+                          _buildCategorySection(
+                            title: 'Đơn hàng',
+                            icon: Icons.local_shipping_outlined,
+                            color: Colors.green,
+                            unreadCount: unreadOrders,
+                            isExpanded: orderExpanded,
+                            items: orderNotifications,
+                            provider: provider,
+                            onTapHeader: () {
+                              setState(() {
+                                _isOrderExpanded = !orderExpanded;
+                              });
+                            },
+                          ),
+
+                          // --- MỤC 2: KHUYẾN MÃI ---
+                          _buildCategorySection(
+                            title: 'Khuyến mãi',
+                            icon: Icons.local_offer_outlined,
+                            color: Colors.orange,
+                            unreadCount: unreadPromos,
+                            isExpanded: _isPromoExpanded,
+                            items: promoNotifications,
+                            provider: provider,
+                            onTapHeader: () {
+                              setState(() {
+                                _isPromoExpanded = !_isPromoExpanded;
+                              });
+                            },
+                          ),
+
+                          // --- MỤC 3: HỆ THỐNG ---
+                          _buildCategorySection(
+                            title: 'Hệ thống',
+                            icon: Icons.campaign_outlined,
+                            color: Colors.blue,
+                            unreadCount: unreadSystems,
+                            isExpanded: _isSystemExpanded,
+                            items: systemNotifications,
+                            provider: provider,
+                            onTapHeader: () {
+                              setState(() {
+                                _isSystemExpanded = !_isSystemExpanded;
+                              });
+                            },
+                          ),
+                        ],
                       ),
                     ),
         );
@@ -108,18 +179,153 @@ class _NotificationsPageState extends State<NotificationsPage> {
     );
   }
 
-  Widget _buildNotificationItem(NotificationModel notification, NotificationProvider provider) {
+  Widget _buildCategorySection({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required int unreadCount,
+    required bool isExpanded,
+    required List<NotificationModel> items,
+    required NotificationProvider provider,
+    required VoidCallback onTapHeader,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildCategoryHeader(
+          title: title,
+          icon: icon,
+          color: color,
+          unreadCount: unreadCount,
+          isExpanded: isExpanded,
+          onTap: onTapHeader,
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+          child: isExpanded
+              ? items.isEmpty
+                  ? Container(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Không có thông báo nào trong mục này',
+                        style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                      ),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: const EdgeInsets.only(bottom: 8),
+                      itemCount: items.length,
+                      itemBuilder: (context, index) {
+                        return _buildNotificationItem(context, items[index], provider);
+                      },
+                    )
+              : const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryHeader({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required int unreadCount,
+    required bool isExpanded,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
-      onTap: () => provider.markAsRead(notification.id),
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+            if (unreadCount > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF6B35),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '$unreadCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            const SizedBox(width: 8),
+            Icon(
+              isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+              color: Colors.grey[400],
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotificationItem(BuildContext context, NotificationModel notification, NotificationProvider provider) {
+    return GestureDetector(
+      onTap: () {
+        provider.markAsRead(notification.id);
+        if (notification.type == 'ORDER' && notification.referenceId != null && notification.referenceId!.isNotEmpty) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OrderDetailPage(orderId: notification.referenceId),
+            ),
+          );
+        }
+      },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: notification.isRead ? Colors.white : const Color(0xFFFF6B35).withOpacity(0.05),
-          borderRadius: BorderRadius.circular(12),
-          border: notification.isRead
-              ? null
-              : Border.all(color: const Color(0xFFFF6B35).withOpacity(0.2)),
+          color: notification.isRead ? Colors.white : const Color(0xFFFF6B35).withOpacity(0.03),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: notification.isRead
+                ? Colors.grey[100]!
+                : const Color(0xFFFF6B35).withOpacity(0.15),
+          ),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,7 +354,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                         child: Text(
                           notification.title,
                           style: TextStyle(
-                            fontSize: 15,
+                            fontSize: 14,
                             fontWeight: notification.isRead ? FontWeight.w500 : FontWeight.w600,
                             color: Colors.black87,
                           ),
@@ -178,7 +384,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   Text(
                     _formatTime(notification.createdAt),
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 11,
                       color: Colors.grey[400],
                     ),
                   ),

@@ -59,6 +59,14 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  // FCM Tokens - Lưu token của từng thiết bị để gửi Push Notification
+  fcmTokens: [
+    {
+      token: { type: String, required: true },
+      device: { type: String, default: 'Unknown' },
+      updatedAt: { type: Date, default: Date.now }
+    }
+  ],
   createdAt: {
     type: Date,
     default: Date.now

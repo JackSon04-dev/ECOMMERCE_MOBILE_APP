@@ -29,6 +29,7 @@ class OrderDetailPage extends ConsumerStatefulWidget {
 class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
   bool _isLoading = false;
   Order? _order;
+  bool _isHistoryExpanded = false;
 
   @override
   void initState() {
@@ -312,6 +313,8 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
             const SizedBox(height: 12),
             _buildDeliveryInfo(),
             const SizedBox(height: 12),
+            _buildStatusHistorySection(),
+            const SizedBox(height: 12),
             _buildProductsSection(),
             const SizedBox(height: 12),
             _buildPaymentInfo(),
@@ -432,6 +435,240 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
           _buildInfoRow(Icons.phone, 'Số điện thoại', _order!.userInfo.phoneNumber),
           const SizedBox(height: 8),
           _buildInfoRow(Icons.location_on, 'Địa chỉ', _order!.userInfo.address),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusHistorySection() {
+    if (_order == null) return const SizedBox.shrink();
+
+    final history = _order!.statusHistory.reversed.toList();
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.1),
+            spreadRadius: 1,
+            blurRadius: 5,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isHistoryExpanded = !_isHistoryExpanded;
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.history_toggle_off_outlined,
+                    size: 20,
+                    color: Color(0xFFFF6B35),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Lịch sử trạng thái đơn hàng',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (history.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF6B35).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${history.length}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFFF6B35),
+                        ),
+                      ),
+                    ),
+                  const Spacer(),
+                  AnimatedRotation(
+                    turns: _isHistoryExpanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeInOut,
+            child: _isHistoryExpanded
+                ? Container(
+                    padding: const EdgeInsets.only(left: 16, right: 16, bottom: 20, top: 4),
+                    child: history.isEmpty
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Text(
+                                'Chưa có thông tin cập nhật lịch sử trạng thái.',
+                                style: TextStyle(color: Colors.grey, fontSize: 13),
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: history.length,
+                            itemBuilder: (context, index) {
+                              final item = history[index];
+                              final isFirst = index == 0;
+                              final isLast = index == history.length - 1;
+                              final statusColor = _getStatusColor(item.status);
+
+                              return IntrinsicHeight(
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    // Timeline graphic column
+                                    SizedBox(
+                                      width: 32,
+                                      child: Stack(
+                                        alignment: Alignment.topCenter,
+                                        children: [
+                                          // Vertical connection line
+                                          if (history.length > 1)
+                                            if (isFirst)
+                                              Positioned(
+                                                top: 20,
+                                                bottom: 0,
+                                                child: Container(
+                                                  width: 2,
+                                                  color: Colors.grey[200],
+                                                ),
+                                              )
+                                            else if (isLast)
+                                              Positioned(
+                                                top: 0,
+                                                height: 20,
+                                                child: Container(
+                                                  width: 2,
+                                                  color: Colors.grey[200],
+                                                ),
+                                              )
+                                            else
+                                              Positioned(
+                                                top: 0,
+                                                bottom: 0,
+                                                child: Container(
+                                                  width: 2,
+                                                  color: Colors.grey[200],
+                                                ),
+                                              ),
+                                          // Status dot
+                                          Positioned(
+                                            top: 12,
+                                            child: AnimatedContainer(
+                                              duration: const Duration(milliseconds: 300),
+                                              width: isFirst ? 14 : 10,
+                                              height: isFirst ? 14 : 10,
+                                              decoration: BoxDecoration(
+                                                color: isFirst ? statusColor : Colors.grey[350],
+                                                shape: BoxShape.circle,
+                                                border: isFirst
+                                                    ? Border.all(
+                                                        color: statusColor.withValues(alpha: 0.25),
+                                                        width: 4,
+                                                        strokeAlign: BorderSide.strokeAlignOutside,
+                                                      )
+                                                    : null,
+                                                boxShadow: isFirst
+                                                    ? [
+                                                        BoxShadow(
+                                                          color: statusColor.withValues(alpha: 0.3),
+                                                          blurRadius: 6,
+                                                          spreadRadius: 1,
+                                                        )
+                                                      ]
+                                                    : null,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    // Status details column
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item.status,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: isFirst ? FontWeight.w700 : FontWeight.w600,
+                                              color: isFirst ? Colors.black87 : Colors.grey[600],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          if (item.updatedAt != null)
+                                            Text(
+                                              _formatDate(item.updatedAt),
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: isFirst ? Colors.black54 : Colors.grey[500],
+                                              ),
+                                            ),
+                                          if (item.note.isNotEmpty) ...[
+                                            const SizedBox(height: 6),
+                                            Container(
+                                              width: double.infinity,
+                                              padding: const EdgeInsets.all(10),
+                                              decoration: BoxDecoration(
+                                                color: Colors.grey[50],
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(
+                                                  color: Colors.grey[200]!,
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                item.note,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontStyle: FontStyle.italic,
+                                                  color: Colors.grey[700],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                          const SizedBox(height: 16),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                  )
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
     );

@@ -91,7 +91,17 @@ const orderSchema = new mongoose.Schema(
     vnpayTxnRef: { type: String },
     payosOrderCode: { type: String },
     zalopayTransId: { type: String },
-    paidAt: { type: Date }
+    paidAt: { type: Date },
+
+    // 10. LỊCH SỬ TRẠNG THÁI ĐƠN HÀNG (Event Timeline)
+    // Ghi lại từng mốc thời gian thay đổi status để hiển thị Timeline trên App
+    statusHistory: [
+      {
+        status: { type: String, required: true },
+        updatedAt: { type: Date, default: Date.now },
+        note: { type: String, default: '' } // Ghi chú tùy chọn (VD: "Đã giao cho shipper")
+      }
+    ]
   },
   { timestamps: true }
 )

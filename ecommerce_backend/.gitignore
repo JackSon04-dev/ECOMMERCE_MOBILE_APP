@@ -26,3 +26,6 @@ build/
 
 # Uploads (nếu có)
 uploads/
+
+# Firebase Admin SDK (BẢO MẬT - Tuyệt đối không push lên GitHub)
+config/firebase-adminsdk.json

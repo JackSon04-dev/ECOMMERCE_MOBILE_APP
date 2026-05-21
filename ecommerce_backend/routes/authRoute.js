@@ -8,7 +8,9 @@ import {
   refreshToken,
   updateProfile,
   changePassword,
-  googleLogin
+  googleLogin,
+  registerFcmToken,
+  unregisterFcmToken
 } from '../controllers/authController.js'
 import { verifyToken } from '../middleware/authMiddleware.js'
 
@@ -25,4 +27,9 @@ router.get('/me', verifyToken, getMe)
 router.put('/update-profile', verifyToken, updateProfile)
 router.put('/change-password', verifyToken, changePassword)
 
+// FCM Token management (Push Notification)
+router.post('/fcm-token', verifyToken, registerFcmToken)
+router.delete('/fcm-token', verifyToken, unregisterFcmToken)
+
 export default router // ✅ export đúng
+

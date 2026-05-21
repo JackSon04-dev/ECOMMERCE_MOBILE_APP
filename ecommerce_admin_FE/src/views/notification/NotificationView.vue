@@ -18,7 +18,7 @@
     </div>
 
     <!-- Stats Row -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
         <p class="text-gray-500 text-sm">Tổng thông báo</p>
         <p class="text-2xl font-bold text-gray-800">{{ notifications.length }}</p>
@@ -30,6 +30,10 @@
       <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
         <p class="text-gray-500 text-sm">Hệ thống</p>
         <p class="text-2xl font-bold text-blue-500">{{ stats.system }}</p>
+      </div>
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+        <p class="text-gray-500 text-sm">Đơn hàng</p>
+        <p class="text-2xl font-bold text-emerald-500">{{ stats.order }}</p>
       </div>
     </div>
 
@@ -63,10 +67,10 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <span 
-                  :class="noti.type === 'promo' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'"
+                  :class="noti.type === 'PROMOTION' ? 'bg-orange-100 text-orange-600' : noti.type === 'ORDER' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'"
                   class="px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-tighter"
                 >
-                  {{ noti.type === 'promo' ? 'Khuyến mãi' : 'Hệ thống' }}
+                  {{ noti.type === 'PROMOTION' ? 'Khuyến mãi' : noti.type === 'ORDER' ? 'Đơn hàng' : 'Hệ thống' }}
                 </span>
               </td>
               <td class="px-6 py-4 font-bold text-gray-800">{{ noti.title }}</td>
@@ -99,22 +103,30 @@
         <form @submit.prevent="handleCreate" class="p-6 space-y-5">
           <div>
             <label class="block text-sm font-bold text-gray-700 mb-1.5">Loại thông báo</label>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-3 gap-3">
               <button 
                 type="button"
-                @click="newNoti.type = 'promo'"
-                :class="newNoti.type === 'promo' ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-gray-200 text-gray-500 hover:bg-gray-50'"
+                @click="newNoti.type = 'PROMOTION'"
+                :class="newNoti.type === 'PROMOTION' ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-gray-200 text-gray-500 hover:bg-gray-50'"
                 class="flex items-center justify-center gap-2 p-3 rounded-xl border-2 font-bold transition"
               >
                 <span>🎁</span> Khuyến mãi
               </button>
               <button 
                 type="button"
-                @click="newNoti.type = 'system'"
-                :class="newNoti.type === 'system' ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-gray-200 text-gray-500 hover:bg-gray-50'"
+                @click="newNoti.type = 'SYSTEM'"
+                :class="newNoti.type === 'SYSTEM' ? 'border-blue-500 bg-blue-50 text-blue-600' : 'border-gray-200 text-gray-500 hover:bg-gray-50'"
                 class="flex items-center justify-center gap-2 p-3 rounded-xl border-2 font-bold transition"
               >
                 <span>⚙️</span> Hệ thống
+              </button>
+              <button 
+                type="button"
+                @click="newNoti.type = 'ORDER'"
+                :class="newNoti.type === 'ORDER' ? 'border-emerald-500 bg-emerald-50 text-emerald-600' : 'border-gray-200 text-gray-500 hover:bg-gray-50'"
+                class="flex items-center justify-center gap-2 p-3 rounded-xl border-2 font-bold transition"
+              >
+                <span>📦</span> Đơn hàng
               </button>
             </div>
           </div>
@@ -175,14 +187,15 @@ const showCreateModal = ref(false)
 const newNoti = ref({
   title: '',
   message: '',
-  type: 'promo'
+  type: 'PROMOTION'
 })
 
 // Stats
 const stats = computed(() => {
   return {
-    promo: notifications.value.filter(n => n.type === 'promo').length,
-    system: notifications.value.filter(n => n.type === 'system').length
+    promo: notifications.value.filter(n => n.type === 'PROMOTION').length,
+    system: notifications.value.filter(n => n.type === 'SYSTEM').length,
+    order: notifications.value.filter(n => n.type === 'ORDER').length
   }
 })
 
@@ -210,7 +223,7 @@ const handleCreate = async () => {
     if (res.data.success) {
       alert('Thành công! Thông báo đã được gửi đến mọi người dùng.')
       showCreateModal.value = false
-      newNoti.value = { title: '', message: '', type: 'promo' }
+      newNoti.value = { title: '', message: '', type: 'PROMOTION' }
       fetchNotifications()
     }
   } catch (error) {

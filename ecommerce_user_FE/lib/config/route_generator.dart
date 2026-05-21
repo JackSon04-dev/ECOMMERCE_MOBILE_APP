@@ -26,6 +26,8 @@ import '../models/order_model.dart';
 /// Hiện tại support: login, register, home (và các tab bên trong)
 /// Thêm routes mới khi tạo screens mới
 class RouteGenerator {
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   /// ⭐ Main function - Được gọi mỗi khi navigate
   /// settings.name = route name (e.g., '/home')
   static Route<dynamic> generateRoute(RouteSettings settings) {

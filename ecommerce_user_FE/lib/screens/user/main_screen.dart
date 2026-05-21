@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../services/fcm_service.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../../widgets/chatbot_widget.dart';
 import 'home_page.dart';
@@ -52,9 +53,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     if (mounted && auth.isLoggedIn) {
       print('✅ [Auth] Valid user: ${auth.user?['username']}');
       
-      // CHỈ tải thông báo và giỏ hàng khi ĐÃ đăng nhập thành công
-      // (Provider.of của Notification)
       Provider.of<NotificationProvider>(context, listen: false).fetchNotifications();
+      
+      // Kiểm tra và giải phóng thông báo chờ (nếu có)
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        FcmService.checkPendingNotification();
+      });
       
       // (CartProvider của Riverpod sẽ tự động reload nhờ ref.watch(isLoggedIn))
     } else {

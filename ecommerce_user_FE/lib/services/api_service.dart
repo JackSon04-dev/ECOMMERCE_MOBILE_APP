@@ -176,12 +176,17 @@ class ApiService {
   }
 
   /// DELETE request với auto refresh token
-  static Future<http.Response> delete(String endpoint, {bool withAuth = true}) async {
+  static Future<http.Response> delete(String endpoint, {Map<String, dynamic>? body, bool withAuth = true}) async {
     var headers = await _getHeaders(withAuth: withAuth);
-    var response = await http.delete(
-      Uri.parse('$baseUrl$endpoint'),
-      headers: headers,
-    );
+    var request = http.Request('DELETE', Uri.parse('$baseUrl$endpoint'))
+      ..headers.addAll(headers);
+    
+    if (body != null) {
+      request.body = jsonEncode(body);
+    }
+    
+    var streamedResponse = await request.send();
+    var response = await http.Response.fromStream(streamedResponse);
 
     print('🌐 [API] DELETE $endpoint → ${response.statusCode}');
 
@@ -189,10 +194,13 @@ class ApiService {
       final refreshed = await refreshToken();
       if (refreshed) {
         headers = await _getHeaders(withAuth: true);
-        response = await http.delete(
-          Uri.parse('$baseUrl$endpoint'),
-          headers: headers,
-        );
+        request = http.Request('DELETE', Uri.parse('$baseUrl$endpoint'))
+          ..headers.addAll(headers);
+        if (body != null) {
+          request.body = jsonEncode(body);
+        }
+        streamedResponse = await request.send();
+        response = await http.Response.fromStream(streamedResponse);
         print('🔄 [API] DELETE $endpoint (Retry) → ${response.statusCode}');
       }
     }

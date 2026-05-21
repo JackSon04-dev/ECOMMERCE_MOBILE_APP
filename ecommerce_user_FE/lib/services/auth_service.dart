@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'api_service.dart';
+import 'fcm_service.dart';
 
 /// 🔐 Auth Service - Xử lý logic networking cho Authentication
 /// Sử dụng ApiService để hưởng lợi từ logic Auto Refresh Token
@@ -48,6 +49,8 @@ class AuthService {
       final data = jsonDecode(response.body);
       // Lưu token vào storage ngay khi login thành công
       await ApiService.saveTokens(data['accessToken'], data['refreshToken']);
+      // Đăng ký FCM Token ngay sau khi login thành công
+      await FcmService.getTokenAndRegister();
       return data;
     } else {
       final errorData = jsonDecode(response.body);
@@ -58,6 +61,8 @@ class AuthService {
   /// Đăng xuất - Xóa token cả trên server và client
   static Future<void> logout() async {
     try {
+      // Hủy đăng ký FCM Token TRƯỚC khi logout (vì cần Auth header)
+      await FcmService.unregisterToken();
       final refreshToken = await ApiService.getRefreshToken();
       if (refreshToken != null) {
         await ApiService.post(
@@ -125,6 +130,8 @@ class AuthService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       await ApiService.saveTokens(data['accessToken'], data['refreshToken']);
+      // Đăng ký FCM Token ngay sau khi Google login thành công
+      await FcmService.getTokenAndRegister();
       return data;
     } else {
       final errorData = jsonDecode(response.body);
