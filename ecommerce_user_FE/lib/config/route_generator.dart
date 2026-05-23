@@ -4,32 +4,32 @@ import 'routes.dart';
 // Import screens
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
-import '../screens/user/main_screen.dart';
-import '../screens/user/products_page.dart';
-import '../screens/user/product_detail_page.dart';
-import '../screens/user/cart_page.dart';
-import '../screens/user/checkout_page.dart';
-import '../screens/user/order/orders_page.dart';
-import '../screens/user/order/order_detail_page.dart';
-import '../screens/user/notifications_page.dart';
-import '../screens/user/profile_page.dart';
-import '../screens/user/address_page.dart';
-import '../screens/user/search_page.dart';
-import '../screens/user/change_password_page.dart';
-import '../screens/user/vnpay_payment_page.dart';
-import '../screens/user/zalopay_payment_page.dart';
-import '../screens/user/create_review_page.dart';
+import '../screens/user/homes/main_screen.dart';
+import '../screens/user/products/products_page.dart';
+import '../screens/user/products/product_detail_page.dart';
+import '../screens/user/carts/cart_page.dart';
+import '../screens/user/payments/checkout_page.dart';
+import '../screens/user/orders/orders_page.dart';
+import '../screens/user/orders/order_detail_page.dart';
+import '../screens/user/notifications/notifications_page.dart';
+import '../screens/user/profiles/profile_page.dart';
+import '../screens/user/profiles/address_page.dart';
+import '../screens/user/homes/search_page.dart';
+import '../screens/user/profiles/change_password_page.dart';
+import '../screens/user/payments/vnpay_payment_page.dart';
+import '../screens/user/payments/zalopay_payment_page.dart';
+import '../screens/user/orders/create_review_page.dart';
 import '../models/product_model.dart';
 import '../models/order_model.dart';
 
 /// 🚀 Route Generator - Xử lý route generation và guards
-/// Hiện tại support: login, register, home (và các tab bên trong)
+/// Hiện tại support: login, register, homes (và các tab bên trong)
 /// Thêm routes mới khi tạo screens mới
 class RouteGenerator {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   /// ⭐ Main function - Được gọi mỗi khi navigate
-  /// settings.name = route name (e.g., '/home')
+  /// settings.name = route name (e.g., '/homes')
   static Route<dynamic> generateRoute(RouteSettings settings) {
     print('🔀 Navigate: ${settings.name}');
 

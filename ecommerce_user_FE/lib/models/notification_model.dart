@@ -8,6 +8,7 @@ class NotificationModel {
   final bool isRead;
   final DateTime? createdAt;
   final String? referenceId;
+  final String? imageUrl;
 
   NotificationModel({
     required this.id,
@@ -17,6 +18,7 @@ class NotificationModel {
     this.isRead = false,
     this.createdAt,
     this.referenceId,
+    this.imageUrl,
   });
 
   NotificationModel copyWith({bool? isRead}) {
@@ -28,6 +30,7 @@ class NotificationModel {
       isRead: isRead ?? this.isRead,
       createdAt: createdAt,
       referenceId: referenceId,
+      imageUrl: imageUrl,
     );
   }
 
@@ -49,6 +52,7 @@ class NotificationModel {
       referenceId: json['referenceId'] is Map
           ? json['referenceId']['\$oid']
           : json['referenceId'],
+      imageUrl: json['imageUrl'],
     );
   }
 
@@ -60,6 +64,7 @@ class NotificationModel {
       'type': type,
       'isRead': isRead,
       'referenceId': referenceId,
+      'imageUrl': imageUrl,
     };
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../services/payment_service.dart';
+import '../../../services/payment_service.dart';
 
 /// 💳 VNPay Payment Page
 /// Hiển thị trạng thái thanh toán VNPay

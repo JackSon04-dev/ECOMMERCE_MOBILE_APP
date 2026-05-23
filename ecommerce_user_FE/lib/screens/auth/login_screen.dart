@@ -38,7 +38,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           // Được mở từ auth guard → pop(true) trả kết quả về
           Navigator.pop(context, true);
         } else {
-          // Truy cập trực tiếp → vào home
+          // Truy cập trực tiếp → vào homes
           Navigator.pushNamedAndRemoveUntil(context, AppRoutes.home, (route) => false);
         }
       }

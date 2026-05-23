@@ -10,6 +10,7 @@ import '../../../services/payment_service.dart';
 import '../../../utils/date_helper.dart';
 import '../../../widgets/common_widgets.dart';
 import '../../../widgets/reorder_result_sheet.dart';
+import '../../../widgets/order/order_action_buttons.dart';
 
 /// 📦 Order Detail Page - Trang chi tiết đơn hàng
 class OrderDetailPage extends ConsumerStatefulWidget {
@@ -95,178 +96,6 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
     }
   }
 
-  Future<void> _cancelOrder() async {
-    if (_order == null) return;
-
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hủy đơn hàng'),
-        content: const Text('Bạn có chắc muốn hủy đơn hàng này?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Không'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Hủy đơn', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true && mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
-      );
-
-      try {
-        final updatedOrder = await OrderService.cancelOrder(_order!.id);
-        if (mounted) {
-          Navigator.pop(context);
-          if (updatedOrder != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Đã hủy đơn hàng thành công'), backgroundColor: Colors.green),
-            );
-            // Cập nhật RAM thông qua Riverpod bằng cách Invalidate Family
-            ref.invalidate(orderProvider);
-            Navigator.pop(context); // Trở về danh sách
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Không thể hủy đơn hàng. Vui lòng thử lại!'), backgroundColor: Colors.red),
-            );
-          }
-        }
-      } catch (e) {
-        if (mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Lỗi: ${e.toString()}'), backgroundColor: Colors.red),
-          );
-        }
-      }
-    }
-  }
-
-  Future<void> _reorder() async {
-    if (_order == null) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B35))),
-    );
-
-    final result = await ref.read(cartProvider.notifier).reorder(_order!.orderItems);
-
-    if (!mounted) return;
-    Navigator.pop(context);
-
-    final added = result['added'] ?? [];
-    final outOfStock = result['outOfStock'] ?? [];
-    final failed = result['failed'] ?? [];
-
-    await ReorderResultSheet.show(
-      context,
-      added: added,
-      outOfStock: outOfStock,
-      failed: failed,
-    );
-  }
-
-  Future<void> _handleVnpayPayment() async {
-    if (_order == null) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B35))),
-    );
-
-    try {
-      final paymentUrl = await PaymentService.createVnpayPaymentUrl(_order!.id);
-      if (!mounted) return;
-      Navigator.pop(context);
-
-      if (paymentUrl != null) {
-        final result = await Navigator.pushNamed(
-          context,
-          AppRoutes.vnpayPayment,
-          arguments: {
-            'orderId': _order!.id,
-            'paymentUrl': paymentUrl,
-          },
-        );
-
-        if (result == true && mounted) {
-            _refreshOrder();
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
-
-  Future<void> _handleZalopayPayment() async {
-    if (_order == null) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B35))),
-    );
-
-    try {
-      final result = await PaymentService.createZalopayPayment(_order!.id);
-      if (!mounted) return;
-      Navigator.pop(context);
-
-      if (result != null) {
-        final paymentResult = await Navigator.pushNamed(
-          context,
-          AppRoutes.zalopayPayment,
-          arguments: {
-            'orderId': _order!.id,
-            'orderUrl': result['orderUrl'],
-            'amount': _order!.totalPrice,
-            'zpTransToken': result['zpTransToken'],
-          },
-        );
-
-        if (paymentResult == true && mounted) {
-          _refreshOrder();
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
-
-  Future<void> _refreshOrder() async {
-    final updatedOrder = await OrderService.getOrderById(_order!.id);
-    ref.invalidate(orderProvider);
-    
-    setState(() {
-      _order = updatedOrder;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('✅ Thanh toán thành công!'), backgroundColor: Colors.green),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -804,102 +633,14 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
   Widget? _buildBottomActions() {
     if (_order == null) return null;
     
-    final canCancel = _order!.status == 'Chờ xác nhận';
-    final canPay = !_order!.isPaid && (_order!.paymentMethod == 'VNPay' || _order!.paymentMethod == 'ZaloPay') && _order!.status != 'Đã hủy';
-    final canReview = _order!.status == 'Thành công';
-
-    if (!canCancel && !canPay && !canReview) return null;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))]),
-      child: Row(
-        children: [
-          if (canCancel)
-            Expanded(
-              child: OutlinedButton(
-                onPressed: _cancelOrder,
-                style: OutlinedButton.styleFrom(foregroundColor: Colors.red, side: const BorderSide(color: Colors.red), padding: const EdgeInsets.symmetric(vertical: 12)),
-                child: const Text('Hủy đơn hàng'),
-              ),
-            ),
-          if (canPay) ...[
-            if (canCancel) const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: _order!.paymentMethod == 'VNPay' ? _handleVnpayPayment : _handleZalopayPayment,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _order!.paymentMethod == 'VNPay' ? const Color(0xFF2196F3) : const Color(0xFF007DFE), 
-                  foregroundColor: Colors.white, 
-                  padding: const EdgeInsets.symmetric(vertical: 12)
-                ),
-                child: const Text('Thanh toán ngay'),
-              ),
-            ),
-          ],
-          if (canReview) ...[
-            Expanded(
-              child: OutlinedButton(
-                onPressed: _reorder,
-                style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFFF6B35), side: const BorderSide(color: Color(0xFFFF6B35)), padding: const EdgeInsets.symmetric(vertical: 12)),
-                child: const Text('Mua lại'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pushNamed(
-                    context,
-                    '/create-review',
-                    arguments: _order,
-                  ).then((result) {
-                    if (result == true && mounted) {
-                      _loadOrderDetail();
-                    }
-                  });
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _order!.isRated
-                      ? Colors.grey[100]
-                      : _order!.hasAnyRated
-                          ? const Color(0xFFFF8F60)
-                          : const Color(0xFFFF6B35),
-                  foregroundColor: _order!.isRated
-                      ? Colors.grey[600]
-                      : Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      _order!.isRated
-                          ? Icons.star_rounded
-                          : Icons.star_outline_rounded,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          _order!.isRated
-                              ? 'Xem đánh giá'
-                              : 'Đánh giá',
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
+    return OrderActionButtons(
+      order: _order!,
+      isDetailView: true,
+      onSuccess: (updatedOrder) {
+        setState(() {
+          _order = updatedOrder;
+        });
+      },
     );
   }
 }

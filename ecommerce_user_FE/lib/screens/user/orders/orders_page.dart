@@ -8,6 +8,7 @@ import '../../../providers/order_provider.dart';
 import '../../../services/order_service.dart';
 import '../../../utils/date_helper.dart';
 import '../../../widgets/common_widgets.dart';
+import '../../../widgets/order/order_action_buttons.dart';
 import '../../../widgets/reorder_result_sheet.dart';
 
 /// 📦 Orders Page - Trang đơn hàng
@@ -136,44 +137,6 @@ class _OrderListTabState extends ConsumerState<_OrderListTab> {
       case 'Thành công': return Colors.green;
       case 'Đã hủy': return Colors.red;
       default: return Colors.grey;
-    }
-  }
-
-  Future<void> _confirmReceived(Order order) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Xác nhận nhận hàng'),
-        content: const Text('Bạn xác nhận đã nhận được hàng?\nĐơn hàng sẽ chuyển sang trạng thái "Thành công".'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Chưa')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF6B35), foregroundColor: Colors.white, elevation: 0),
-            child: const Text('Đã nhận hàng'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true || !mounted) return;
-
-    showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
-
-    try {
-      final updatedOrder = await OrderService.confirmReceived(order.id);
-      if (!mounted) return;
-      Navigator.pop(context);
-
-      if (updatedOrder != null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Xác nhận nhận hàng thành công!'), backgroundColor: Colors.green));
-        // Invalidate toàn bộ Family Provider để cập nhật các tab liên quan
-        ref.invalidate(orderProvider);
-      }
-    } catch (e) {
-      if (!mounted) return;
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red));
     }
   }
 
@@ -337,24 +300,9 @@ class _OrderListTabState extends ConsumerState<_OrderListTab> {
                 ),
               ),
             ),
-            if (order.status == 'Đã giao')
-              Padding(
-                padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => _confirmReceived(order),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF6B35),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    child: const Text('Đã nhận được hàng', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ),
+            OrderActionButtons(
+              order: order,
+            ),
           ],
         ),
       ),

@@ -374,6 +374,13 @@ export const confirmReceived = async (req, res) => {
 
     order.status = 'Thành công'
 
+    // Ghi nhận lịch sử trạng thái
+    order.statusHistory.push({
+      status: 'Thành công',
+      note: 'Người dùng đã xác nhận nhận hàng',
+      updatedAt: new Date()
+    })
+
     // Cập nhật trạng thái thanh toán (đặc biệt cho COD)
     if (!order.isPaid) {
       order.isPaid = true

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../services/payment_service.dart';
+import '../../../services/payment_service.dart';
 
 class ZalopayPaymentPage extends StatefulWidget {
   final String orderId;

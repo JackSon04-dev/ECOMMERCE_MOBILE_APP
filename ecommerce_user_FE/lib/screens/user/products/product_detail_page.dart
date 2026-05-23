@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../models/product_model.dart';
-import '../../models/review_model.dart';
-import '../../services/product_service.dart';
-import '../../services/review_service.dart';
-import '../../providers/cart_provider.dart';
-import '../../utils/auth_guard.dart';
-import '../../utils/date_helper.dart';
-import '../../widgets/common_widgets.dart';
-import '../../widgets/add_to_cart_animation.dart';
-import '../../widgets/size_guide_sheet.dart';
-import '../../widgets/product_card_widget.dart';
-import '../../widgets/add_to_cart_bottom_sheet.dart';
+import '../../../models/product_model.dart';
+import '../../../models/review_model.dart';
+import '../../../services/product_service.dart';
+import '../../../services/review_service.dart';
+import '../../../providers/cart_provider.dart';
+import '../../../utils/auth_guard.dart';
+import '../../../utils/date_helper.dart';
+import '../../../widgets/common_widgets.dart';
+import '../../../widgets/add_to_cart_animation.dart';
+import '../../../widgets/size_guide_sheet.dart';
+import '../../../widgets/product_card_widget.dart';
+import '../../../widgets/add_to_cart_bottom_sheet.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -60,8 +60,17 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
         product = await ProductService.getProductById(widget.productId!);
       }
 
-      // Load all products for the bottom list
-      final allProducts = await ProductService.getAllProducts();
+      // Load products for the bottom list based on the same tag
+      String? filterTag;
+      if (product != null && product.tags.isNotEmpty) {
+        filterTag = product.tags.first; // Lấy tag đầu tiên làm danh mục (ví dụ: 'Áo thun', 'Quần')
+      }
+      final allProducts = await ProductService.getAllProducts(tag: filterTag);
+      
+      // Loại bỏ chính sản phẩm hiện tại ra khỏi danh sách gợi ý
+      if (product != null) {
+        allProducts.removeWhere((p) => p.id == product!.id);
+      }
 
       if (product != null) {
         final reviews = await ReviewService.getReviewsByProduct(product.id);

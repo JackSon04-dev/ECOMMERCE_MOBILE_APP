@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/auth_provider.dart';
-import '../../config/routes.dart';
-import '../../models/user_model.dart';
-import '../../services/user_service.dart';
-import '../../utils/auth_guard.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../config/routes.dart';
+import '../../../models/user_model.dart';
+import '../../../services/user_service.dart';
+
 
 /// 👤 Profile Page - Trang tài khoản
 class ProfilePage extends ConsumerStatefulWidget {

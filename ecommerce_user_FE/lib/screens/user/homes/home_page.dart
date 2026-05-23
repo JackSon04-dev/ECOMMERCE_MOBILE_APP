@@ -1,18 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../config/routes.dart';
-import '../../models/product_model.dart';
-import '../../services/product_service.dart';
-import '../../widgets/custom_app_bar.dart';
-import '../../widgets/product_card_widget.dart';
-import '../../widgets/common_widgets.dart';
-import '../../providers/cart_provider.dart';
-import '../../widgets/add_to_cart_bottom_sheet.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../../../config/routes.dart';
+import '../../../models/product_model.dart';
+import '../../../widgets/custom_app_bar.dart';
+import '../../../widgets/product_card_widget.dart';
+import '../../../widgets/common_widgets.dart';
+import '../../../providers/cart_provider.dart';
+import '../../../widgets/add_to_cart_bottom_sheet.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/product_provider.dart';
+import '../../../providers/product_provider.dart';
 
 /// 🏠 Home Page - Trang chủ
 class HomePage extends ConsumerStatefulWidget {

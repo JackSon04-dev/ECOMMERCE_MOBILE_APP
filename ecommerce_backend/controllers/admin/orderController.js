@@ -194,17 +194,36 @@ export const updateOrderStatus = async (req, res) => {
 const _sendOrderNotification = async (order, status) => {
   try {
     const orderId = order._id.toString()
-    const orderCode = orderId.slice(-6).toUpperCase()
+    const orderCode = orderId.slice(-8).toUpperCase()
+    const userName = order.userInfo?.username || 'bạn'
+    
     const title = '📦 Cập nhật đơn hàng'
-    const body = statusMessages[status] || `Đơn hàng #${orderCode} đã chuyển sang: ${status}`
+    const baseMessage = statusMessages[status] || `Đơn hàng của bạn đã chuyển sang: ${status}`
+    const body = `Xin chào ${userName}! ${baseMessage.replace('Đơn hàng của bạn', `Đơn hàng #${orderCode}`)}`
 
-    // 1. Tạo Notification trong DB (để User xem lại trong App)
+    // Xoá thông báo trạng thái trước đó của order này
+    // (Vì theo thiết kế, user đọc thông báo ORDER xong thì báo đó sẽ bị xoá hẳn khỏi DB. 
+    // Nên nếu còn tồn tại trong DB, tức là user chưa đọc -> Xoá đi để thay bằng trạng thái mới nhất)
+    await Notification.deleteMany({
+      userId: order.user,
+      type: 'ORDER',
+      referenceId: order._id
+    })
+
+    // Lấy ảnh của sản phẩm đầu tiên để hiển thị trên thông báo (nếu có)
+    let imageUrl = null;
+    if (order.orderItems && order.orderItems.length > 0) {
+      imageUrl = order.orderItems[0].variant?.colorImage || order.orderItems[0].productImage;
+    }
+
+    // 1. Tạo Notification mới trong DB (để User xem lại trong App)
     const notification = await Notification.create({
       userId: order.user,
       title,
       message: body,
       type: 'ORDER',
-      referenceId: order._id
+      referenceId: order._id,
+      imageUrl: imageUrl
     })
 
     // 2. Lấy FCM tokens của User để gửi Push Notification
@@ -216,12 +235,6 @@ const _sendOrderNotification = async (order, status) => {
 
     // Trích xuất danh sách token string từ mảng fcmTokens
     const tokens = user.fcmTokens.map(t => t.token)
-
-    // Lấy ảnh của sản phẩm đầu tiên để hiển thị trên thông báo (nếu có)
-    let imageUrl = null;
-    if (order.orderItems && order.orderItems.length > 0) {
-      imageUrl = order.orderItems[0].variant?.colorImage || order.orderItems[0].productImage;
-    }
 
     // 3. Gửi Push Notification qua FCM
     await sendPushNotification(tokens, title, body, {

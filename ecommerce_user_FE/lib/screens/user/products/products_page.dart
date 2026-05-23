@@ -1,16 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../models/product_model.dart';
-import '../../services/product_service.dart';
-import '../../widgets/custom_app_bar.dart';
-import '../../widgets/product_card_widget.dart';
-import '../../widgets/common_widgets.dart';
-import '../../providers/cart_provider.dart';
-import '../../widgets/add_to_cart_animation.dart';
-import '../../widgets/add_to_cart_bottom_sheet.dart';
+import '../../../models/product_model.dart';
+import '../../../services/product_service.dart';
+import '../../../widgets/custom_app_bar.dart';
+import '../../../widgets/product_card_widget.dart';
+import '../../../widgets/common_widgets.dart';
+import '../../../providers/cart_provider.dart';
+import '../../../widgets/add_to_cart_animation.dart';
+import '../../../widgets/add_to_cart_bottom_sheet.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/product_provider.dart';
+import '../../../providers/product_provider.dart';
 
 /// 🛍️ Products Page - Trang danh sách sản phẩm
 class ProductsPage extends ConsumerStatefulWidget {

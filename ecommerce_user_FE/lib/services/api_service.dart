@@ -6,7 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// 🌐 API Service - Quản lý tất cả API calls
 class ApiService {
-  static final String baseUrl = dotenv.env['BASE_URL'] ?? '';
+  static final String baseUrl = dotenv.env['BASE_URL'] ?? 'http://10.0.2.2:5000/api';
   static final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   /// Lấy access token từ storage

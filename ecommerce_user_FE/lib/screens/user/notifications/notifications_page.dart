@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../models/notification_model.dart';
-import '../../providers/notification_provider.dart';
-import '../../widgets/common_widgets.dart';
-import 'order/order_detail_page.dart';
+import '../../../models/notification_model.dart';
+import '../../../providers/notification_provider.dart';
+import '../../../widgets/common_widgets.dart';
+import '../../../services/api_service.dart';
+import '../orders/order_detail_page.dart';
 
 /// 🔔 Notifications Page - Trang thông báo (Sử dụng Provider)
 class NotificationsPage extends StatefulWidget {
@@ -330,18 +331,40 @@ class _NotificationsPageState extends State<NotificationsPage> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: _getNotificationColor(notification.type).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                _getNotificationIcon(notification.type),
-                color: _getNotificationColor(notification.type),
-                size: 22,
-              ),
+            Builder(
+              builder: (context) {
+                final defaultIcon = Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: _getNotificationColor(notification.type).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    _getNotificationIcon(notification.type),
+                    color: _getNotificationColor(notification.type),
+                    size: 22,
+                  ),
+                );
+
+                if (notification.imageUrl != null && notification.imageUrl!.isNotEmpty) {
+                  String finalUrl = notification.imageUrl!;
+                  if (!finalUrl.startsWith('http')) {
+                    finalUrl = '${ApiService.baseUrl}$finalUrl';
+                  }
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      finalUrl,
+                      width: 44,
+                      height: 44,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => defaultIcon,
+                    ),
+                  );
+                }
+                return defaultIcon;
+              },
             ),
             const SizedBox(width: 12),
             Expanded(

@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../models/product_model.dart';
-import '../../services/product_service.dart';
-import '../../widgets/product_card_widget.dart';
-import '../../widgets/common_widgets.dart';
-import '../../widgets/add_to_cart_bottom_sheet.dart';
+import '../../../models/product_model.dart';
+import '../../../services/product_service.dart';
+import '../../../widgets/product_card_widget.dart';
+import '../../../widgets/common_widgets.dart';
+import '../../../widgets/add_to_cart_bottom_sheet.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/product_provider.dart';
+import '../../../providers/product_provider.dart';
 
 /// 🔍 Search Page - Trang tìm kiếm
 class SearchPage extends ConsumerStatefulWidget {

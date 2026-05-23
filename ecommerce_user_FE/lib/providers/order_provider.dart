@@ -64,7 +64,32 @@ class OrderNotifier extends AutoDisposeFamilyAsyncNotifier<List<Order>, String> 
     }
   }
 
-  // Hàm thủ công update trong RAM giờ không dùng nữa vì ta invalidate Family thay thế
+  // Cập nhật Order ngay trên RAM mà không cần gọi lại API
+  void updateOrderInCache(Order updatedOrder) {
+    if (state.value == null) return;
+    
+    final currentList = state.value!;
+    final index = currentList.indexWhere((o) => o.id == updatedOrder.id);
+    
+    if (index != -1) {
+      final newList = [...currentList];
+      
+      final expectedStatus = _getApiStatus(arg);
+      if (expectedStatus != null) {
+        final statuses = expectedStatus.split(',');
+        if (!statuses.contains(updatedOrder.status)) {
+           // Đơn hàng đổi trạng thái -> Không còn thuộc tab này nữa -> Xóa đi
+           newList.removeAt(index);
+           state = AsyncData(newList);
+           return;
+        }
+      }
+
+      // Vẫn thuộc tab này (hoặc là tab Tất cả) -> Cập nhật thông tin mới
+      newList[index] = updatedOrder;
+      state = AsyncData(newList);
+    }
+  }
 }
 
 // Khai báo Provider toàn cục

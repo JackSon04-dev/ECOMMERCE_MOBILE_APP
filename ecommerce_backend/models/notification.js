@@ -26,6 +26,10 @@ const notificationSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     default: null
   },
+  imageUrl: {
+    type: String,
+    default: null
+  },
 }, {
   timestamps: true,
 })

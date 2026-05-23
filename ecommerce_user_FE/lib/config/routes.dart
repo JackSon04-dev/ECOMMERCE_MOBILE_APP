@@ -7,7 +7,7 @@ class AppRoutes {
 
   // Main routes
   static const String splash = '/';
-  static const String home = '/home';
+  static const String home = '/homes';
 
   // Product routes
   static const String products = '/products';

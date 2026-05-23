@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -181,8 +182,8 @@ class FcmService {
     }
   }
 
-  /// Tải file ảnh và lưu vào thư mục cache tạm thời của hệ thống
-  static Future<String?> _downloadAndSaveFile(String url, String fileName) async {
+  /// Tải file ảnh trực tiếp vào bộ nhớ dưới dạng Bytes (Uint8List)
+  static Future<Uint8List?> _downloadImageBytes(String url) async {
     try {
       String finalUrl = url;
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
@@ -190,14 +191,10 @@ class FcmService {
       }
       final response = await http.get(Uri.parse(finalUrl)).timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
-        final directory = Directory.systemTemp;
-        final filePath = '${directory.path}/$fileName';
-        final file = File(filePath);
-        await file.writeAsBytes(response.bodyBytes);
-        return filePath;
+        return response.bodyBytes;
       }
     } catch (e) {
-      debugPrint('❌ [FCM] Error downloading image: $e');
+      debugPrint('❌ [FCM] Error downloading image bytes: $e');
     }
     return null;
   }
@@ -213,45 +210,31 @@ class FcmService {
     if (notification == null) return;
 
     final String? imageUrl = message.data['imageUrl'] ?? message.notification?.android?.imageUrl;
-    String? largeIconPath;
-    String? bigPicturePath;
+    Uint8List? largeIconBytes;
 
     if (imageUrl != null && imageUrl.isNotEmpty) {
-      final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-      largeIconPath = await _downloadAndSaveFile(imageUrl, 'icon_$timestamp.jpg');
-      bigPicturePath = await _downloadAndSaveFile(imageUrl, 'pic_$timestamp.jpg');
+      largeIconBytes = await _downloadImageBytes(imageUrl);
     }
 
-    AndroidNotificationDetails androidPlatformChannelSpecifics;
-    if (bigPicturePath != null) {
-      final bigPictureStyleInformation = BigPictureStyleInformation(
-        FilePathAndroidBitmap(bigPicturePath),
-        largeIcon: largeIconPath != null ? FilePathAndroidBitmap(largeIconPath) : null,
-        contentTitle: notification.title,
-        summaryText: notification.body,
-      );
+    // Luôn dùng BigTextStyle để văn bản dài không bị cắt thành dấu "..."
+    final bigTextStyleInformation = BigTextStyleInformation(
+      notification.body ?? '',
+      contentTitle: notification.title,
+      htmlFormatContentTitle: true,
+      htmlFormatSummaryText: true,
+    );
 
-      androidPlatformChannelSpecifics = AndroidNotificationDetails(
-        'order_updates',
-        'Cập nhật đơn hàng',
-        icon: '@mipmap/ic_launcher',
-        importance: Importance.high,
-        priority: Priority.high,
-        sound: const RawResourceAndroidNotificationSound('notification_sound'),
-        playSound: true,
-        styleInformation: bigPictureStyleInformation,
-      );
-    } else {
-      androidPlatformChannelSpecifics = const AndroidNotificationDetails(
-        'order_updates',
-        'Cập nhật đơn hàng',
-        icon: '@mipmap/ic_launcher',
-        importance: Importance.high,
-        priority: Priority.high,
-        sound: RawResourceAndroidNotificationSound('notification_sound'),
-        playSound: true,
-      );
-    }
+    final androidPlatformChannelSpecifics = AndroidNotificationDetails(
+      'order_updates',
+      'Cập nhật đơn hàng',
+      icon: '@mipmap/ic_launcher',
+      largeIcon: largeIconBytes != null ? ByteArrayAndroidBitmap(largeIconBytes) : null,
+      styleInformation: bigTextStyleInformation,
+      importance: Importance.high,
+      priority: Priority.high,
+      sound: const RawResourceAndroidNotificationSound('notification_sound'),
+      playSound: true,
+    );
 
     final platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
 

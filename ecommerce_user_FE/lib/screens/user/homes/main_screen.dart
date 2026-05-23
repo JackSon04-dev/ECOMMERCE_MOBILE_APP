@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/notification_provider.dart';
-import '../../services/fcm_service.dart';
-import '../../widgets/bottom_nav_bar.dart';
-import '../../widgets/chatbot_widget.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../providers/notification_provider.dart';
+import '../../../services/fcm_service.dart';
+import '../../../widgets/bottom_nav_bar.dart';
+import '../../../widgets/chatbot_widget.dart';
 import 'home_page.dart';
-import 'products_page.dart';
-import 'notifications_page.dart';
-import 'profile_page.dart';
+import '../products/products_page.dart';
+import '../notifications/notifications_page.dart';
+import '../profiles/profile_page.dart';
 
 /// 🏠 Main Screen - Màn hình chính với Bottom Navigation
 class MainScreen extends ConsumerStatefulWidget {

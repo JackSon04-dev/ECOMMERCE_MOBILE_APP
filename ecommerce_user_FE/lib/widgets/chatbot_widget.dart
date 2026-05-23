@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/chatbot_service.dart';
-import '../screens/user/product_detail_page.dart'; // Đảm bảo đúng đường dẫn
+import '../screens/user/products/product_detail_page.dart'; // Đảm bảo đúng đường dẫn
 
 class ChatbotWidget extends StatefulWidget {
   const ChatbotWidget({super.key});
