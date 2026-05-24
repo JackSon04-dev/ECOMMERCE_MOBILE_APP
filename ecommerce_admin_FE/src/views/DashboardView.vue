@@ -875,23 +875,29 @@ const minRevenue = computed(() => {
   return Math.min(...revenueChart.value.map((item) => item.revenue))
 })
 
-// Y-axis max = 2* maxRevenue, rounded up to nearest 150k
+// Y-axis max based on max revenue * 1.8 for tooltip padding
 const yAxisMax = computed(() => {
-  if (maxRevenue.value === 0) return 150000
-  const interval = 150000
-  const targetMax = maxRevenue.value * 1.7
-  return Math.ceil(targetMax / interval) * interval
+  if (maxRevenue.value === 0) return 1800000 // 1.8 * 1M
+  return maxRevenue.value * 1.8
 })
 
-// Y-axis labels with 150k intervals
+// Y-axis labels based on max revenue divided by 10
 const yAxisLabels = computed(() => {
-  const interval = 150000 // 150k
-  const max = yAxisMax.value
-  const labels = []
-  const steps = Math.floor(max / interval)
+  if (maxRevenue.value === 0) {
+    const defaultInterval = 1000000 / 10
+    const labels = []
+    for (let i = 18; i >= 0; i--) {
+      labels.push(i * defaultInterval)
+    }
+    return labels
+  }
 
-  for (let i = steps; i >= 0; i--) {
-    labels.push(i * interval)
+  const interval = maxRevenue.value / 10
+  const labels = []
+
+  // Create labels up to 1.8x the max revenue (18 intervals)
+  for (let i = 18; i >= 0; i--) {
+    labels.push(Math.round(i * interval))
   }
 
   return labels
@@ -938,7 +944,7 @@ const formatShortCurrency = (value) => {
   return value.toString()
 }
 
-// Format Y-axis currency (always show full number for 200k intervals)
+// Format Y-axis currency
 const formatYAxisCurrency = (value) => {
   if (!value) return '0đ'
   if (value >= 1000000) {
