@@ -154,7 +154,9 @@ export const vnpayReturn = async (req, res) => {
       if (order && !order.isPaid) {
         order.isPaid = true
         order.paidAt = new Date()
-        order.status = 'Đã xác nhận'
+        if (order.status === 'Chờ xác nhận') {
+          order.status = 'Đã xác nhận'
+        }
         await order.save()
         console.log(`✅ [VNPay Return] Order ${order._id} marked as paid`)
       } else {
@@ -410,7 +412,9 @@ export const vnpayIpn = async (req, res) => {
       // Thanh toán thành công → cập nhật đơn hàng
       order.isPaid = true
       order.paidAt = new Date()
-      order.status = 'Đã xác nhận'
+      if (order.status === 'Chờ xác nhận') {
+        order.status = 'Đã xác nhận'
+      }
       await order.save()
 
       console.log(`✅ [VNPay IPN] Order ${order._id} marked as PAID`)
@@ -487,7 +491,9 @@ export const checkPaymentStatus = async (req, res) => {
         if (zpData.return_code === 1) {
           order.isPaid = true
           order.paidAt = new Date()
-          order.status = 'Đã xác nhận'
+          if (order.status === 'Chờ xác nhận') {
+            order.status = 'Đã xác nhận'
+          }
           await order.save()
           console.log(`✅ [ZaloPay Query] Đơn hàng ${order._id} cập nhật THÀNH CÔNG từ query!`)
         }
