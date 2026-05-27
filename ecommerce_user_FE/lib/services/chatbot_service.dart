@@ -30,7 +30,7 @@ class ChatMessage {
 }
 
 class ChatbotService {
-  static final String baseUrl = dotenv.env['CHATBOT_URL'] ?? '';
+  static final String baseUrl = dotenv.env['CHATBOT_URL'] ?? 'http://10.0.2.2:8080';
   static final String apiUrl = '$baseUrl/api/chat'; 
 
   static Future<ChatMessage> sendMessage(String message) async {

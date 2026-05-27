@@ -1,0 +1,9 @@
+# ==========================================
+# Docker Configurations (Contains Secrets)
+# ==========================================
+docker-compose.yml
+
+# IDE and System Files
+.vscode/
+.DS_Store
+Thumbs.db
