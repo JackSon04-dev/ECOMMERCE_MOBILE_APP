@@ -5,11 +5,11 @@ import moment from 'moment'
 import { PayOS } from '@payos/node'
 
 // Khởi tạo PayOS
-const payos = new PayOS(
-  process.env.PAYOS_CLIENT_ID || 'dummy_client_id',
-  process.env.PAYOS_API_KEY || 'dummy_api_key',
-  process.env.PAYOS_CHECKSUM_KEY || 'dummy_checksum_key'
-)
+const payos = new PayOS({
+  clientId: process.env.PAYOS_CLIENT_ID || 'dummy_client_id',
+  apiKey: process.env.PAYOS_API_KEY || 'dummy_api_key',
+  checksumKey: process.env.PAYOS_CHECKSUM_KEY || 'dummy_checksum_key'
+})
 
 // Khởi tạo VNPay instance với config từ .env
 const vnpay = new VNPay({
@@ -809,7 +809,7 @@ export const createPayosPaymentUrl = async (req, res) => {
       cancelUrl: cancelUrl
     };
 
-    const paymentLinkData = await payos.createPaymentLink(body);
+    const paymentLinkData = await payos.paymentRequests.create(body);
 
     console.log(`✅ [PayOS] Created URL/QR successfully: ${paymentLinkData.checkoutUrl}`)
 
@@ -893,7 +893,7 @@ export const payosWebhook = async (req, res) => {
     console.log('\n📡 [PayOS Webhook] PayOS SERVER gọi thẳng vào backend (Server-to-Server)')
     console.log(`   → Đây là luồng cập nhật DB chính, đáng tin cậy nhất`)
 
-    const webhookData = payos.verifyPaymentWebhookData(req.body);
+    const webhookData = await payos.webhooks.verify(req.body);
 
     console.log(`   OrderCode: ${webhookData.orderCode}`);
     console.log(`   Amount: ${webhookData.amount}`);
