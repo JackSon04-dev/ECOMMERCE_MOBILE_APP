@@ -2,7 +2,7 @@ import { VNPay, ignoreLogger, ProductCode, VnpLocale } from 'vnpay'
 import Order from '../../models/orderModel.js'
 import CryptoJS from 'crypto-js'
 import moment from 'moment'
-import PayOS from '@payos/node'
+import { PayOS } from '@payos/node'
 
 // Khởi tạo PayOS
 const payos = new PayOS(
