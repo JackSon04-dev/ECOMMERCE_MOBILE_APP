@@ -18,6 +18,7 @@ import '../screens/user/homes/search_page.dart';
 import '../screens/user/profiles/change_password_page.dart';
 import '../screens/user/payments/vnpay_payment_page.dart';
 import '../screens/user/payments/zalopay_payment_page.dart';
+import '../screens/user/payments/payos_payment_page.dart';
 import '../screens/user/orders/create_review_page.dart';
 import '../models/product_model.dart';
 import '../models/order_model.dart';
@@ -129,6 +130,18 @@ class RouteGenerator {
           orderUrl: args['orderUrl'] as String,
           amount: (args['amount'] as num).toDouble(),
           zpTransToken: args['zpTransToken'] as String?,
+        ));
+
+      case AppRoutes.payosPayment:
+        final args = settings.arguments as Map<String, dynamic>;
+        return _buildRoute(PayosPaymentPage(
+          orderId: args['orderId'] as String,
+          qrCode: args['qrCode'] as String,
+          checkoutUrl: args['checkoutUrl'] as String,
+          amount: (args['amount'] as num).toDouble(),
+          accountNumber: args['accountNumber'] as String,
+          accountName: args['accountName'] as String,
+          description: args['description'] as String,
         ));
 
       // ============ NOTIFICATION ROUTES ============

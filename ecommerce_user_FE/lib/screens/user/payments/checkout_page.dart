@@ -272,6 +272,9 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
           } else if (_paymentMethod == 'ZaloPay') {
             // ─── ZALOPAY: Chuyển sang màn hình ZaloPay ───
             await _handleZalopayPayment(order);
+          } else if (_paymentMethod == 'PayOS') {
+            // ─── PAYOS: Chuyển sang màn hình PayOS ───
+            await _handlePayosPayment(order);
           } else {
             // ─── COD: Hiển thị dialog thành công bình thường ───
             _showOrderSuccessDialog(
@@ -383,6 +386,50 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       );
     }
   }
+
+  // ─── PAYOS PAYMENT ───────────────────────────────────────────────────
+
+  Future<void> _handlePayosPayment(dynamic order) async {
+    // Gọi backend tạo PayOS QR info
+    final payosData = await PaymentService.createPayosPayment(order.id);
+
+    if (payosData != null && mounted) {
+      final result = await Navigator.pushNamed(
+        context,
+        AppRoutes.payosPayment,
+        arguments: {
+          'orderId': order.id,
+          'qrCode': payosData['qrCode'],
+          'checkoutUrl': payosData['checkoutUrl'],
+          'amount': payosData['amount'],
+          'accountNumber': payosData['accountNumber'],
+          'accountName': payosData['accountName'],
+          'description': payosData['description'],
+        },
+      );
+
+      if (mounted) {
+        final isPaid = result == true;
+        _showOrderSuccessDialog(
+          orderId: order.id,
+          message: isPaid
+              ? 'Đơn hàng đã được thanh toán thành công qua PayOS (VietQR).'
+              : 'Đơn hàng đã tạo. Bạn có thể thanh toán sau trong chi tiết đơn hàng.',
+          isPaid: isPaid,
+          isCod: false,
+        );
+      }
+    } else if (mounted) {
+      _showOrderSuccessDialog(
+        orderId: order.id,
+        message: 'Đơn hàng đã tạo nhưng không thể kết nối hệ thống PayOS.\n'
+            'Bạn có thể thanh toán sau trong chi tiết đơn hàng.',
+        isPaid: false,
+        isCod: false,
+      );
+    }
+  }
+
 
   // ─── ORDER SUCCESS DIALOG ─────────────────────────────────────────────
 
@@ -749,7 +796,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     );
   }
 
-  bool get _isOnlinePayment => _paymentMethod == 'VNPay' || _paymentMethod == 'ZaloPay';
+  bool get _isOnlinePayment => _paymentMethod == 'VNPay' || _paymentMethod == 'ZaloPay' || _paymentMethod == 'PayOS';
 
   Widget _buildPaymentMethodSection() {
     return Container(
@@ -806,6 +853,8 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                 padding: const EdgeInsets.only(left: 32.0),
                 child: Column(
                    children: [
+                      _buildOnlineSubOption('PayOS', 'VietQR (Miễn phí qua PayOS)', Icons.qr_code_2),
+                      const SizedBox(height: 8),
                       _buildOnlineSubOption('ZaloPay', 'Ví ZaloPay / QR ZaloPay', Icons.domain_verification),
                       const SizedBox(height: 8),
                       _buildOnlineSubOption('VNPay', 'Cổng thanh toán VNPay', Icons.account_balance_outlined),

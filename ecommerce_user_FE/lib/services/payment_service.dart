@@ -63,6 +63,33 @@ class PaymentService {
     }
   }
 
+  /// Tạo thông tin thanh toán PayOS (VietQR)
+  /// Trả về Map chứa `qrCode`, `checkoutUrl` và các thông tin chuyển khoản
+  static Future<Map<String, dynamic>?> createPayosPayment(String orderId) async {
+    try {
+      print('💳 [Payment] Creating PayOS URL for order: $orderId');
+
+      final response = await ApiService.post(
+        '/payment/create_payos_url',
+        {'orderId': orderId},
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          print('✅ [Payment] PayOS data created successfully');
+          return data; // Trả về nguyên cục data từ API
+        }
+      }
+
+      print('❌ [Payment] Create PayOS failed: ${response.statusCode}');
+      return null;
+    } catch (e) {
+      print('❌ [Payment] Create PayOS error: $e');
+      return null;
+    }
+  }
+
   /// Kiểm tra trạng thái thanh toán của đơn hàng
   static Future<bool> checkPaymentStatus(String orderId) async {
     try {

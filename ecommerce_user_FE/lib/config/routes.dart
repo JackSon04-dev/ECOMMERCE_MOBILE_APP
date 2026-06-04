@@ -34,6 +34,7 @@ class AppRoutes {
   // Payment routes
   static const String vnpayPayment = '/vnpay-payment';
   static const String zalopayPayment = '/zalopay-payment';
+  static const String payosPayment = '/payos-payment';
 
   // Error routes
   static const String notFound = '/404';

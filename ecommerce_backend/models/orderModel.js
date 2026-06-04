@@ -48,7 +48,7 @@ const orderSchema = new mongoose.Schema(
     paymentMethod: {
       type: String,
       required: true,
-      enum: ['COD', 'VNPay', 'ZaloPay']
+      enum: ['COD', 'VNPay', 'ZaloPay', 'PayOS']
     },
 
     // 4. CHI PHÍ & TỔNG TIỀN
