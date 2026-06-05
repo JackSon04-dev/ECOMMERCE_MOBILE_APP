@@ -803,7 +803,7 @@ export const createPayosPaymentUrl = async (req, res) => {
 
     const body = {
       orderCode: orderCode,
-      amount: 1000, // FIXME: Đã ép giá 1000 VND để test, DB vẫn giữ order.totalPrice
+      amount: 2000, // FIXME: Đã ép giá 2000 VND để test, DB vẫn giữ order.totalPrice
       description: `Thanh toan DH ${orderCode}`,
       returnUrl: returnUrl,
       cancelUrl: cancelUrl

@@ -20,7 +20,7 @@ class OrderActionButtons extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final canCancel = order.status == 'Chờ xác nhận';
-    final canPay = !order.isPaid && (order.paymentMethod == 'VNPay' || order.paymentMethod == 'ZaloPay') && order.status != 'Đã hủy';
+    final canPay = !order.isPaid && (order.paymentMethod == 'VNPay' || order.paymentMethod == 'ZaloPay' || order.paymentMethod == 'PayOS') && order.status != 'Đã hủy';
     final canReview = order.status == 'Thành công';
     final canConfirmReceive = order.status == 'Đã giao';
 
@@ -44,12 +44,22 @@ class OrderActionButtons extends ConsumerWidget {
           if (canCancel) const SizedBox(width: 12),
           Expanded(
             child: ElevatedButton(
-              onPressed: () => order.paymentMethod == 'VNPay' 
-                  ? OrderActionHelper.handleVnpayPayment(context, ref, order, onSuccess) 
-                  : OrderActionHelper.handleZalopayPayment(context, ref, order, onSuccess),
+              onPressed: () {
+                if (order.paymentMethod == 'VNPay') {
+                  OrderActionHelper.handleVnpayPayment(context, ref, order, onSuccess);
+                } else if (order.paymentMethod == 'ZaloPay') {
+                  OrderActionHelper.handleZalopayPayment(context, ref, order, onSuccess);
+                } else if (order.paymentMethod == 'PayOS') {
+                  OrderActionHelper.handlePayosPayment(context, ref, order, onSuccess);
+                }
+              },
               style: ElevatedButton.styleFrom(
-                backgroundColor: order.paymentMethod == 'VNPay' ? const Color(0xFF2196F3) : const Color(0xFF007DFE), 
-                foregroundColor: Colors.white, 
+                backgroundColor: order.paymentMethod == 'VNPay'
+                    ? const Color(0xFF2196F3)
+                    : order.paymentMethod == 'ZaloPay'
+                        ? const Color(0xFF007DFE)
+                        : const Color(0xFF00C853), // PayOS - xanh lá
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12)
               ),
               child: const Text('Thanh toán ngay'),

@@ -249,4 +249,61 @@ class OrderActionHelper {
       }
     }
   }
+  static Future<void> handlePayosPayment(
+      BuildContext context, WidgetRef ref, Order order, Function(Order)? onSuccess) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: Color(0xFF00C853))),
+    );
+
+    try {
+      final payosData = await PaymentService.createPayosPayment(order.id);
+      if (!context.mounted) return;
+      Navigator.pop(context); // đóng loading
+
+      if (payosData != null) {
+        final paymentResult = await Navigator.pushNamed(
+          context,
+          AppRoutes.payosPayment,
+          arguments: {
+            'orderId': order.id,
+            'qrCode': payosData['qrCode'],
+            'checkoutUrl': payosData['checkoutUrl'],
+            'amount': payosData['amount'],
+            'accountNumber': payosData['accountNumber'],
+            'accountName': payosData['accountName'],
+            'description': payosData['description'],
+          },
+        );
+
+        if (paymentResult == true && context.mounted) {
+          final updatedOrder = await OrderService.getOrderById(order.id);
+          final tabs = ['Tất cả', 'Chờ xác nhận', 'Đã xác nhận', 'Đang giao', 'Đã giao', 'Đã hủy'];
+          for (var tab in tabs) {
+            if (ref.exists(orderProvider(tab))) {
+              ref.read(orderProvider(tab).notifier).updateOrderInCache(updatedOrder);
+            }
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('✅ Thanh toán PayOS thành công!'), backgroundColor: Colors.green),
+          );
+          onSuccess?.call(updatedOrder);
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('❌ Không thể tạo mã QR PayOS. Vui lòng thử lại!'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
 }

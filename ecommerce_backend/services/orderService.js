@@ -4,6 +4,42 @@ import Product from '../models/productModel.js';
 import Voucher from '../models/voucherModel.js';
 import User from '../models/userModel.js';
 
+/**
+ * 🔄 Retry helper dành riêng cho MongoDB Transient Transaction Errors.
+ * WriteConflict (code 112) xảy ra khi 2 transaction tranh chấp cùng document.
+ * MongoDB khuyến nghị retry toàn bộ transaction thay vì throw ngững.
+ * @param {Function} txnFn - Hàm async chứa logic transaction, nhận vào session
+ * @param {number} maxRetries - Số lần retry tối đa (mặc định 3)
+ */
+const withRetry = async (txnFn, maxRetries = 3) => {
+  let attempt = 0;
+  while (attempt <= maxRetries) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const result = await txnFn(session);
+      await session.commitTransaction();
+      return result;
+
+    } catch (error) {
+      await session.abortTransaction();
+      const isTransient =
+        error.errorLabels?.includes('TransientTransactionError') ||
+        error.code === 112; // WriteConflict
+      if (isTransient && attempt < maxRetries) {
+        attempt++;
+        const backoffMs = 50 * Math.pow(2, attempt); // 100ms, 200ms, 400ms
+        console.warn(`⚠️ [Retry] WriteConflict - Thử lại lần ${attempt}/${maxRetries} sau ${backoffMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+      } else {
+        throw error;
+      }
+    } finally {
+      session.endSession();
+    }
+  }
+};
+
 // 📋 Lấy đơn hàng của user với tính năng phân trang
 export const getMyOrders = async (userId, { status, page = 1, limit = 10 }) => {
   // Build query
@@ -53,7 +89,7 @@ export const getOrderById = async (orderId, userId) => {
   return order
 }
 
-// ✨ Tạo đơn hàng mới (Áp dụng Transaction & Atomic Updates)
+// ✨ Tạo đơn hàng mới (Áp dụng Transaction & Atomic Updates + Retry)
 export const processCreateOrder = async (userId, { orderItems, paymentMethod, userInfo, voucherCode }) => {
   console.log('\n📦 ========== BẮT ĐẦU TẠO ĐƠN HÀNG (SERVICE) ==========')
   // 1. Validate input
@@ -75,11 +111,8 @@ export const processCreateOrder = async (userId, { orderItems, paymentMethod, us
     throw new Error('Không tìm thấy người dùng')
   }
 
-  // KHỞI TẠO TRANSACTION
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
+  // KHỞI CHẠY TRANSACTION VỚI RETRY
+  return withRetry(async (session) => {
     const processedOrderItems = []
     let itemsPrice = 0
 
@@ -113,7 +146,7 @@ export const processCreateOrder = async (userId, { orderItems, paymentMethod, us
       );
 
       if (!updatedProduct) {
-        // Lỗi này xảy ra khi hết kho (không thỏa mãn $gte: quantity) hoặc gửi sai thông tin size/color
+        // Lỗi này xảy ra khi hết kho (không thỏa mãn $gte: quantity) hoặc gử sai thông tin size/color
         throw new Error(`Sản phẩm ${productId} (${color} - ${size}) không tồn tại, ngưng bán hoặc KHÔNG ĐỦ SỐ LƯỢNG KHO!`);
       }
 
@@ -152,7 +185,7 @@ export const processCreateOrder = async (userId, { orderItems, paymentMethod, us
         {
           $inc: { usageLimit: -1 }
         },
-        { session, new: true } 
+        { session, new: true }
       );
 
       if (!voucher) {
@@ -173,7 +206,7 @@ export const processCreateOrder = async (userId, { orderItems, paymentMethod, us
     }
 
     // 5. Create order
-    const shippingPrice = 20000 
+    const shippingPrice = 20000
     const totalPrice = itemsPrice + shippingPrice - voucherData.discountAmount
 
     const order = new Order({
@@ -189,35 +222,25 @@ export const processCreateOrder = async (userId, { orderItems, paymentMethod, us
       shippingPrice,
       voucher: voucherData,
       totalPrice,
-      isPaid: false 
+      isPaid: false
     })
 
-    await order.save({ session }); 
+    await order.save({ session });
 
     // Update soldCount 
     for (const item of processedOrderItems) {
       await Product.findByIdAndUpdate(
-        item.product, 
+        item.product,
         { $inc: { soldCount: item.variant.quantity } },
         { session }
       )
     }
 
-    // NẾU CHẠY ĐẾN ĐÂY KHÔNG LỖI -> COMMIT
-    await session.commitTransaction(); 
     console.log(`✅ ========== ĐẶT HÀNG THÀNH CÔNG ==========`)
-
     return { order, itemsPrice, shippingPrice, voucherData, totalPrice };
-
-  } catch (error) {
-    // CÓ BẤT KỲ LỖI NÀO (KỂ CẢ THROW) -> ROLLBACK
-    console.log(`❌ Rollback Transaction vì lỗi: ${error.message}`)
-    await session.abortTransaction(); 
-    throw error;
-  } finally {
-    session.endSession();
-  }
+  });
 }
+
 
 // ✅ Xác nhận đã nhận hàng
 export const processConfirmReceived = async (orderId, userId) => {
@@ -278,7 +301,7 @@ export const processCancelOrder = async (orderId, userId) => {
     // Hoàn trả tồn kho bằng Atomic Updates
     for (const item of order.orderItems) {
       await Product.findOneAndUpdate(
-        { 
+        {
           _id: item.product,
           'colorVariants.color': item.variant.color,
           'colorVariants.sizes.size': item.variant.size
