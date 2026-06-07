@@ -20,7 +20,6 @@ const withRetry = async (txnFn, maxRetries = 3) => {
       const result = await txnFn(session);
       await session.commitTransaction();
       return result;
-
     } catch (error) {
       await session.abortTransaction();
       const isTransient =
@@ -40,7 +39,15 @@ const withRetry = async (txnFn, maxRetries = 3) => {
   }
 };
 
-// 📋 Lấy đơn hàng của user với tính năng phân trang
+/**
+ * 📋 Lấy đơn hàng của user với tính năng phân trang
+ * @param {string} userId - ID của người dùng sở hữu các đơn hàng
+ * @param {object} queryParams - Tham số phân trang và bộ lọc { status, page, limit }
+ * @param {string} queryParams.status - Trạng thái đơn hàng cần lọc (hỗ trợ phân tách bằng dấu phẩy)
+ * @param {number} queryParams.page - Số trang hiện tại
+ * @param {number} queryParams.limit - Số lượng đơn hàng mỗi trang
+ * @returns {Promise<object>} Đối tượng chứa danh sách đơn hàng và thông tin phân trang
+ */
 export const getMyOrders = async (userId, { status, page = 1, limit = 10 }) => {
   // Build query
   const query = { user: userId }
@@ -73,7 +80,12 @@ export const getMyOrders = async (userId, { status, page = 1, limit = 10 }) => {
   }
 }
 
-// 📦 Lấy chi tiết đơn hàng theo ID
+/**
+ * 📦 Lấy chi tiết đơn hàng theo ID
+ * @param {string} orderId - ID của đơn hàng cần lấy chi tiết
+ * @param {string} userId - ID của người dùng gửi yêu cầu (để kiểm tra quyền xem)
+ * @returns {Promise<object>} Đối tượng đơn hàng
+ */
 export const getOrderById = async (orderId, userId) => {
   const order = await Order.findById(orderId)
 
@@ -82,14 +94,22 @@ export const getOrderById = async (orderId, userId) => {
   }
 
   // Check if order belongs to user
-  if (order.user._id.toString() !== userId) {
+  if (order.user.toString() !== userId) {
     throw new Error('Bạn không có quyền xem đơn hàng này')
   }
-
   return order
 }
 
-// ✨ Tạo đơn hàng mới (Áp dụng Transaction & Atomic Updates + Retry)
+/**
+ * ✨ Tạo đơn hàng mới (Áp dụng Transaction & Atomic Updates + Retry)
+ * @param {string} userId - ID của người dùng mua hàng
+ * @param {object} orderData - Dữ liệu đơn hàng gửi lên { orderItems, paymentMethod, userInfo, voucherCode }
+ * @param {array} orderData.orderItems - Danh sách sản phẩm mua
+ * @param {string} orderData.paymentMethod - Phương thức thanh toán (COD, VNPay...)
+ * @param {object} orderData.userInfo - Thông tin người nhận
+ * @param {string} orderData.voucherCode - Mã giảm giá áp dụng
+ * @returns {Promise<object>} Kết quả tạo đơn hàng gồm thông tin chi tiết và chi phí
+ */
 export const processCreateOrder = async (userId, { orderItems, paymentMethod, userInfo, voucherCode }) => {
   console.log('\n📦 ========== BẮT ĐẦU TẠO ĐƠN HÀNG (SERVICE) ==========')
   // 1. Validate input
@@ -242,7 +262,12 @@ export const processCreateOrder = async (userId, { orderItems, paymentMethod, us
 }
 
 
-// ✅ Xác nhận đã nhận hàng
+/**
+ * ✅ Xác nhận đã nhận hàng
+ * @param {string} orderId - ID của đơn hàng cần xác nhận
+ * @param {string} userId - ID của người dùng thực hiện (để check quyền)
+ * @returns {Promise<object>} Đơn hàng đã được xác nhận thành công
+ */
 export const processConfirmReceived = async (orderId, userId) => {
   const order = await Order.findById(orderId)
 
@@ -277,7 +302,12 @@ export const processConfirmReceived = async (orderId, userId) => {
   return order;
 }
 
-// ❌ Hủy đơn hàng (Hoàn kho bằng Transaction & Atomic)
+/**
+ * ❌ Hủy đơn hàng (Hoàn kho bằng Transaction & Atomic + Retry)
+ * @param {string} orderId - ID của đơn hàng cần hủy
+ * @param {string} userId - ID của người dùng thực hiện (để check quyền)
+ * @returns {Promise<object>} Đơn hàng đã được hủy thành công
+ */
 export const processCancelOrder = async (orderId, userId) => {
   const order = await Order.findById(orderId)
 
@@ -294,12 +324,19 @@ export const processCancelOrder = async (orderId, userId) => {
     throw new Error(`Không thể hủy đơn hàng ở trạng thái "${order.status}"`)
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  return withRetry(async (session) => {
+    // Phải lấy lại thông tin đơn hàng bên trong session để đảm bảo tính nhất quán dữ liệu
+    const sessionOrder = await Order.findById(orderId).session(session);
+    if (!sessionOrder) {
+      throw new Error('Không tìm thấy đơn hàng');
+    }
 
-  try {
+    if (!cancellableStatuses.includes(sessionOrder.status)) {
+      throw new Error(`Không thể hủy đơn hàng ở trạng thái "${sessionOrder.status}"`);
+    }
+
     // Hoàn trả tồn kho bằng Atomic Updates
-    for (const item of order.orderItems) {
+    for (const item of sessionOrder.orderItems) {
       await Product.findOneAndUpdate(
         {
           _id: item.product,
@@ -316,16 +353,14 @@ export const processCancelOrder = async (orderId, userId) => {
       );
     }
 
-    order.status = 'Đã hủy';
-    await order.save({ session }); // Lưu trạng thái Hủy trong transaction
-
-    await session.commitTransaction();
-    return order;
-
-  } catch (error) {
-    await session.abortTransaction();
-    throw error;
-  } finally {
-    session.endSession();
-  }
+    sessionOrder.status = 'Đã hủy';
+    sessionOrder.statusHistory.push({
+      status: 'Đã hủy',
+      note: 'Người dùng yêu cầu hủy đơn hàng',
+      updatedAt: new Date()
+    });
+    await sessionOrder.save({ session }); // Lưu trạng thái Hủy trong transaction
+    
+    return sessionOrder;
+  });
 }

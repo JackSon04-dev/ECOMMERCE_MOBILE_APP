@@ -21,6 +21,7 @@ import userVoucherRoutes from './routes/user/voucherRoutes.js'
 import userPaymentRoutes from './routes/user/paymentRoutes.js'
 import userNotificationRoutes from './routes/user/notificationRoute.js'
 import userCartRoutes from './routes/user/cartRoutes.js'
+import { globalLimiter } from './middleware/rateLimitMiddleware.js'
 
 // Cau hinh bien moi truong
 dotenv.config()
@@ -28,9 +29,13 @@ dotenv.config()
 // Tao app Express
 const app = express()
 
+// Tin tưởng proxy (Nginx) để lấy IP thực của client
+app.set('trust proxy', 1)
+
 // Middleware
 app.use(express.json())
 app.use(cors())
+app.use(globalLimiter)
 
 // Ket noi DB
 connectDB()

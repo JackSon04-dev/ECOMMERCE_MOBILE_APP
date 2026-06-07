@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # 1. Redis Caching Service (Chạy nội bộ trong Docker Compose)
+  redis:
+    image: redis:7-alpine
+    container_name: local_redis
+    networks:
+      - ecommerce_local_net
+
+  # 2. Backend Express.js
+  backend:
+    build:
+      context: ./ecommerce_backend
+      dockerfile: Dockerfile
+    container_name: local_backend
+    env_file:
+      - ./ecommerce_backend/.env
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - ecommerce_local_net
+
+  # 3. Chatbot AI FastAPI
+  chatbot:
+    build:
+      context: ./chatbotAI
+      dockerfile: Dockerfile
+    container_name: local_chatbot
+    networks:
+      - ecommerce_local_net
+
+  # 4. Static Admin Web Panel Vue 3 (Chạy cổng 80, ghi đè cấu hình local Nginx)
+  admin_web:
+    build:
+      context: ./ecommerce_admin_FE
+      dockerfile: Dockerfile
+    container_name: local_admin_web
+    ports:
+      - "80:80"
+    volumes:
+      # Ghi đè file default.conf của nginx trong container bằng cấu hình local không SSL
+      - ./ecommerce_admin_FE/nginx.local.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+      - chatbot
+    networks:
+      - ecommerce_local_net
+
+networks:
+  ecommerce_local_net:
+    driver: bridge

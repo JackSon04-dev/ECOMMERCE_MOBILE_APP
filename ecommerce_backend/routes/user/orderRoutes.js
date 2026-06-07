@@ -7,6 +7,13 @@ import {
   confirmReceived
 } from '../../controllers/user/orderController.js'
 import { verifyToken } from '../../middleware/authMiddleware.js'
+import { validate } from '../../middleware/validationMiddleware.js'
+import {
+  getMyOrdersSchema,
+  getOrderByIdSchema,
+  createOrderSchema,
+  orderActionSchema
+} from '../../validations/userValidation.js'
 
 const router = express.Router()
 
@@ -14,19 +21,18 @@ const router = express.Router()
 router.use(verifyToken)
 
 // 📋 Lấy tất cả đơn hàng của user (có thể filter theo status)
-// Query: ?status=Chờ xác nhận
-router.get('/my-orders', getMyOrders)
+router.get('/my-orders', validate(getMyOrdersSchema), getMyOrders)
 
 // ✨ Tạo đơn hàng mới
-router.post('/', createOrder)
+router.post('/', validate(createOrderSchema), createOrder)
 
 // 📦 Lấy chi tiết đơn hàng theo ID
-router.get('/:id', getOrderById)
+router.get('/:id', validate(getOrderByIdSchema), getOrderById)
 
 // ❌ Hủy đơn hàng
-router.patch('/:id/cancel', cancelOrder)
+router.patch('/:id/cancel', validate(orderActionSchema), cancelOrder)
 
 // ✅ Xác nhận đã nhận hàng
-router.patch('/:id/confirm-received', confirmReceived)
+router.patch('/:id/confirm-received', validate(orderActionSchema), confirmReceived)
 
 export default router
