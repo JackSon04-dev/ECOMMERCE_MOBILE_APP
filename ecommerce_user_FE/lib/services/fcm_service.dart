@@ -9,6 +9,8 @@ import 'package:provider/provider.dart' as legacy_provider;
 import '../config/route_generator.dart';
 import '../config/routes.dart';
 import '../providers/notification_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/auth_provider.dart';
 import 'api_service.dart';
 import 'auth_service.dart';
 
@@ -32,7 +34,7 @@ class FcmService {
   // Hàng đợi lưu thông báo khi app mở từ terminated và context chưa sẵn sàng
   static Map<String, dynamic>? pendingNotification;
 
-  static void handleNotificationTap(Map<String, dynamic> data) {
+  static void handleNotificationTap(Map<String, dynamic> data) async {
     debugPrint('🔔 [FCM] Handling notification tap: $data');
     final context = RouteGenerator.navigatorKey.currentContext;
     if (context == null) {
@@ -44,6 +46,29 @@ class FcmService {
     final type = data['type'];
     final referenceId = data['referenceId'];
     final notificationId = data['notificationId'];
+
+    // Kiểm tra đăng nhập trước khi xem chi tiết
+    try {
+      final container = ProviderScope.containerOf(context);
+      final isLoggedIn = container.read(authProvider).isLoggedIn;
+      
+      if (!isLoggedIn) {
+        debugPrint('🔑 [FCM] User not logged in, redirecting to LoginScreen first');
+        final loggedIn = await RouteGenerator.navigatorKey.currentState?.pushNamed(AppRoutes.login);
+        if (loggedIn != true) {
+          debugPrint('🔑 [FCM] Login canceled, aborting navigation to details');
+          return;
+        }
+        // Đăng nhập thành công -> Fetch lại danh sách thông báo để cập nhật UI
+        try {
+          legacy_provider.Provider.of<NotificationProvider>(context, listen: false).fetchNotifications();
+        } catch (e) {
+          debugPrint('❌ [FCM] Error fetching notifications after login: $e');
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ [FCM] Error checking auth status or redirecting: $e');
+    }
 
     if (notificationId != null && notificationId.toString().isNotEmpty) {
       try {

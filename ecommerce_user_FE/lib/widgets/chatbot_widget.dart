@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import '../utils/currency_helper.dart';
 import '../services/chatbot_service.dart';
 import '../screens/user/products/product_detail_page.dart'; // Đảm bảo đúng đường dẫn
 
@@ -59,10 +59,6 @@ class _ChatbotWidgetState extends State<ChatbotWidget> {
         );
       }
     });
-  }
-
-  String _formatCurrency(double amount) {
-    return NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0).format(amount);
   }
 
   @override
@@ -239,7 +235,7 @@ class _ChatbotWidgetState extends State<ChatbotWidget> {
                                 children: [
                                   Text(product.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                   const SizedBox(height: 4),
-                                  Text(_formatCurrency(product.price), style: const TextStyle(fontSize: 12, color: Color(0xFFFF6B35), fontWeight: FontWeight.bold)),
+                                  Text(product.price.toVND(), style: const TextStyle(fontSize: 12, color: Color(0xFFFF6B35), fontWeight: FontWeight.bold)),
                                 ],
                               ),
                             )

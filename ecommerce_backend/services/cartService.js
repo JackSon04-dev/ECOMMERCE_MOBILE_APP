@@ -1,4 +1,5 @@
 import Cart from '../models/cartModel.js';
+import { ApiError } from '../middleware/errorMiddleware.js';
 
 /**
  * 🛒 Lấy giỏ hàng của User và tự động check Stock (Tồn kho thực tế)
@@ -111,7 +112,7 @@ export const updateCart = async (userId, payload) => {
   } else if (payload.productId) {
     itemsToUpdate = [payload];
   } else {
-    throw new Error('Dữ liệu không hợp lệ.');
+    throw new ApiError(400, 'Dữ liệu không hợp lệ.');
   }
 
   // 1. Tìm giỏ hàng hiện tại hoặc tạo mới

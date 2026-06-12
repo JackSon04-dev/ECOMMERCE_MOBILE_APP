@@ -4,6 +4,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../config/routes.dart';
 import '../../../models/user_model.dart';
 import '../../../services/user_service.dart';
+import '../../../widgets/common_widgets.dart';
 
 
 /// 👤 Profile Page - Trang tài khoản
@@ -153,7 +154,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B35)))
+          ? const LoadingWidget()
           : RefreshIndicator(
               onRefresh: _loadUserInfo,
               color: const Color(0xFFFF6B35),

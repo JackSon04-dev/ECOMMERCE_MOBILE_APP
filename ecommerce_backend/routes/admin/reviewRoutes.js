@@ -1,7 +1,10 @@
 import express from 'express'
 import * as reviewController from '../../controllers/admin/reviewController.js'
+import { verifyToken, restrictToRoles } from '../../middleware/authMiddleware.js'
 
 const router = express.Router()
+
+router.use(verifyToken, restrictToRoles(['ADMIN']))
 
 // Quản lý reviews:
 

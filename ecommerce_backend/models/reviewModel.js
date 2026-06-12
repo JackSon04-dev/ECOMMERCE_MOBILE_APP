@@ -44,7 +44,6 @@ const reviewSchema = new mongoose.Schema(
 
 // Index để tăng hiệu suất truy vấn
 reviewSchema.index({ product: 1, createdAt: -1 })
-reviewSchema.index({ user: 1 })
 
 // Đảm bảo một user chỉ review một product một lần trên mỗi đơn hàng
 reviewSchema.index({ user: 1, product: 1, order: 1 }, { unique: true })

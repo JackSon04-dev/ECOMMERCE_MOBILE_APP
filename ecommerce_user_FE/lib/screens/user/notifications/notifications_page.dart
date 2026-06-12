@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
+import '../../../utils/date_helper.dart';
 import '../../../models/notification_model.dart';
 import '../../../providers/notification_provider.dart';
 import '../../../widgets/common_widgets.dart';
@@ -45,22 +45,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
         return Colors.green;
       default:
         return Colors.grey;
-    }
-  }
-
-  String _formatTime(DateTime? dateTime) {
-    if (dateTime == null) return '';
-    final now = DateTime.now();
-    final diff = now.difference(dateTime);
-
-    if (diff.inMinutes < 60) {
-      return '${diff.inMinutes} phút trước';
-    } else if (diff.inHours < 24) {
-      return '${diff.inHours} giờ trước';
-    } else if (diff.inDays < 7) {
-      return '${diff.inDays} ngày trước';
-    } else {
-      return DateFormat('dd/MM/yyyy').format(dateTime);
     }
   }
 
@@ -405,7 +389,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _formatTime(notification.createdAt),
+                    DateHelper.formatTimeAgo(notification.createdAt),
                     style: TextStyle(
                       fontSize: 11,
                       color: Colors.grey[400],

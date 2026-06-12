@@ -1,9 +1,10 @@
 import express from 'express'
 import * as dashboardController from '../../controllers/admin/dashboardController.js'
+import { verifyToken, restrictToRoles } from '../../middleware/authMiddleware.js'
 
 const router = express.Router()
 
-// Dashboard routes
+router.use(verifyToken, restrictToRoles(['ADMIN']))
 
 // Tổng quan tài chính
 router.get('/financial-overview', dashboardController.getFinancialOverview)

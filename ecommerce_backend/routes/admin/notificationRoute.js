@@ -1,7 +1,10 @@
 import express from 'express'
 import { createNotification, getAllNotifications, deleteNotification } from '../../controllers/admin/notificationController.js'
+import { verifyToken, restrictToRoles } from '../../middleware/authMiddleware.js'
 
 const router = express.Router()
+
+router.use(verifyToken, restrictToRoles(['ADMIN']))
 
 // Route: POST /api/admin/notifications
 router.post('/', createNotification)

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import '../../../utils/currency_helper.dart';
 import '../../../models/product_model.dart';
 import '../../../models/review_model.dart';
 import '../../../services/product_service.dart';
@@ -8,12 +8,12 @@ import '../../../providers/cart_provider.dart';
 import '../../../utils/auth_guard.dart';
 import '../../../utils/date_helper.dart';
 import '../../../widgets/common_widgets.dart';
-import '../../../widgets/add_to_cart_animation.dart';
 import '../../../widgets/size_guide_sheet.dart';
 import '../../../widgets/product_card_widget.dart';
 import '../../../widgets/add_to_cart_bottom_sheet.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../utils/scroll_pagination_mixin.dart';
 
 /// 📦 Product Detail Page - Trang chi tiết sản phẩm
 class ProductDetailPage extends ConsumerStatefulWidget {
@@ -26,7 +26,7 @@ class ProductDetailPage extends ConsumerStatefulWidget {
   ConsumerState<ProductDetailPage> createState() => _ProductDetailPageState();
 }
 
-class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
+class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with ScrollPaginationMixin<ProductDetailPage> {
   Product? _product;
   List<ReviewModel> _reviews = [];
   bool _isLoading = true;
@@ -38,11 +38,21 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   bool _showAllReviews = false;
   List<Product> _allProducts = [];
 
+  // Recommended products pagination fields
+  bool _hasMoreProducts = true;
+  bool _isLoadingMore = false;
+  String? _lastProductId;
+
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
     _loadProduct();
+  }
+
+  @override
+  void onScrollThresholdReached() {
+    _loadMoreProducts();
   }
 
   @override
@@ -65,7 +75,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
       if (product != null && product.tags.isNotEmpty) {
         filterTag = product.tags.first; // Lấy tag đầu tiên làm danh mục (ví dụ: 'Áo thun', 'Quần')
       }
-      final allProducts = await ProductService.getAllProducts(tag: filterTag);
+      final allProducts = await ProductService.getAllProducts(tag: filterTag, limit: 20);
       
       // Loại bỏ chính sản phẩm hiện tại ra khỏi danh sách gợi ý
       if (product != null) {
@@ -86,6 +96,10 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
               ? product.colorVariants.first.sizes.first.size
               : null;
           _allProducts = allProducts;
+          _hasMoreProducts = allProducts.length >= 20;
+          if (allProducts.isNotEmpty) {
+            _lastProductId = allProducts.last.id;
+          }
           _isLoading = false;
         });
       } else {
@@ -101,6 +115,41 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
         _reviews = []; // Không dùng demo reviews
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadMoreProducts() async {
+    if (_isLoadingMore || !_hasMoreProducts || _lastProductId == null) return;
+
+    setState(() => _isLoadingMore = true);
+
+    try {
+      String? filterTag;
+      if (_product != null && _product!.tags.isNotEmpty) {
+        filterTag = _product!.tags.first;
+      }
+      final newProducts = await ProductService.getAllProducts(
+        tag: filterTag,
+        lastId: _lastProductId,
+        limit: 20,
+      );
+
+      // Loại bỏ chính sản phẩm hiện tại ra khỏi danh sách gợi ý
+      if (_product != null) {
+        newProducts.removeWhere((p) => p.id == _product!.id);
+      }
+
+      setState(() {
+        _allProducts.addAll(newProducts);
+        _hasMoreProducts = newProducts.length >= 20;
+        if (newProducts.isNotEmpty) {
+          _lastProductId = newProducts.last.id;
+        }
+        _isLoadingMore = false;
+      });
+    } catch (e) {
+      print('❌ [ProductDetail] Load more recommendations error: $e');
+      setState(() => _isLoadingMore = false);
     }
   }
 
@@ -147,15 +196,6 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     );
   }
 
-
-  String _formatCurrency(double amount) {
-    final formatter = NumberFormat.currency(
-      locale: 'vi_VN',
-      symbol: '₫',
-      decimalDigits: 0,
-    );
-    return formatter.format(amount);
-  }
 
   // Map để lưu thông tin màu của từng ảnh
   final Map<String, String> _imageColorMap = {};
@@ -303,6 +343,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
           : _product == null
               ? const ErrorDisplayWidget(message: 'Không tìm thấy sản phẩm')
               : CustomScrollView(
+                  controller: scrollController,
                   slivers: [
                     // App Bar with image
                     _buildSliverAppBar(),
@@ -321,6 +362,15 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                           _buildReviews(),
                           const SizedBox(height: 20),
                           _buildAllProductsGrid(),
+                          if (_isLoadingMore)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF6B35)),
+                                ),
+                              ),
+                            ),
                           const SizedBox(height: 100),
                         ],
                       ),
@@ -511,7 +561,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                _formatCurrency(_product!.finalPrice),
+                _product!.finalPrice.toVND(),
                 style: const TextStyle(
                   color: Color(0xFFFF6B35),
                   fontSize: 26,
@@ -521,7 +571,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
               if (_product!.discount > 0) ...[
                 const SizedBox(width: 12),
                 Text(
-                  _formatCurrency(_product!.price),
+                  _product!.price.toVND(),
                   style: const TextStyle(
                     color: Colors.grey,
                     fontSize: 16,
@@ -966,42 +1016,12 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
             ),
           ),
           const Spacer(),
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey[300]!),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.remove),
-                  onPressed: _quantity > 1
-                      ? () => setState(() => _quantity--)
-                      : null,
-                  color: _quantity > 1 ? Colors.black87 : Colors.grey,
-                ),
-                Container(
-                  width: 50,
-                  alignment: Alignment.center,
-                  child: Text(
-                    '$_quantity',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: (_currentStock > 0 && _quantity < _currentStock)
-                      ? () => setState(() => _quantity++)
-                      : null,
-                  color: (_currentStock > 0 && _quantity < _currentStock)
-                      ? Colors.black87
-                      : Colors.grey,
-                ),
-              ],
-            ),
+          QuantitySelector(
+            quantity: _quantity,
+            maxStock: _currentStock,
+            large: true,
+            snackBarContext: context,
+            onChanged: (newQty) => setState(() => _quantity = newQty),
           ),
         ],
       ),

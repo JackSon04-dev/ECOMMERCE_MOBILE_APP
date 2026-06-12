@@ -3,9 +3,11 @@ import {
   getAllUsers,
   updateUserStatus
 } from '../../controllers/admin/userController.js'
-import { verifyToken } from '../../middleware/authMiddleware.js'
+import { verifyToken, restrictToRoles } from '../../middleware/authMiddleware.js'
 
 const router = express.Router()
+
+router.use(verifyToken, restrictToRoles(['ADMIN']))
 
 // GET /api/admin/users - Lấy danh sách tất cả users
 router.get('/', getAllUsers)

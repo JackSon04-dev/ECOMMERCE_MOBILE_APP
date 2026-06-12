@@ -76,7 +76,9 @@ export const getAllProductsSchema = Joi.object({
   query: Joi.object({
     tag: Joi.string().allow('', null),
     sortBy: Joi.string().valid('newest', 'price_asc', 'price-asc', 'price_desc', 'price-desc', 'best_selling', 'best-selling').allow('', null),
-    search: Joi.string().allow('', null)
+    search: Joi.string().allow('', null),
+    lastId: Joi.string().regex(/^[0-9a-fA-F]{24}$/).allow('', null),
+    limit: Joi.number().integer().min(1).max(100).default(20)
   })
 });
 
@@ -143,10 +145,18 @@ export const createOrderSchema = Joi.object({
   body: Joi.object({
     orderItems: Joi.array().items(
       Joi.object({
-        product: objectId.required(),
-        color: Joi.string().required(),
-        size: Joi.string().required(),
-        quantity: Joi.number().integer().min(1).required()
+        productId: objectId.required().messages({
+          'any.required': 'ID sản phẩm là bắt buộc.'
+        }),
+        color: Joi.string().required().messages({
+          'any.required': 'Màu sắc là bắt buộc.'
+        }),
+        size: Joi.string().required().messages({
+          'any.required': 'Kích cỡ là bắt buộc.'
+        }),
+        quantity: Joi.number().integer().min(1).required().messages({
+          'any.required': 'Số lượng là bắt buộc.'
+        })
       })
     ).min(1).required().messages({
       'array.min': 'Đơn hàng phải có ít nhất 1 sản phẩm.'
@@ -155,10 +165,10 @@ export const createOrderSchema = Joi.object({
       'any.only': 'Phương thức thanh toán không hợp lệ.'
     }),
     userInfo: Joi.object({
-      name: Joi.string().trim().required().messages({
+      username: Joi.string().trim().required().messages({
         'any.required': 'Tên người nhận là bắt buộc.'
       }),
-      phone: Joi.string().trim().required().messages({
+      phoneNumber: Joi.string().trim().required().messages({
         'any.required': 'Số điện thoại nhận hàng là bắt buộc.'
       }),
       address: Joi.string().trim().required().messages({

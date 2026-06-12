@@ -5,14 +5,12 @@ const userSchema = new mongoose.Schema({
   username: {
     type: String,
     required: true,
-    unique: true,
     trim: true,
     minlength: 3
   },
   email: {
     type: String,
     required: true,
-    unique: true,
     trim: true,
     lowercase: true,
     match: [/^\S+@\S+\.\S+$/, 'Email không hợp lệ']
@@ -72,6 +70,9 @@ const userSchema = new mongoose.Schema({
     default: Date.now
   }
 })
+
+// Thiết lập chỉ mục (Indexes) để tối ưu hiệu năng truy vấn
+userSchema.index({ email: 1 }, { unique: true })
 
 const User = mongoose.model('User', userSchema)
 export default User

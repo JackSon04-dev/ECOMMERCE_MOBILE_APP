@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import '../../../utils/currency_helper.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../services/payment_service.dart';
@@ -189,7 +189,7 @@ class _PayosPaymentPageState extends State<PayosPaymentPage> with WidgetsBinding
                     children: [
                       const Text('Số tiền:', style: TextStyle(color: Colors.grey, fontSize: 16)),
                       Text(
-                        NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0).format(widget.amount),
+                        widget.amount.toVND(),
                         style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,

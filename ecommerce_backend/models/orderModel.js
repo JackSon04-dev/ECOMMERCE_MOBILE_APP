@@ -124,5 +124,10 @@ orderSchema.pre('save', function (next) {
   next()
 })
 
+// Thiết lập chỉ mục (Indexes) để tối ưu hiệu năng truy vấn
+orderSchema.index({ user: 1 })
+orderSchema.index({ payosOrderCode: 1 })
+
+
 const Order = mongoose.model('Order', orderSchema)
 export default Order

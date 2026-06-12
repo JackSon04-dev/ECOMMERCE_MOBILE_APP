@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import '../../../utils/currency_helper.dart';
 import '../../../config/routes.dart';
 import '../../../models/product_model.dart';
 import '../../../widgets/custom_app_bar.dart';
@@ -160,15 +160,6 @@ class _HomePageState extends ConsumerState<HomePage> {
         soldCount: 280,
       ),
     ];
-  }
-
-  String _formatCurrency(double amount) {
-    final formatter = NumberFormat.currency(
-      locale: 'vi_VN',
-      symbol: '₫',
-      decimalDigits: 0,
-    );
-    return formatter.format(amount);
   }
 
   void _goToCart() {
@@ -362,7 +353,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  _formatCurrency(product.finalPrice),
+                                  product.finalPrice.toVND(),
                                   style: const TextStyle(
                                     color: Color(0xFFFF6B35),
                                     fontSize: 11,

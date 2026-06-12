@@ -4,8 +4,11 @@ import {
   createVoucher,
   updateVoucher
 } from '../../controllers/admin/voucherController.js'
+import { verifyToken, restrictToRoles } from '../../middleware/authMiddleware.js'
 
 const router = express.Router()
+
+router.use(verifyToken, restrictToRoles(['ADMIN']))
 
 // GET /api/admin/vouchers - Lấy danh sách tất cả vouchers
 router.get('/', getAllVouchers)

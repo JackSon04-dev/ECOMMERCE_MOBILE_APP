@@ -3,6 +3,7 @@ import Order from '../models/orderModel.js';
 import Product from '../models/productModel.js';
 import Voucher from '../models/voucherModel.js';
 import User from '../models/userModel.js';
+import { ApiError } from '../middleware/errorMiddleware.js';
 
 /**
  * 🔄 Retry helper dành riêng cho MongoDB Transient Transaction Errors.
@@ -90,12 +91,12 @@ export const getOrderById = async (orderId, userId) => {
   const order = await Order.findById(orderId)
 
   if (!order) {
-    throw new Error('Không tìm thấy đơn hàng')
+    throw new ApiError(404, 'Không tìm thấy đơn hàng')
   }
 
   // Check if order belongs to user
   if (order.user.toString() !== userId) {
-    throw new Error('Bạn không có quyền xem đơn hàng này')
+    throw new ApiError(403, 'Bạn không có quyền xem đơn hàng này')
   }
   return order
 }
@@ -110,25 +111,25 @@ export const getOrderById = async (orderId, userId) => {
  * @param {string} orderData.voucherCode - Mã giảm giá áp dụng
  * @returns {Promise<object>} Kết quả tạo đơn hàng gồm thông tin chi tiết và chi phí
  */
-export const processCreateOrder = async (userId, { orderItems, paymentMethod, userInfo, voucherCode }) => {
+export const processCreateOrder = async (userId, { orderItems, paymentMethod, userInfo, voucherCode }, preAllocatedId) => {
   console.log('\n📦 ========== BẮT ĐẦU TẠO ĐƠN HÀNG (SERVICE) ==========')
   // 1. Validate input
   if (!orderItems || orderItems.length === 0) {
-    throw new Error('Đơn hàng phải có ít nhất 1 sản phẩm')
+    throw new ApiError(400, 'Đơn hàng phải có ít nhất 1 sản phẩm')
   }
 
   if (!paymentMethod || !['COD', 'VNPay', 'ZaloPay', 'PayOS'].includes(paymentMethod)) {
-    throw new Error('Phương thức thanh toán không hợp lệ')
+    throw new ApiError(400, 'Phương thức thanh toán không hợp lệ')
   }
 
   if (!userInfo || !userInfo.username || !userInfo.address || !userInfo.phoneNumber) {
-    throw new Error('Thông tin người nhận không đầy đủ')
+    throw new ApiError(400, 'Thông tin người nhận không đầy đủ')
   }
 
   // 2. Get user info
   const user = await User.findById(userId)
   if (!user) {
-    throw new Error('Không tìm thấy người dùng')
+    throw new ApiError(404, 'Không tìm thấy người dùng')
   }
 
   // KHỞI CHẠY TRANSACTION VỚI RETRY
@@ -138,10 +139,11 @@ export const processCreateOrder = async (userId, { orderItems, paymentMethod, us
 
     // 3. Process order items và Atomic Update stock
     for (const item of orderItems) {
+      // productId khớp với field Flutter gửi lên và Joi schema validate
       const { productId, color, size, quantity } = item
 
       if (!productId || !color || !size || !quantity) {
-        throw new Error('Thông tin sản phẩm không đầy đủ (cần productId, color, size, quantity)')
+        throw new ApiError(400, 'Thông tin sản phẩm không đầy đủ (cần productId, color, size, quantity)')
       }
 
       console.log(`📦 Đang kiểm tra & trừ kho: [${productId}] ${color} - ${size} (Số lượng: ${quantity})`)
@@ -167,7 +169,7 @@ export const processCreateOrder = async (userId, { orderItems, paymentMethod, us
 
       if (!updatedProduct) {
         // Lỗi này xảy ra khi hết kho (không thỏa mãn $gte: quantity) hoặc gử sai thông tin size/color
-        throw new Error(`Sản phẩm ${productId} (${color} - ${size}) không tồn tại, ngưng bán hoặc KHÔNG ĐỦ SỐ LƯỢNG KHO!`);
+        throw new ApiError(400, `Sản phẩm ${productId} (${color} - ${size}) không tồn tại, ngưng bán hoặc không đủ số lượng kho!`);
       }
 
       // Tìm lại thông tin variant chính xác từ document mới
@@ -209,12 +211,12 @@ export const processCreateOrder = async (userId, { orderItems, paymentMethod, us
       );
 
       if (!voucher) {
-        throw new Error('Mã voucher không hợp lệ, đã hết hạn hoặc hết lượt sử dụng');
+        throw new ApiError(400, 'Mã voucher không hợp lệ, đã hết hạn hoặc hết lượt sử dụng');
       }
 
       // Check min order amount, nếu lỗi thì Throw Error -> Transaction Rollback -> Lượt Voucher tự phục hồi
       if (itemsPrice < voucher.minOrderAmount) {
-        throw new Error(`Đơn hàng tối thiểu ${voucher.minOrderAmount.toLocaleString()}đ để áp dụng voucher này`);
+        throw new ApiError(400, `Đơn hàng tối thiểu ${voucher.minOrderAmount.toLocaleString()}đ để áp dụng voucher này`);
       }
 
       voucherData = {
@@ -230,6 +232,7 @@ export const processCreateOrder = async (userId, { orderItems, paymentMethod, us
     const totalPrice = itemsPrice + shippingPrice - voucherData.discountAmount
 
     const order = new Order({
+      _id: preAllocatedId || new mongoose.Types.ObjectId(),
       user: userId,
       userInfo: {
         username: userInfo.username,
@@ -272,16 +275,16 @@ export const processConfirmReceived = async (orderId, userId) => {
   const order = await Order.findById(orderId)
 
   if (!order) {
-    throw new Error('Không tìm thấy đơn hàng')
+    throw new ApiError(404, 'Không tìm thấy đơn hàng')
   }
 
   if (order.user.toString() !== userId) {
-    throw new Error('Bạn không có quyền xác nhận đơn hàng này')
+    throw new ApiError(403, 'Bạn không có quyền xác nhận đơn hàng này')
   }
 
   const confirmableStatuses = 'Đã giao'
   if (order.status !== confirmableStatuses) {
-    throw new Error(`Không thể xác nhận nhận hàng ở trạng thái "${order.status}"`)
+    throw new ApiError(400, `Không thể xác nhận nhận hàng ở trạng thái "${order.status}"`)
   }
 
   order.status = 'Thành công'
@@ -312,27 +315,27 @@ export const processCancelOrder = async (orderId, userId) => {
   const order = await Order.findById(orderId)
 
   if (!order) {
-    throw new Error('Không tìm thấy đơn hàng');
+    throw new ApiError(404, 'Không tìm thấy đơn hàng');
   }
 
   if (order.user.toString() !== userId) {
-    throw new Error('Bạn không có quyền hủy đơn hàng này')
+    throw new ApiError(403, 'Bạn không có quyền hủy đơn hàng này')
   }
 
   const cancellableStatuses = ['Chờ xác nhận', 'Đã xác nhận']
   if (!cancellableStatuses.includes(order.status)) {
-    throw new Error(`Không thể hủy đơn hàng ở trạng thái "${order.status}"`)
+    throw new ApiError(400, `Không thể hủy đơn hàng ở trạng thái "${order.status}"`)
   }
 
   return withRetry(async (session) => {
     // Phải lấy lại thông tin đơn hàng bên trong session để đảm bảo tính nhất quán dữ liệu
     const sessionOrder = await Order.findById(orderId).session(session);
     if (!sessionOrder) {
-      throw new Error('Không tìm thấy đơn hàng');
+      throw new ApiError(404, 'Không tìm thấy đơn hàng');
     }
 
     if (!cancellableStatuses.includes(sessionOrder.status)) {
-      throw new Error(`Không thể hủy đơn hàng ở trạng thái "${sessionOrder.status}"`);
+      throw new ApiError(400, `Không thể hủy đơn hàng ở trạng thái "${sessionOrder.status}"`);
     }
 
     // Hoàn trả tồn kho bằng Atomic Updates
@@ -360,7 +363,7 @@ export const processCancelOrder = async (orderId, userId) => {
       updatedAt: new Date()
     });
     await sessionOrder.save({ session }); // Lưu trạng thái Hủy trong transaction
-    
+
     return sessionOrder;
   });
 }

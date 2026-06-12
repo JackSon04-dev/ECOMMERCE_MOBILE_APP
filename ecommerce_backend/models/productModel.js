@@ -38,5 +38,10 @@ productSchema.pre('save', function (next) {
   next()
 })
 
+// Thiết lập chỉ mục (Index) cho tags và createdAt để phục vụ phân trang hiệu quả
+productSchema.index({ tags: 1 })
+productSchema.index({ createdAt: -1 })
+productSchema.index({ tags: 1, createdAt: -1 })
+
 const Product = mongoose.model('Product', productSchema)
 export default Product

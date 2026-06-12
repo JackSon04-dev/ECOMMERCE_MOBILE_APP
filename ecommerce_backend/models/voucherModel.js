@@ -9,7 +9,6 @@ const voucherSchema = new mongoose.Schema({
   voucherCode: {
     type: String,
     required: [true, 'Mã voucher là bắt buộc'],
-    unique: true,
     uppercase: true,
     trim: true
   },
@@ -31,12 +30,11 @@ const voucherSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
   }
-})
+}, { timestamps: true })
+
+// Thiết lập chỉ mục (Indexes) để tối ưu hiệu năng truy vấn
+voucherSchema.index({ voucherCode: 1 }, { unique: true })
 
 const Voucher = mongoose.model('Voucher', voucherSchema)
 export default Voucher

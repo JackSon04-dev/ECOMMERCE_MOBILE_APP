@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/routes.dart';
 import '../../providers/auth_provider.dart';
+import 'package:provider/provider.dart' as legacy_provider;
+import '../../providers/notification_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -34,6 +36,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       // get auth state
       final auth = ref.read(authProvider);
       if (auth.user != null) {
+        // Tải thông báo ngay khi đăng nhập để cập nhật UI
+        try {
+          legacy_provider.Provider.of<NotificationProvider>(context, listen: false).fetchNotifications();
+        } catch (e) {
+          debugPrint('❌ [Login] Error fetching notifications: $e');
+        }
+
         if (_isModal) {
           // Được mở từ auth guard → pop(true) trả kết quả về
           Navigator.pop(context, true);
@@ -63,6 +72,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (!mounted) return;
       final auth = ref.read(authProvider);
       if (auth.user != null) {
+        // Tải thông báo ngay khi đăng nhập để cập nhật UI
+        try {
+          legacy_provider.Provider.of<NotificationProvider>(context, listen: false).fetchNotifications();
+        } catch (e) {
+          debugPrint('❌ [Google Login] Error fetching notifications: $e');
+        }
+
         if (_isModal) {
           Navigator.pop(context, true);
         } else {

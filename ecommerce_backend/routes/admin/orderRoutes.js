@@ -6,8 +6,11 @@ import {
   updatePaymentStatus,
   getOrderStatistics
 } from '../../controllers/admin/orderController.js'
+import { verifyToken, restrictToRoles } from '../../middleware/authMiddleware.js'
 
 const router = express.Router()
+
+router.use(verifyToken, restrictToRoles(['ADMIN']))
 
 // GET /api/admin/orders/statistics - Thống kê đơn hàng (đặt trước /:id)
 router.get('/statistics', getOrderStatistics)

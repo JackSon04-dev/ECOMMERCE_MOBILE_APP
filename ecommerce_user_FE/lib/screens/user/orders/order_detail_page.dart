@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
-import '../../../config/routes.dart';
+import '../../../utils/currency_helper.dart';
 import '../../../models/order_model.dart';
-import '../../../providers/cart_provider.dart';
-import '../../../providers/order_provider.dart';
 import '../../../services/order_service.dart';
-import '../../../services/payment_service.dart';
 import '../../../utils/date_helper.dart';
 import '../../../widgets/common_widgets.dart';
-import '../../../widgets/reorder_result_sheet.dart';
 import '../../../widgets/order/order_action_buttons.dart';
+import '../../../widgets/order/order_action_helper.dart';
 
 /// 📦 Order Detail Page - Trang chi tiết đơn hàng
 class OrderDetailPage extends ConsumerStatefulWidget {
@@ -64,36 +60,8 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
     }
   }
 
-  String _formatCurrency(double amount) {
-    return NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(amount);
-  }
-
   String _formatDate(DateTime? date) {
     return DateHelper.formatDateTime(date);
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Chờ xác nhận': return Colors.orange;
-      case 'Đã xác nhận': return Colors.blue;
-      case 'Đang giao': return Colors.purple;
-      case 'Đã giao':
-      case 'Thành công': return Colors.green;
-      case 'Đã hủy': return Colors.red;
-      default: return Colors.grey;
-    }
-  }
-
-  IconData _getStatusIcon(String status) {
-    switch (status) {
-      case 'Chờ xác nhận': return Icons.schedule;
-      case 'Đã xác nhận': return Icons.check_circle_outline;
-      case 'Đang giao': return Icons.local_shipping_outlined;
-      case 'Đã giao':
-      case 'Thành công': return Icons.check_circle;
-      case 'Đã hủy': return Icons.cancel;
-      default: return Icons.info_outline;
-    }
   }
 
 
@@ -158,7 +126,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
   }
 
   Widget _buildStatusSection() {
-    final statusColor = _getStatusColor(_order!.status);
+    final statusColor = OrderActionHelper.getStatusColor(_order!.status);
     final shortId = '#${_order!.id.substring(_order!.id.length - 8).toUpperCase()}';
 
     return Container(
@@ -180,7 +148,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.15), shape: BoxShape.circle),
-                  child: Icon(_getStatusIcon(_order!.status), size: 32, color: statusColor),
+                  child: Icon(OrderActionHelper.getStatusIcon(_order!.status), size: 32, color: statusColor),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -189,7 +157,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                     children: [
                       Text(_order!.status, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: statusColor)),
                       const SizedBox(height: 4),
-                      Text(_getStatusDescription(_order!.status), style: TextStyle(fontSize: 12, color: statusColor.withValues(alpha: 0.8))),
+                      Text(OrderActionHelper.getStatusDescription(_order!.status), style: TextStyle(fontSize: 12, color: statusColor.withValues(alpha: 0.8))),
                     ],
                   ),
                 ),
@@ -235,18 +203,6 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
 
   Widget _buildVerticalDivider() {
     return Container(width: 1, height: 48, color: Colors.grey[200], margin: const EdgeInsets.symmetric(horizontal: 4));
-  }
-
-  String _getStatusDescription(String status) {
-    switch (status) {
-      case 'Chờ xác nhận': return 'Đơn hàng đang chờ được xác nhận';
-      case 'Đã xác nhận': return 'Đơn hàng đã được xác nhận';
-      case 'Đang giao': return 'Đơn hàng đang trên đường giao';
-      case 'Đã giao': return 'Đơn hàng đã được giao thành công';
-      case 'Thành công': return 'Giao dịch hoàn tất';
-      case 'Đã hủy': return 'Đơn hàng đã bị hủy';
-      default: return '';
-    }
   }
 
   Widget _buildDeliveryInfo() {
@@ -367,7 +323,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                               final item = history[index];
                               final isFirst = index == 0;
                               final isLast = index == history.length - 1;
-                              final statusColor = _getStatusColor(item.status);
+                              final statusColor = OrderActionHelper.getStatusColor(item.status);
 
                               return IntrinsicHeight(
                                 child: Row(
@@ -569,9 +525,9 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(_formatCurrency(item.finalPrice), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFFFF6B35))),
+              Text(item.finalPrice.toVND(), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFFFF6B35))),
               const SizedBox(height: 4),
-              Text(_formatCurrency(item.itemTotal), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)),
+              Text(item.itemTotal.toVND(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)),
             ],
           ),
         ],
@@ -625,7 +581,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: TextStyle(fontSize: fontSize, fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
-        Text(_formatCurrency(amount), style: TextStyle(fontSize: fontSize, fontWeight: isBold ? FontWeight.bold : FontWeight.w600, color: color)),
+        Text(amount.toVND(), style: TextStyle(fontSize: fontSize, fontWeight: isBold ? FontWeight.bold : FontWeight.w600, color: color)),
       ],
     );
   }

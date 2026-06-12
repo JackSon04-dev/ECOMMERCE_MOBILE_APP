@@ -9,6 +9,8 @@ class ProductService {
     String? tag,
     String? sortBy,
     String? search,
+    String? lastId,
+    int? limit,
   }) async {
     try {
       String endpoint = '/products';
@@ -22,6 +24,12 @@ class ProductService {
       }
       if (search != null && search.isNotEmpty) {
         queryParams.add('search=$search');
+      }
+      if (lastId != null && lastId.isNotEmpty) {
+        queryParams.add('lastId=$lastId');
+      }
+      if (limit != null) {
+        queryParams.add('limit=$limit');
       }
 
       if (queryParams.isNotEmpty) {

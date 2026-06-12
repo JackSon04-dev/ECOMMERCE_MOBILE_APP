@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../models/user_model.dart';
 import '../../../services/user_service.dart';
+import '../../../widgets/common_widgets.dart';
 
 /// 📍 Address Page - Trang cập nhật địa chỉ
 class AddressPage extends StatefulWidget {
@@ -106,9 +107,7 @@ class _AddressPageState extends State<AddressPage> {
         ),
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFFFF6B35)),
-            )
+          ? const LoadingWidget()
           : SingleChildScrollView(
               child: Form(
                 key: _formKey,

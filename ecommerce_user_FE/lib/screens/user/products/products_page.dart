@@ -6,11 +6,11 @@ import '../../../widgets/custom_app_bar.dart';
 import '../../../widgets/product_card_widget.dart';
 import '../../../widgets/common_widgets.dart';
 import '../../../providers/cart_provider.dart';
-import '../../../widgets/add_to_cart_animation.dart';
 import '../../../widgets/add_to_cart_bottom_sheet.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/product_provider.dart';
+import '../../../utils/scroll_pagination_mixin.dart';
 
 /// 🛍️ Products Page - Trang danh sách sản phẩm
 class ProductsPage extends ConsumerStatefulWidget {
@@ -22,9 +22,7 @@ class ProductsPage extends ConsumerStatefulWidget {
   ConsumerState<ProductsPage> createState() => ProductsPageState();
 }
 
-class ProductsPageState extends ConsumerState<ProductsPage> {
-  bool _isLoading = true;
-  List<Product> _products = [];
+class ProductsPageState extends ConsumerState<ProductsPage> with ScrollPaginationMixin<ProductsPage> {
   String? _selectedTag;
   String _sortBy = 'newest';
   final TextEditingController _searchController = TextEditingController();
@@ -50,7 +48,15 @@ class ProductsPageState extends ConsumerState<ProductsPage> {
   void initState() {
     super.initState();
     _selectedTag = widget.initialTag ?? '';
-    // Không gọi _loadProducts() ở đây nữa, build() sẽ tự động watch provider
+  }
+
+  @override
+  void onScrollThresholdReached() {
+    ref.read(paginatedProductsProvider((
+      tag: _selectedTag,
+      sortBy: _sortBy,
+      search: _debouncedSearch,
+    )).notifier).loadMore();
   }
 
   /// Cho phép MainScreen gọi từ bên ngoài để thay đổi tag filter
@@ -61,24 +67,12 @@ class ProductsPageState extends ConsumerState<ProductsPage> {
   }
 
   void _refresh() {
-    if (_isDefaultFilter) {
-      ref.invalidate(productsProvider);
-    } else {
-      ref.invalidate(filteredProductsProvider((tag: _selectedTag, sortBy: _sortBy, search: _debouncedSearch)));
-    }
+    ref.invalidate(paginatedProductsProvider((
+      tag: _selectedTag,
+      sortBy: _sortBy,
+      search: _debouncedSearch,
+    )));
   }
-
-  bool get _isDefaultFilter => 
-      (_selectedTag == null || _selectedTag!.isEmpty) && 
-      _sortBy == 'newest' && 
-      _debouncedSearch.isEmpty;
-
-  Map<String, String?> get _currentParams => {
-    'tag': _selectedTag,
-    'sortBy': _sortBy,
-    'search': _debouncedSearch,
-  };
-
 
   void _goToProductDetail(Product product) {
     Navigator.pushNamed(context, '/product-detail', arguments: product.id);
@@ -90,11 +84,11 @@ class ProductsPageState extends ConsumerState<ProductsPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Luồng dữ liệu: Nếu filter mặc định thì dùng productsProvider (đã load ở Home)
-    // Nếu có filter thì dùng filteredProductsProvider (load mới)
-    final productsAsync = _isDefaultFilter 
-        ? ref.watch(productsProvider)
-        : ref.watch(filteredProductsProvider((tag: _selectedTag, sortBy: _sortBy, search: _debouncedSearch)));
+    final productsAsync = ref.watch(paginatedProductsProvider((
+      tag: _selectedTag,
+      sortBy: _sortBy,
+      search: _debouncedSearch,
+    )));
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -116,7 +110,10 @@ class ProductsPageState extends ConsumerState<ProductsPage> {
       body: Column(
         children: [
           _buildFilterChips(),
-          _buildSortDropdown(),
+          productsAsync.maybeWhen(
+            data: (products) => _buildSortDropdown(products.length),
+            orElse: () => _buildSortDropdown(0),
+          ),
           Expanded(
             child: productsAsync.when(
               loading: () => const LoadingWidget(),
@@ -133,27 +130,50 @@ class ProductsPageState extends ConsumerState<ProductsPage> {
                   );
                 }
 
+                final isFetchingMore = productsAsync.isLoading && productsAsync.value != null;
+
                 return RefreshIndicator(
                   onRefresh: () async => _refresh(),
-                  child: GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.55,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                    ),
-                    itemCount: products.length,
-                    itemBuilder: (context, index) {
-                      final product = products[index];
-                      return ProductCard(
-                        product: product,
-                        onTap: () => _goToProductDetail(product),
-                        onAddToCart: () {
-                          AddToCartBottomSheet.show(context, product);
-                        },
-                      );
-                    },
+                  child: CustomScrollView(
+                    controller: scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.all(16),
+                        sliver: SliverGrid(
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 0.55,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                          ),
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final product = products[index];
+                              return ProductCard(
+                                product: product,
+                                onTap: () => _goToProductDetail(product),
+                                onAddToCart: () {
+                                  AddToCartBottomSheet.show(context, product);
+                                },
+                              );
+                            },
+                            childCount: products.length,
+                          ),
+                        ),
+                      ),
+                      if (isFetchingMore)
+                        const SliverToBoxAdapter(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF6B35)),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 );
               },
@@ -199,7 +219,7 @@ class ProductsPageState extends ConsumerState<ProductsPage> {
     );
   }
 
-  Widget _buildSortDropdown() {
+  Widget _buildSortDropdown(int count) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       color: Colors.white,
@@ -207,7 +227,7 @@ class ProductsPageState extends ConsumerState<ProductsPage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            '${_products.length} sản phẩm',
+            '$count sản phẩm',
             style: TextStyle(
               color: Colors.grey[600],
               fontSize: 14,

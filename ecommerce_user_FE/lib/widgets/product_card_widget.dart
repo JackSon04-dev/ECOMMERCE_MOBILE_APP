@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/product_model.dart';
-import 'package:intl/intl.dart';
-import 'add_to_cart_animation.dart';
+import '../utils/currency_helper.dart';
 import 'common_widgets.dart';
 
 /// 🛍️ Product Card Widget - Thẻ sản phẩm dùng chung
@@ -18,15 +17,6 @@ class ProductCard extends StatelessWidget {
     this.onAddToCart,
     this.showAddToCart = true,
   });
-
-  String _formatCurrency(double amount) {
-    final formatter = NumberFormat.currency(
-      locale: 'vi_VN',
-      symbol: '₫',
-      decimalDigits: 0,
-    );
-    return formatter.format(amount);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -165,7 +155,7 @@ class ProductCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     // Price - compact
                     Text(
-                      _formatCurrency(product.finalPrice),
+                      product.finalPrice.toVND(),
                       style: const TextStyle(
                         color: Color(0xFFFF6B35),
                         fontSize: 14,
@@ -182,7 +172,7 @@ class ProductCard extends StatelessWidget {
                           if (product.discount > 0)
                             Flexible(
                               child: Text(
-                                _formatCurrency(product.price),
+                                product.price.toVND(),
                                 style: const TextStyle(
                                   color: Colors.grey,
                                   fontSize: 11,
@@ -290,15 +280,6 @@ class ProductCardHorizontal extends StatelessWidget {
     this.onToggleSelect,
   });
 
-  String _formatCurrency(double amount) {
-    final formatter = NumberFormat.currency(
-      locale: 'vi_VN',
-      symbol: '₫',
-      decimalDigits: 0,
-    );
-    return formatter.format(amount);
-  }
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -398,7 +379,7 @@ class ProductCardHorizontal extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _formatCurrency(price),
+                              price.toVND(),
                               style: const TextStyle(
                                 color: Color(0xFFFF6B35),
                                 fontSize: 14,
@@ -408,7 +389,7 @@ class ProductCardHorizontal extends StatelessWidget {
                             ),
                             if (originalPrice != null && originalPrice! > price)
                               Text(
-                                _formatCurrency(originalPrice!),
+                                originalPrice!.toVND(),
                                 style: const TextStyle(
                                   color: Colors.grey,
                                   fontSize: 11,

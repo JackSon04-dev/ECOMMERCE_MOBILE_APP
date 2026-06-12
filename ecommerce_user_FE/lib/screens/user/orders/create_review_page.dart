@@ -5,6 +5,7 @@ import '../../../models/order_model.dart';
 import '../../../models/review_model.dart';
 import '../../../services/review_service.dart';
 import '../../../utils/date_helper.dart';
+import '../../../widgets/common_widgets.dart';
 
 /// ⭐ Create Review Page - Trang đánh giá sản phẩm
 class CreateReviewPage extends StatefulWidget {
@@ -335,7 +336,7 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
       return Scaffold(
         backgroundColor: Colors.grey[50],
         appBar: _buildAppBar(),
-        body: const Center(child: CircularProgressIndicator(color: _primaryColor)),
+        body: const LoadingWidget(),
       );
     }
 

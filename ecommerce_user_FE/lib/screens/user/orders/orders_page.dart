@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
-import '../../../config/routes.dart';
+import '../../../utils/currency_helper.dart';
 import '../../../models/order_model.dart';
-import '../../../providers/cart_provider.dart';
 import '../../../providers/order_provider.dart';
-import '../../../services/order_service.dart';
 import '../../../utils/date_helper.dart';
+import '../../../utils/scroll_pagination_mixin.dart';
 import '../../../widgets/common_widgets.dart';
 import '../../../widgets/order/order_action_buttons.dart';
-import '../../../widgets/reorder_result_sheet.dart';
+import '../../../widgets/order/order_action_helper.dart';
 
 /// 📦 Orders Page - Trang đơn hàng
 class OrdersPage extends ConsumerStatefulWidget {
@@ -99,45 +97,10 @@ class _OrderListTab extends ConsumerStatefulWidget {
   ConsumerState<_OrderListTab> createState() => _OrderListTabState();
 }
 
-class _OrderListTabState extends ConsumerState<_OrderListTab> {
-  late ScrollController _scrollController;
-
+class _OrderListTabState extends ConsumerState<_OrderListTab> with ScrollPaginationMixin<_OrderListTab> {
   @override
-  void initState() {
-    super.initState();
-    _scrollController = ScrollController();
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent * 0.9) {
-        ref.read(orderProvider(widget.tabName).notifier).loadMore();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  String _formatCurrency(double amount) {
-    return NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0).format(amount);
-  }
-
-  String _formatDateOnly(DateTime? date) {
-    if (date == null) return '';
-    return DateFormat('dd/MM/yyyy').format(date);
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Chờ xác nhận': return Colors.orange;
-      case 'Đã xác nhận': return Colors.blue;
-      case 'Đang giao': return Colors.purple;
-      case 'Đã giao':
-      case 'Thành công': return Colors.green;
-      case 'Đã hủy': return Colors.red;
-      default: return Colors.grey;
-    }
+  void onScrollThresholdReached() {
+    ref.read(orderProvider(widget.tabName).notifier).loadMore();
   }
 
   @override
@@ -166,7 +129,7 @@ class _OrderListTabState extends ConsumerState<_OrderListTab> {
         return RefreshIndicator(
           onRefresh: () => ref.refresh(orderProvider(widget.tabName).future),
           child: ListView.builder(
-            controller: _scrollController,
+            controller: scrollController,
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16),
             itemCount: orders.length + (ref.watch(orderProvider(widget.tabName)).isLoading ? 1 : 0),
@@ -231,8 +194,8 @@ class _OrderListTabState extends ConsumerState<_OrderListTab> {
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: _getStatusColor(order.status).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
-                    child: Text(order.status, style: TextStyle(color: _getStatusColor(order.status), fontSize: 12, fontWeight: FontWeight.w500)),
+                    decoration: BoxDecoration(color: OrderActionHelper.getStatusColor(order.status).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                    child: Text(order.status, style: TextStyle(color: OrderActionHelper.getStatusColor(order.status), fontSize: 12, fontWeight: FontWeight.w500)),
                   ),
                 ],
               ),
@@ -262,7 +225,7 @@ class _OrderListTabState extends ConsumerState<_OrderListTab> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text(_formatCurrency(item.finalPrice), style: const TextStyle(fontWeight: FontWeight.w600)),
+                          Text(item.finalPrice.toVND(), style: const TextStyle(fontWeight: FontWeight.w600)),
                           Text('x${item.variant.quantity}', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
                         ],
                       ),
@@ -285,7 +248,7 @@ class _OrderListTabState extends ConsumerState<_OrderListTab> {
                       children: [
                         Icon(Icons.calendar_today_outlined, size: 13, color: Colors.grey[500]),
                         const SizedBox(width: 4),
-                        Text('Ngày đặt: ${_formatDateOnly(order.createdAt)}', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                        Text('Ngày đặt: ${DateHelper.formatDate(order.createdAt)}', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
                       ],
                     ),
                     const SizedBox(width: 16),
@@ -293,7 +256,7 @@ class _OrderListTabState extends ConsumerState<_OrderListTab> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Text('Tổng: ', style: TextStyle(fontSize: 13)),
-                        Text(_formatCurrency(order.totalPrice), style: const TextStyle(color: Color(0xFFFF6B35), fontSize: 14, fontWeight: FontWeight.bold)),
+                        Text(order.totalPrice.toVND(), style: const TextStyle(color: Color(0xFFFF6B35), fontSize: 14, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ],

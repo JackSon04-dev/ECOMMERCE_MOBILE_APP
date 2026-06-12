@@ -4,7 +4,8 @@ import {
   getOrderById,
   createOrder,
   cancelOrder,
-  confirmReceived
+  confirmReceived,
+  getOrderStatus
 } from '../../controllers/user/orderController.js'
 import { verifyToken } from '../../middleware/authMiddleware.js'
 import { validate } from '../../middleware/validationMiddleware.js'
@@ -25,6 +26,9 @@ router.get('/my-orders', validate(getMyOrdersSchema), getMyOrders)
 
 // ✨ Tạo đơn hàng mới
 router.post('/', validate(createOrderSchema), createOrder)
+
+// 🔍 Kiểm tra trạng thái xử lý đơn hàng (Polling)
+router.get('/status/:id', validate(getOrderByIdSchema), getOrderStatus)
 
 // 📦 Lấy chi tiết đơn hàng theo ID
 router.get('/:id', validate(getOrderByIdSchema), getOrderById)

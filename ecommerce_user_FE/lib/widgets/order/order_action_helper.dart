@@ -306,4 +306,40 @@ class OrderActionHelper {
       }
     }
   }
+
+  static Color getStatusColor(String status) {
+    switch (status) {
+      case 'Chờ xác nhận': return Colors.orange;
+      case 'Đã xác nhận': return Colors.blue;
+      case 'Đang giao': return Colors.purple;
+      case 'Đã giao':
+      case 'Thành công': return Colors.green;
+      case 'Đã hủy': return Colors.red;
+      default: return Colors.grey;
+    }
+  }
+
+  static IconData getStatusIcon(String status) {
+    switch (status) {
+      case 'Chờ xác nhận': return Icons.schedule;
+      case 'Đã xác nhận': return Icons.check_circle_outline;
+      case 'Đang giao': return Icons.local_shipping_outlined;
+      case 'Đã giao':
+      case 'Thành công': return Icons.check_circle;
+      case 'Đã hủy': return Icons.cancel;
+      default: return Icons.info_outline;
+    }
+  }
+
+  static String getStatusDescription(String status) {
+    switch (status) {
+      case 'Chờ xác nhận': return 'Đơn hàng đang chờ được xác nhận';
+      case 'Đã xác nhận': return 'Đơn hàng đã được xác nhận';
+      case 'Đang giao': return 'Đơn hàng đang trên đường giao';
+      case 'Đã giao': return 'Đơn hàng đã được giao thành công';
+      case 'Thành công': return 'Giao dịch hoàn tất';
+      case 'Đã hủy': return 'Đơn hàng đã bị hủy';
+      default: return '';
+    }
+  }
 }

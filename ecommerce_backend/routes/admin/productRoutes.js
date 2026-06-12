@@ -1,8 +1,11 @@
 import express from 'express'
 import uploadCloud from '../../config/cloudinary.js'
 import * as adminController from '../../controllers/admin/productController.js'
+import { verifyToken, restrictToRoles } from '../../middleware/authMiddleware.js'
 
 const router = express.Router()
+
+router.use(verifyToken, restrictToRoles(['ADMIN']))
 
 // Quản lý sản phẩm:
 

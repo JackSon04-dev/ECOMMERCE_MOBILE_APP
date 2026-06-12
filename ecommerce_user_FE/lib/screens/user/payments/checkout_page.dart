@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import '../../../utils/currency_helper.dart';
 import '../../../config/routes.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../services/order_service.dart';
@@ -115,10 +115,6 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     }
   }
 
-  String _formatCurrency(double amount) {
-    return NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0).format(amount);
-  }
-
   double get _subtotal => _checkoutItems.fold(0.0, (sum, item) => sum + item.totalPrice);
   double get _total => _subtotal + _shippingFee - _voucherDiscount;
 
@@ -197,7 +193,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('✅ Giảm ${_formatCurrency(_voucherDiscount)}'), backgroundColor: Colors.green),
+            SnackBar(content: Text('✅ Giảm ${_voucherDiscount.toVND()}'), backgroundColor: Colors.green),
           );
         }
       }
@@ -699,7 +695,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(_formatCurrency(item.product.finalPrice), style: const TextStyle(color: Color(0xFFFF6B35), fontWeight: FontWeight.w600)),
+                             Text((item.product.finalPrice as num).toVND(), style: const TextStyle(color: Color(0xFFFF6B35), fontWeight: FontWeight.w600)),
                             // Quantity controls
                             QuantitySelector(
                               quantity: item.quantity,
@@ -934,15 +930,15 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         children: [
           const Text('Chi tiết đơn hàng', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
           const SizedBox(height: 16),
-          _buildSummaryRow('Tạm tính', _formatCurrency(_subtotal)),
+          _buildSummaryRow('Tạm tính', _subtotal.toVND()),
           const SizedBox(height: 8),
-          _buildSummaryRow('Phí vận chuyển', _formatCurrency(_shippingFee)),
+          _buildSummaryRow('Phí vận chuyển', _shippingFee.toVND()),
           if (_voucherDiscount > 0) ...[
             const SizedBox(height: 8),
-            _buildSummaryRow('Giảm giá voucher', '-${_formatCurrency(_voucherDiscount)}', valueColor: Colors.green),
+            _buildSummaryRow('Giảm giá voucher', '-${_voucherDiscount.toVND()}', valueColor: Colors.green),
           ],
           const Divider(height: 24),
-          _buildSummaryRow('Tổng cộng', _formatCurrency(_total), isBold: true, valueColor: const Color(0xFFFF6B35)),
+          _buildSummaryRow('Tổng cộng', _total.toVND(), isBold: true, valueColor: const Color(0xFFFF6B35)),
         ],
       ),
     );
@@ -973,7 +969,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('Tổng thanh toán'),
-                Text(_formatCurrency(_total), style: const TextStyle(color: Color(0xFFFF6B35), fontSize: 20, fontWeight: FontWeight.bold)),
+                 Text(_total.toVND(), style: const TextStyle(color: Color(0xFFFF6B35), fontSize: 20, fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(width: 16),

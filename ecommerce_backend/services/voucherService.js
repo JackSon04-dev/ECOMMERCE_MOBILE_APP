@@ -1,4 +1,5 @@
 import Voucher from '../models/voucherModel.js';
+import { ApiError } from '../middleware/errorMiddleware.js';
 
 /**
  * 🎫 Áp dụng voucher
@@ -9,11 +10,11 @@ import Voucher from '../models/voucherModel.js';
 export const applyVoucher = async (voucherCode, orderTotal) => {
   // Validate input
   if (!voucherCode) {
-    throw new Error('Vui lòng nhập mã giảm giá');
+    throw new ApiError(400, 'Vui lòng nhập mã giảm giá');
   }
 
   if (!orderTotal || orderTotal <= 0) {
-    throw new Error('Tổng đơn hàng không hợp lệ');
+    throw new ApiError(400, 'Tổng đơn hàng không hợp lệ');
   }
 
   // Tìm voucher theo code (case insensitive)
@@ -23,22 +24,22 @@ export const applyVoucher = async (voucherCode, orderTotal) => {
 
   // ❌ Kiểm tra voucher có tồn tại không
   if (!voucher) {
-    throw new Error('Mã giảm giá không tồn tại');
+    throw new ApiError(404, 'Mã giảm giá không tồn tại');
   }
 
   // ❌ Kiểm tra voucher có đang hoạt động không
   if (!voucher.isActive) {
-    throw new Error('Mã giảm giá đã ngừng hoạt động');
+    throw new ApiError(400, 'Mã giảm giá đã ngưng hoạt động');
   }
 
   // ❌ Kiểm tra còn lượt dùng không
   if (voucher.usageLimit <= 0) {
-    throw new Error('Mã giảm giá đã hết lượt sử dụng');
+    throw new ApiError(400, 'Mã giảm giá đã hết lượt sử dụng');
   }
 
   // ❌ Kiểm tra đơn hàng có đủ giá trị tối thiểu không
   if (orderTotal < voucher.minOrderAmount) {
-    throw new Error(`Đơn hàng tối thiểu ${voucher.minOrderAmount.toLocaleString('vi-VN')}đ để áp dụng mã này`);
+    throw new ApiError(400, `Đơn hàng tối thiểu ${voucher.minOrderAmount.toLocaleString('vi-VN')}đ để áp dụng mã này`);
   }
 
   // ✅ Voucher hợp lệ

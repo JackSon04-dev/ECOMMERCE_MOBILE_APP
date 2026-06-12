@@ -74,11 +74,43 @@ class OrderService {
 
       final response = await ApiService.post('/orders', body);
 
+      // Nếu Server trả về mã 202 Accepted (Xử lý bất đồng bộ qua RabbitMQ)
+      if (response.statusCode == 202) {
+        final data = jsonDecode(response.body);
+        final trackingId = data['trackingId'] as String;
+        print('⏳ [Order] Server accepted asynchronously. Polling status for trackingId: $trackingId');
+
+        // Polling tối đa 10 lần, mỗi lần cách nhau 1 giây
+        for (int i = 0; i < 10; i++) {
+          await Future.delayed(const Duration(seconds: 1));
+          print('🔍 [Order] Polling attempt ${i + 1}/10...');
+          
+          final statusRes = await ApiService.get('/orders/status/$trackingId');
+          
+          if (statusRes.statusCode == 200) {
+            final statusData = jsonDecode(statusRes.body);
+            final status = statusData['status'] as String;
+
+            if (status == 'success') {
+              final order = Order.fromJson(statusData['order']);
+              print('✅ [Order] Polled success: ${order.id}');
+              return order;
+            } else if (status == 'failed') {
+              final errorMessage = statusData['message'] ?? 'Đặt hàng thất bại';
+              print('❌ [Order] Polled failed: $errorMessage');
+              throw Exception(errorMessage);
+            }
+          }
+        }
+        throw Exception('Hệ thống đang bận. Đơn hàng đang được xử lý, vui lòng kiểm tra lại đơn hàng trong Lịch sử mua hàng.');
+      }
+
+      // Fallback: Nếu trả về 201 hoặc 200 trực tiếp (Xử lý đồng bộ)
       if (response.statusCode == 201 || response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final order = Order.fromJson(data['order'] ?? data);
 
-        print('✅ [Order] Create success: ${order.id}');
+        print('✅ [Order] Create success (sync): ${order.id}');
         return order;
       } else {
         try {

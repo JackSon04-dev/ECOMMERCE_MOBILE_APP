@@ -1,53 +1,44 @@
 import * as paymentService from '../../services/paymentService.js';
+import { asyncHandler, ApiError } from '../../middleware/errorMiddleware.js';
+import { publishToQueue } from '../../services/rabbitmqService.js';
 
 /**
  * 💳 Tạo URL thanh toán VNPay
  * POST /api/payment/create_payment_url
  * Body: { orderId }
  */
-export const createPaymentUrl = async (req, res) => {
-  try {
-    console.log('\n📥 [createPaymentUrl] Called');
-    const { orderId } = req.body;
-    const userId = req.user.id;
+export const createPaymentUrl = asyncHandler(async (req, res) => {
+  console.log('\n📥 [createPaymentUrl] Called');
+  const { orderId } = req.body;
+  const userId = req.user.id;
 
-    // Lấy baseUrl từ body hoặc request host
-    let reqBaseUrl = null;
-    if (req.body.baseUrl) {
-      reqBaseUrl = req.body.baseUrl;
-    } else {
-      const protocol = req.protocol;
-      let host = req.get('host');
-      reqBaseUrl = `${protocol}://${host}`;
-    }
-
-    const { paymentUrl, txnRef } = await paymentService.createPaymentUrl(orderId, userId, reqBaseUrl);
-
-    res.status(200).json({
-      success: true,
-      paymentUrl,
-      txnRef
-    });
-  } catch (error) {
-    console.error('❌ [VNPay] Create payment URL error:', error);
-    const statusCode = error.message.includes('Không tìm thấy') ? 404 :
-                      (error.message.includes('quyền') ? 403 :
-                      (error.message.includes('đã được thanh toán') || error.message.includes('phương thức') ? 400 : 500));
-    res.status(statusCode).json({
-      success: false,
-      message: error.message || 'Lỗi khi tạo URL thanh toán',
-      error: error.message
-    });
+  // Lấy baseUrl từ body hoặc request host
+  let reqBaseUrl = null;
+  if (req.body.baseUrl) {
+    reqBaseUrl = req.body.baseUrl;
+  } else {
+    const protocol = req.protocol;
+    let host = req.get('host');
+    reqBaseUrl = `${protocol}://${host}`;
   }
-};
+
+  // Service tự throw ApiError với đúng status code → asyncHandler forward về errorHandler
+  const { paymentUrl, txnRef } = await paymentService.createPaymentUrl(orderId, userId, reqBaseUrl);
+
+  res.status(200).json({
+    success: true,
+    paymentUrl,
+    txnRef
+  });
+});
 
 /**
  * 🔄 VNPay Return URL - User được redirect về đây sau khi thanh toán
  * GET /api/payment/vnpay_return
  */
-export const vnpayReturn = async (req, res) => {
+export const vnpayReturn = asyncHandler(async (req, res) => {
+  console.log('\n🌏 [VNPay Return] Browser redirect gọi vào backend');
   try {
-    console.log('\n🌏 [VNPay Return] Browser redirect gọi vào backend');
     const result = await paymentService.processVnpayReturn(req.query);
 
     if (result.success) {
@@ -247,138 +238,100 @@ export const vnpayReturn = async (req, res) => {
       `);
     }
   } catch (error) {
-    console.error('❌ [VNPay Return] Error:', error);
-    res.status(500).send('Lỗi xử lý kết quả thanh toán');
+    throw new ApiError(500, error.message || 'Lỗi xử lý kết quả thanh toán');
   }
-};
+});
 
 /**
  * 📡 VNPay IPN (Instant Payment Notification)
  * VNPay server gọi endpoint này để thông báo kết quả thanh toán
  * GET /api/payment/vnpay_ipn
  */
-export const vnpayIpn = async (req, res) => {
+export const vnpayIpn = asyncHandler(async (req, res) => {
+  console.log('\n📡 [VNPay IPN] VNPay SERVER gọi thẳng vào backend');
   try {
-    console.log('\n📡 [VNPay IPN] VNPay SERVER gọi thẳng vào backend');
     const result = await paymentService.processVnpayIpn(req.query);
-
     return res.json(result);
   } catch (error) {
-    console.error('❌ [VNPay IPN] Lỗi hệ thống:', error);
+    // VNPay IPN requires custom response code on failure
     return res.json({ RspCode: '99', Message: 'Unknown error' });
   }
-};
+});
 
 /**
  * 🔍 Kiểm tra trạng thái thanh toán của đơn hàng
  * GET /api/payment/status/:orderId
  */
-export const checkPaymentStatus = async (req, res) => {
-  try {
-    console.log('\n📥 [checkPaymentStatus] Called');
-    const { orderId } = req.params;
-    const userId = req.user.id;
+export const checkPaymentStatus = asyncHandler(async (req, res) => {
+  console.log('\n📥 [checkPaymentStatus] Called');
+  const { orderId } = req.params;
+  const userId = req.user.id;
 
-    const data = await paymentService.checkPaymentStatus(orderId, userId);
+  const data = await paymentService.checkPaymentStatus(orderId, userId);
 
-    res.status(200).json({
-      success: true,
-      ...data
-    });
-  } catch (error) {
-    console.error('❌ [PaymentStatus] Error:', error);
-    const statusCode = error.message.includes('Không tìm thấy') ? 404 :
-                      (error.message.includes('quyền') ? 403 : 500);
-    res.status(statusCode).json({
-      success: false,
-      message: error.message || 'Lỗi khi kiểm tra trạng thái thanh toán'
-    });
-  }
-};
+  res.status(200).json({
+    success: true,
+    ...data
+  });
+});
 
 /**
  * 💳 Tạo URL thanh toán ZaloPay
  * POST /api/payment/create_zalopay_url
  * Body: { orderId }
  */
-export const createZalopayPaymentUrl = async (req, res) => {
-  try {
-    console.log('\n📥 [createZalopayPaymentUrl] Called');
-    const { orderId } = req.body;
-    const userId = req.user.id;
+export const createZalopayPaymentUrl = asyncHandler(async (req, res) => {
+  console.log('\n📥 [createZalopayPaymentUrl] Called');
+  const { orderId } = req.body;
+  const userId = req.user.id;
 
-    const data = await paymentService.createZalopayPaymentUrl(orderId, userId);
+  const data = await paymentService.createZalopayPaymentUrl(orderId, userId);
 
-    res.status(200).json({
-      success: true,
-      ...data
-    });
-  } catch (error) {
-    console.error('❌ [ZaloPay] Create payment URL error:', error);
-    const statusCode = error.message.includes('Không tìm thấy') ? 404 :
-                      (error.message.includes('quyền') ? 403 :
-                      (error.message.includes('đã được thanh toán') || error.message.includes('phương thức') ? 400 : 500));
-    res.status(statusCode).json({
-      success: false,
-      message: error.message || 'Lỗi khi tạo mã thanh toán ZaloPay',
-      error: error.message
-    });
-  }
-};
+  res.status(200).json({
+    success: true,
+    ...data
+  });
+});
 
 /**
  * 📡 ZaloPay Callback (Webhook - Server to Server)
  * POST /api/payment/zalopay_callback
  */
-export const zalopayCallback = async (req, res) => {
+export const zalopayCallback = asyncHandler(async (req, res) => {
+  console.log('\n📥 [ZaloPay Callback] Nhận thông báo từ ZaloPay Server');
   try {
-    console.log('\n📥 [ZaloPay Callback] Nhận thông báo từ ZaloPay Server');
     const result = await paymentService.processZalopayCallback(req.body);
-
     return res.json(result);
   } catch (error) {
-    console.error('❌ [ZaloPay Callback] Lỗi hệ thống:', error.message);
     return res.json({ return_code: 0, return_message: error.message });
   }
-};
+});
 
 /**
  * 💳 Tạo URL/Mã QR thanh toán PayOS (VietQR)
  * POST /api/payment/create_payos_url
  * Body: { orderId }
  */
-export const createPayosPaymentUrl = async (req, res) => {
-  try {
-    console.log('\n📥 [createPayosPaymentUrl] Called');
-    const { orderId } = req.body;
-    const userId = req.user.id;
+export const createPayosPaymentUrl = asyncHandler(async (req, res) => {
+  console.log('\n📥 [createPayosPaymentUrl] Called');
+  const { orderId } = req.body;
+  const userId = req.user.id;
 
-    const data = await paymentService.createPayosPaymentUrl(orderId, userId);
+  const data = await paymentService.createPayosPaymentUrl(orderId, userId);
 
-    res.status(200).json({
-      success: true,
-      ...data
-    });
-  } catch (error) {
-    console.error('❌ [PayOS] Create payment URL error:', error);
-    const statusCode = error.message.includes('Không tìm thấy') ? 404 :
-                      (error.message.includes('quyền') ? 403 :
-                      (error.message.includes('đã được thanh toán') || error.message.includes('phương thức') ? 400 : 500));
-    res.status(statusCode).json({
-      success: false,
-      message: error.message || 'Lỗi khi tạo mã thanh toán PayOS',
-      error: error.message
-    });
-  }
-};
+  res.status(200).json({
+    success: true,
+    ...data
+  });
+});
 
 /**
  * 🔄 PayOS Return URL - User được redirect về đây sau khi thanh toán qua giao diện Web
  * GET /api/payment/payos_return
  */
-export const payosReturn = async (req, res) => {
+export const payosReturn = asyncHandler(async (req, res) => {
+  console.log('\n🌏 [PayOS Return] Browser redirect gọi vào backend');
   try {
-    console.log('\n🌏 [PayOS Return] Browser redirect gọi vào backend');
     const result = await paymentService.processPayosReturn(req.query);
 
     if (result.success) {
@@ -391,23 +344,40 @@ export const payosReturn = async (req, res) => {
       `);
     }
   } catch (error) {
-    console.error('❌ [PayOS Return] Error:', error);
-    res.status(500).send('Lỗi xử lý kết quả thanh toán');
+    throw new ApiError(500, error.message || 'Lỗi xử lý kết quả thanh toán');
   }
-};
+});
 
 /**
  * 📡 PayOS Webhook (Server-to-Server)
  * POST /api/payment/payos_webhook
  */
-export const payosWebhook = async (req, res) => {
+export const payosWebhook = asyncHandler(async (req, res) => {
+  console.log('\n📡 [PayOS Webhook] Nhận webhook thanh toán, tiến hành verify và xếp hàng...');
   try {
-    console.log('\n📡 [PayOS Webhook] PayOS SERVER gọi thẳng vào backend');
-    const result = await paymentService.processPayosWebhook(req.body);
+    // 1. Xác thực chữ ký số bằng thư viện của PayOS
+    const webhookData = paymentService.payos.webhooks.verify(req.body);
 
-    return res.json(result);
+    if (webhookData.code === "00" || webhookData.success === true || webhookData.amount > 0) {
+      try {
+        // 2. Đẩy dữ liệu đã xác thực vào RabbitMQ
+        await publishToQueue('payos_payment_queue', webhookData);
+        console.log(`📤 [PayOS Webhook] Đã push callback của orderCode: ${webhookData.orderCode} vào queue: payos_payment_queue thành công`);
+      } catch (queueError) {
+        console.warn('⚠️ [PayOS Webhook] Không thể đẩy vào RabbitMQ, chuyển sang xử lý đồng bộ fallback:', queueError.message);
+        // Fallback: Xử lý đồng bộ ngay lập tức để không bỏ lỡ giao dịch
+        await paymentService.processPayosWebhookSuccess(
+          webhookData,
+          `Thanh toán PayOS thành công (xác nhận qua Webhook đồng bộ fallback)`
+        );
+      }
+    }
+
+    // 3. Phản hồi ngay 200 cho PayOS
+    return res.status(200).json({ success: true, message: 'Đã nhận và xử lý' });
   } catch (error) {
-    console.error('❌ [PayOS Webhook] Lỗi hệ thống hoặc chữ ký sai:', error.message);
-    return res.status(500).json({ success: false, message: 'Lỗi xử lý webhook' });
+    console.error('❌ [PayOS Webhook] Lỗi xác thực chữ ký hoặc lỗi xử lý:', error.message);
+    // Trả về 500 để PayOS tự động thử lại sau (PayOS hỗ trợ gửi lại webhook nếu thất bại)
+    return res.status(500).json({ success: false, message: error.message || 'Lỗi xử lý webhook' });
   }
-};
+});

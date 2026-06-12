@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:intl/intl.dart';
+import '../../../utils/currency_helper.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../utils/auth_guard.dart';
@@ -16,10 +16,6 @@ class CartPage extends ConsumerStatefulWidget {
 }
 
 class _CartPageState extends ConsumerState<CartPage> {
-  String _formatCurrency(double amount) {
-    return NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0).format(amount);
-  }
-
   Future<void> _goToCheckout() async {
     // Kiểm tra đăng nhập trước khi thanh toán
     final isAuth = await AuthGuard.requireAuth(context, ref);
@@ -298,7 +294,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text('Tổng (${cartState.selectedCount} sản phẩm)', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-                                Text(_formatCurrency(cartState.selectedTotalPrice), style: const TextStyle(color: Color(0xFFFF6B35), fontSize: 18, fontWeight: FontWeight.bold)),
+                                Text(cartState.selectedTotalPrice.toVND(), style: const TextStyle(color: Color(0xFFFF6B35), fontSize: 18, fontWeight: FontWeight.bold)),
                               ],
                             ),
                           ],

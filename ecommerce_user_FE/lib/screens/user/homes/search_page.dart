@@ -8,6 +8,7 @@ import '../../../widgets/add_to_cart_bottom_sheet.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/product_provider.dart';
+import '../../../utils/scroll_pagination_mixin.dart';
 
 /// 🔍 Search Page - Trang tìm kiếm
 class SearchPage extends ConsumerStatefulWidget {
@@ -17,7 +18,7 @@ class SearchPage extends ConsumerStatefulWidget {
   ConsumerState<SearchPage> createState() => _SearchPageState();
 }
 
-class _SearchPageState extends ConsumerState<SearchPage> {
+class _SearchPageState extends ConsumerState<SearchPage> with ScrollPaginationMixin<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   List<String> _popularSearches = ['Áo thun', 'Giày', 'Quần jean', 'Áo sơ mi'];
@@ -28,6 +29,17 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   void initState() {
     super.initState();
     _focusNode.requestFocus();
+  }
+
+  @override
+  void onScrollThresholdReached() {
+    if (_debouncedQuery.length >= 2) {
+      ref.read(paginatedProductsProvider((
+        tag: null,
+        sortBy: null,
+        search: _debouncedQuery,
+      )).notifier).loadMore();
+    }
   }
 
   void _onSearch(String query) {
@@ -52,7 +64,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     
     // Chỉ gọi provider khi có từ khóa >= 2 ký tự
     final searchAsync = query.length >= 2 
-        ? ref.watch(filteredProductsProvider((tag: null, sortBy: null, search: query)))
+        ? ref.watch(paginatedProductsProvider((tag: null, sortBy: null, search: query)))
         : null;
 
     return Scaffold(
@@ -123,7 +135,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                         subtitle: 'Thử tìm kiếm với từ khóa khác',
                       );
                     }
-                    return _buildSearchResults(products);
+                    final isFetchingMore = searchAsync != null && searchAsync.isLoading && searchAsync.value != null;
+                    return _buildSearchResults(products, isFetchingMore);
                   },
                 ),
     );
@@ -244,7 +257,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     );
   }
 
-  Widget _buildSearchResults(List<Product> products) {
+  Widget _buildSearchResults(List<Product> products, bool isFetchingMore) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -259,25 +272,46 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           ),
         ),
         Expanded(
-          child: GridView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.55,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-            ),
-            itemCount: products.length,
-            itemBuilder: (context, index) {
-              final product = products[index];
-              return ProductCard(
-                product: product,
-                onTap: () => _goToProductDetail(product),
-                onAddToCart: () {
-                  AddToCartBottomSheet.show(context, product);
-                },
-              );
-            },
+          child: CustomScrollView(
+            controller: scrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.55,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final product = products[index];
+                      return ProductCard(
+                        product: product,
+                        onTap: () => _goToProductDetail(product),
+                        onAddToCart: () {
+                          AddToCartBottomSheet.show(context, product);
+                        },
+                      );
+                    },
+                    childCount: products.length,
+                  ),
+                ),
+              ),
+              if (isFetchingMore)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF6B35)),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ],

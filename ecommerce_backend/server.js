@@ -4,6 +4,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import connectDB from './config/db.js'
 import { connectRedis } from './config/redis.js'
+import { connectRabbitMQ } from './services/rabbitmqService.js'
 import authRoutes from './routes/authRoute.js'
 // Admin routes
 import adminProductRoutes from './routes/admin/productRoutes.js'
@@ -22,6 +23,7 @@ import userPaymentRoutes from './routes/user/paymentRoutes.js'
 import userNotificationRoutes from './routes/user/notificationRoute.js'
 import userCartRoutes from './routes/user/cartRoutes.js'
 import { globalLimiter } from './middleware/rateLimitMiddleware.js'
+import { errorHandler } from './middleware/errorMiddleware.js'
 
 // Cau hinh bien moi truong
 dotenv.config()
@@ -41,6 +43,8 @@ app.use(globalLimiter)
 connectDB()
 // Ket noi Redis
 connectRedis()
+// Ket noi RabbitMQ
+connectRabbitMQ()
 
 // Auth Routes admin hoac nguoi dung, tat ca route bat dau bang /api/auth
 app.use('/api/auth', authRoutes)
@@ -63,22 +67,11 @@ app.use('/api/payment', userPaymentRoutes)
 app.use('/api/notifications', userNotificationRoutes)
 app.use('/api/cart', userCartRoutes)
 
+// Bộ xử lý lỗi tập trung toàn hệ thống (Global Error Handler)
+app.use(errorHandler)
+
 // Khoi dong server
 const PORT = process.env.PORT || 5000
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`)
-})
-
-// Xu ly loi upload file tu multer
-app.use((err, req, res, next) => {
-  if (err.code === 'LIMIT_UNEXPECTED_FILE') {
-    return res.status(400).json({
-      success: false,
-      message: 'Ten truong upload khong dung (Phai la thumbnail hoac images)'
-    })
-  }
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || 'Loi Server noi bo'
-  })
 })

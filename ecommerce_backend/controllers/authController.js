@@ -2,316 +2,253 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { OAuth2Client } from 'google-auth-library'
 import User from '../models/userModel.js'
+import { asyncHandler, ApiError } from '../middleware/errorMiddleware.js'
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
-export const register = async (req, res) => {
+// Register Controller
+export const register = asyncHandler(async (req, res) => {
   const { username, email, password, address, phoneNumber, role } = req.body
 
   // Kiểm tra các trường bắt buộc
   if (!username || !email || !password) {
-    return res.status(400).json({ msg: 'Thiếu các trường bắt buộc' })
+    throw new ApiError(400, 'Thiếu các trường bắt buộc')
   }
 
-  try {
-    // Kiểm tra email hoặc username đã tồn tại (Phòng thủ sớm)
-    const existingEmail = await User.findOne({ email })
-    if (existingEmail) return res.status(400).json({ msg: 'Email đã tồn tại' })
-
-    const existingUser = await User.findOne({ username })
-    if (existingUser) return res.status(400).json({ msg: 'Tên người dùng đã tồn tại' })
-
-    // Mã hóa mật khẩu
-    const salt = await bcrypt.genSalt(10)
-    const hashedPassword = await bcrypt.hash(password, salt)
-
-    // Tạo người dùng mới
-    const user = new User({
-      username,
-      email,
-      password: hashedPassword,
-      address,
-      phoneNumber,
-      role: role || 'user'
-    })
-
-    // Lưu người dùng vào database
-    await user.save()
-
-    // Trả về phản hồi thành công
-    res.status(201).json({ msg: 'Đăng ký thành công' })
-  } catch (err) {
-    // Xử lý lỗi trùng lặp từ MongoDB (Mã lỗi 11000)
-    if (err.code === 11000) {
-      const field = Object.keys(err.keyPattern)[0]
-      const msg = field === 'email' ? 'Email đã tồn tại' : 'Tên người dùng đã tồn tại'
-      return res.status(400).json({ msg })
-    }
-
-    // Xử lý lỗi validation từ Mongoose (ví dụ: pass quá ngắn, phoneNumber sai regex)
-    if (err.name === 'ValidationError') {
-      const messages = Object.values(err.errors).map(val => val.message)
-      return res.status(400).json({ msg: messages[0] })
-    }
-
-    console.error('❌ Register error:', err)
-    res.status(500).json({ msg: 'Lỗi server', error: err.message })
+  // Kiểm tra email đã tồn tại (Phòng thủ sớm)
+  const existingEmail = await User.findOne({ email })
+  if (existingEmail) {
+    throw new ApiError(400, 'Email đã tồn tại')
   }
-}
+
+  // Mã hóa mật khẩu
+  const salt = await bcrypt.genSalt(10)
+  const hashedPassword = await bcrypt.hash(password, salt)
+
+  // Tạo người dùng mới
+  const user = new User({
+    username,
+    email,
+    password: hashedPassword,
+    address,
+    phoneNumber,
+    role: role || 'user'
+  })
+
+  // Lưu người dùng vào database
+  await user.save()
+
+  // Trả về phản hồi thành công
+  res.status(201).json({ msg: 'Đăng ký thành công' })
+})
 
 // Login Controller
-export const login = async (req, res) => {
+export const login = asyncHandler(async (req, res) => {
   const { email, password, deviceName } = req.body
 
+  // Kiểm tra người dùng tồn tại
+  const user = await User.findOne({ email })
+  if (!user) {
+    throw new ApiError(400, 'Sai email')
+  }
+
+  // Kiểm tra mật khẩu
+  const isMatch = await bcrypt.compare(password, user.password)
+  if (!isMatch) {
+    throw new ApiError(400, 'Sai mật khẩu')
+  }
+
+  // Kiểm tra xem tài khoản có bị khóa không
+  if (!user.isActive) {
+    throw new ApiError(403, 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên!')
+  }
+
+  // Tạo Access Token (Ngắn hạn - 3 phút để test)
+  const accessToken = jwt.sign(
+    { id: user.id, email: user.email, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: '3m' }
+  )
+
+  // Tạo Refresh Token (Dài hạn - 7 ngày)
+  const refreshToken = jwt.sign(
+    { id: user.id },
+    process.env.JWT_REFRESH_SECRET,
+    { expiresIn: '7d' }
+  )
+
+  // Đẩy Token mới và tên thiết bị vào mảng refreshTokens
+  user.refreshTokens.push({
+    token: refreshToken,
+    device: deviceName || 'Unknown Device'
+  })
+
+  // Lưu lại vào MongoDB
+  await user.save()
+
+  // Loại bỏ password và refreshTokens khỏi thông tin user trả về
+  const userInfo = {
+    id: user._id,
+    username: user.username,
+    email: user.email,
+    address: user.address,
+    role: user.role,
+    phoneNumber: user.phoneNumber
+  }
+
+  res.json({
+    msg: 'Đăng nhập thành công',
+    accessToken,
+    refreshToken,
+    user: userInfo
+  })
+})
+
+// Logout Controller
+export const logout = asyncHandler(async (req, res) => {
+  const { token } = req.body
+
+  if (!token) {
+    throw new ApiError(400, 'Không tìm thấy Token để đăng xuất')
+  }
+
+  // Tìm user có chứa token này và dùng $pull để xóa nó khỏi mảng
+  const user = await User.findOneAndUpdate(
+    { 'refreshTokens.token': token },
+    { $pull: { refreshTokens: { token: token } } },
+    { new: true }
+  )
+
+  if (!user) {
+    throw new ApiError(404, 'The token does not exist or has been deleted previously.')
+  }
+
+  res.json({
+    msg: 'Successfully logged out and the token has been deactivated on the server.'
+  })
+})
+
+// Refresh Token Controller
+export const refreshToken = asyncHandler(async (req, res) => {
+  const { token } = req.body
+
+  if (!token) {
+    throw new ApiError(401, 'Không tìm thấy Refresh Token')
+  }
+
+  const user = await User.findOne({ 'refreshTokens.token': token })
+  if (!user) {
+    throw new ApiError(403, 'Refresh Token không hợp lệ')
+  }
+
+  // Xác thực chữ ký của Refresh Token
   try {
-    // Kiểm tra người dùng tồn tại
-    const user = await User.findOne({ email })
-    if (!user) return res.status(400).json({ msg: 'Sai email' })
-
-    // Kiểm tra mật khẩu
-    const isMatch = await bcrypt.compare(password, user.password)
-    if (!isMatch) return res.status(400).json({ msg: 'Sai mật khẩu' })
-
-    // 🔥 Kiểm tra xem tài khoản có bị khóa không
-    if (!user.isActive) {
-      return res.status(403).json({ msg: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên!' })
-    }
-
-    // Tạo Access Token (Ngắn hạn - 1 giờ)
-    const accessToken = jwt.sign(
+    jwt.verify(token, process.env.JWT_REFRESH_SECRET)
+    
+    // Tạo Access Token mới
+    const newAccessToken = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '3m' }
     )
-
-    // Tạo Refresh Token (Dài hạn - 7 ngày)
-    const refreshToken = jwt.sign(
-      { id: user.id },
-      process.env.JWT_REFRESH_SECRET, // Phải có key riêng trong .env
-      { expiresIn: '7d' }
-    )
-
-    // Đẩy Token mới và tên thiết bị vào mảng refreshTokens
-    user.refreshTokens.push({
-      token: refreshToken,
-      device: deviceName || 'Unknown Device'
-    })
-
-    // Lưu lại vào MongoDB
-    await user.save()
-
-    // Loại bỏ password và refreshTokens khỏi thông tin user trả về
-    const userInfo = {
-      id: user._id,
-      username: user.username,
-      email: user.email,
-      address: user.address,
-      role: user.role,
-      phoneNumber: user.phoneNumber
-    }
-
-    // Trả về đúng tên biến mà Flutter đang đợi (accessToken, refreshToken)
-    res.json({
-      msg: 'Đăng nhập thành công',
-      accessToken,
-      refreshToken,
-      user: userInfo
-    })
+    
+    res.json({ accessToken: newAccessToken })
   } catch (err) {
-    res.status(500).json({ msg: 'Lỗi server', error: err.message })
+    throw new ApiError(403, 'Token đã hết hạn hoặc không hợp lệ')
   }
-}
+})
 
-// Logout Controller
-export const logout = async (req, res) => {
-  const { token } = req.body
-
-  // Kiểm tra token có được gửi lên không
-  if (!token) {
-    return res.status(400).json({ msg: 'Không tìm thấy Token để đăng xuất' })
+// Get Me Controller
+export const getMe = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id).select('-password -refreshTokens')
+  if (!user) {
+    throw new ApiError(404, 'Người dùng không tồn tại')
   }
 
-  try {
-    // Tìm user có chứa token này và dùng $pull để xóa nó khỏi mảng
-    const user = await User.findOneAndUpdate(
-      { 'refreshTokens.token': token },
-      { $pull: { refreshTokens: { token: token } } },
-      { new: true }
-    )
-
-    // Nếu không tìm thấy user nào với token này
-    if (!user) {
-      return res.status(404).json({
-        msg: 'The token does not exist or has been deleted previously.'
-      })
-    }
-
-    // Thành công
-    res.json({
-      msg: 'Successfully logged out and the token has been deactivated on the server.'
-    })
-  } catch (err) {
-    res.status(500).json({ msg: 'Logout error' })
+  const userInfo = {
+    id: user._id,
+    username: user.username,
+    email: user.email,
+    address: user.address,
+    phoneNumber: user.phoneNumber
   }
-}
+  
+  res.json({ user: userInfo })
+})
 
-// --- HÀM LẤY TOKEN MỚI (NEW) ---
-export const refreshToken = async (req, res) => {
-  const { token } = req.body // Flutter sẽ gửi refreshToken lên đây
+// Update Profile Controller
+export const updateProfile = asyncHandler(async (req, res) => {
+  const { username, address, phoneNumber } = req.body
+  const userId = req.user.id
 
-  if (!token)
-    return res.status(401).json({ msg: 'Không tìm thấy Refresh Token' })
-
-  try {
-    // 1. Tìm user nào đang chứa token này trong mảng
-    const user = await User.findOne({ 'refreshTokens.token': token })
-    if (!user)
-      return res.status(403).json({ msg: 'Refresh Token không hợp lệ' })
-
-    // 2. Xác thực chữ ký của Refresh Token
-    jwt.verify(token, process.env.JWT_REFRESH_SECRET, (err, decoded) => {
-      if (err)
-        return res
-          .status(403)
-          .json({ msg: 'Token đã hết hạn hoặc không hợp lệ' })
-
-      // 3. Nếu mọi thứ OK, tạo Access Token mới
-      const newAccessToken = jwt.sign(
-        { id: user.id, email: user.email, role: user.role },
-        process.env.JWT_SECRET,
-        { expiresIn: '3m' }
-      )
-      // 4. Trả về Access Token mới
-      res.json({ accessToken: newAccessToken })
-    })
-  } catch (err) {
-    res.status(500).json({ msg: 'Lỗi server' })
+  const user = await User.findById(userId)
+  if (!user) {
+    throw new ApiError(404, 'Người dùng không tồn tại')
   }
-}
 
-// --- HÀM LẤY THÔNG TIN NGƯỜI DÙNG KO CAN LOGIN LAI
-export const getMe = async (req, res) => {
-  try {
-    // req.user được tạo ra từ Middleware verifyToken phía trên
-    // Đúng: Truyền thẳng ID vào
-    const user = await User.findById(req.user.id).select(
-      '-password -refreshTokens'
-    )
-    // không tìm thấy user
-    if (!user) return res.status(404).json({ msg: 'Người dùng không tồn tại' })
-    // trả về thông tin user
-    const userInfo = {
-      id: user._id,
-      username: user.username,
-      email: user.email,
-      address: user.address,
-      phoneNumber: user.phoneNumber
-    }
-    res.json({ user: userInfo })
-  } catch (err) {
-    console.error(err) // Nên log lỗi ra để debug
-    res.status(500).json({ msg: 'Lỗi server' })
+  if (username) user.username = username
+  if (address) user.address = address
+  if (phoneNumber) user.phoneNumber = phoneNumber
+
+  await user.save()
+
+  const userInfo = {
+    id: user._id,
+    username: user.username,
+    email: user.email,
+    address: user.address,
+    phoneNumber: user.phoneNumber
   }
-}
 
-// --- HÀM CẬP NHẬT THÔNG TIN USER
-export const updateProfile = async (req, res) => {
-  try {
-    const { username, address, phoneNumber } = req.body
-    const userId = req.user.id
+  res.json({
+    msg: 'Cập nhật thông tin thành công',
+    user: userInfo
+  })
+})
 
-    // Tìm user
-    const user = await User.findById(userId)
-    if (!user) return res.status(404).json({ msg: 'Người dùng không tồn tại' })
+// Change Password Controller
+export const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body
+  const userId = req.user.id
 
-    // Cập nhật các trường nếu có
-    if (username) user.username = username
-    if (address) user.address = address
-    if (phoneNumber) user.phoneNumber = phoneNumber
-
-    // Lưu vào database
-    await user.save()
-
-    // Trả về thông tin user đã cập nhật
-    const userInfo = {
-      id: user._id,
-      username: user.username,
-      email: user.email,
-      address: user.address,
-      phoneNumber: user.phoneNumber
-    }
-
-    res.json({
-      msg: 'Cập nhật thông tin thành công',
-      user: userInfo
-    })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ msg: 'Lỗi server', error: err.message })
+  if (!currentPassword || !newPassword) {
+    throw new ApiError(400, 'Vui lòng cung cấp đầy đủ thông tin')
   }
-}
 
-// --- HÀM ĐỔI MẬT KHẨU
-export const changePassword = async (req, res) => {
-  try {
-    const { currentPassword, newPassword } = req.body
-    const userId = req.user.id
-
-    // Kiểm tra các trường bắt buộc
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({ msg: 'Vui lòng cung cấp đầy đủ thông tin' })
-    }
-
-    // Kiểm tra mật khẩu mới có hợp lệ không
-    if (newPassword.length < 6) {
-      return res
-        .status(400)
-        .json({ msg: 'Mật khẩu mới phải có ít nhất 6 ký tự' })
-    }
-
-    // Tìm user
-    const user = await User.findById(userId)
-    if (!user) return res.status(404).json({ msg: 'Người dùng không tồn tại' })
-
-    // Kiểm tra mật khẩu hiện tại
-    const isMatch = await bcrypt.compare(currentPassword, user.password)
-    if (!isMatch) {
-      return res.status(400).json({ msg: 'Mật khẩu hiện tại không đúng' })
-    }
-
-    // Mã hóa mật khẩu mới
-    const salt = await bcrypt.genSalt(10)
-    const hashedPassword = await bcrypt.hash(newPassword, salt)
-
-    // Cập nhật mật khẩu
-    user.password = hashedPassword
-    await user.save()
-
-    res.json({ msg: 'Đổi mật khẩu thành công' })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ msg: 'Lỗi server', error: err.message })
+  if (newPassword.length < 6) {
+    throw new ApiError(400, 'Mật khẩu mới phải có ít nhất 6 ký tự')
   }
-}
 
-// --- ĐĂNG NHẬP BẰNG GOOGLE ---
-export const googleLogin = async (req, res) => {
+  const user = await User.findById(userId)
+  if (!user) {
+    throw new ApiError(404, 'Người dùng không tồn tại')
+  }
+
+  const isMatch = await bcrypt.compare(currentPassword, user.password)
+  if (!isMatch) {
+    throw new ApiError(400, 'Mật khẩu hiện tại không đúng')
+  }
+
+  const salt = await bcrypt.genSalt(10)
+  const hashedPassword = await bcrypt.hash(newPassword, salt)
+
+  user.password = hashedPassword
+  await user.save()
+
+  res.json({ msg: 'Đổi mật khẩu thành công' })
+})
+
+// Google Login Controller
+export const googleLogin = asyncHandler(async (req, res) => {
   const { idToken, deviceName } = req.body
 
   if (!idToken) {
-    return res.status(400).json({ msg: 'Thiếu Google ID Token' })
+    throw new ApiError(400, 'Thiếu Google ID Token')
   }
 
+  // Xác thực ID Token với Google
+  let payload
   try {
-    // DEBUG: Decode token để xem audience thực tế
-    const tokenParts = idToken.split('.')
-    const tokenPayloadRaw = JSON.parse(
-      Buffer.from(tokenParts[1], 'base64url').toString()
-    )
-    console.log('🔍 Token audience (aud):', tokenPayloadRaw.aud)
-    console.log('🔍 GOOGLE_CLIENT_ID in .env:', process.env.GOOGLE_CLIENT_ID)
-
-    // 1. Xác thực ID Token với Google (chấp nhận cả Web + Android client)
     const ticket = await googleClient.verifyIdToken({
       idToken,
       audience: [
@@ -319,148 +256,118 @@ export const googleLogin = async (req, res) => {
         process.env.GOOGLE_ANDROID_CLIENT_ID
       ].filter(Boolean)
     })
-    const payload = ticket.getPayload()
-    const { sub: googleId, email, name, picture } = payload
+    payload = ticket.getPayload()
+  } catch (err) {
+    throw new ApiError(401, 'Google Token không hợp lệ: ' + err.message)
+  }
 
-    // 2. Tìm user theo googleId hoặc email
-    let user = await User.findOne({ $or: [{ googleId }, { email }] })
+  const { sub: googleId, email, name, picture } = payload
 
-    if (user) {
-      // Nếu user đã tồn tại nhưng chưa liên kết Google → liên kết
-      if (!user.googleId) {
-        user.googleId = googleId
-        if (picture && !user.avatar) user.avatar = picture
-        await user.save()
-      }
-    } else {
-      // 3. Tạo user mới nếu chưa có
-      user = new User({
-        username: name || email.split('@')[0],
-        email,
-        googleId,
-        avatar: picture || '',
-        role: 'user'
-      })
+  let user = await User.findOne({ $or: [{ googleId }, { email }] })
+
+  if (user) {
+    if (!user.googleId) {
+      user.googleId = googleId
+      if (picture && !user.avatar) user.avatar = picture
       await user.save()
     }
-
-    // 🔥 Kiểm tra xem tài khoản có bị khóa không (Áp dụng cho cả user cũ và mới tạo qua Google)
-    if (!user.isActive) {
-      return res.status(403).json({ msg: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên!' })
-    }
-
-    // 4. Tạo Access Token
-    const accessToken = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '3m' }
-    )
-
-    // 5. Tạo Refresh Token
-    const refreshToken = jwt.sign(
-      { id: user._id },
-      process.env.JWT_REFRESH_SECRET,
-      { expiresIn: '7d' }
-    )
-
-    // 6. Lưu Refresh Token
-    user.refreshTokens.push({
-      token: refreshToken,
-      device: deviceName || 'Unknown Device'
+  } else {
+    user = new User({
+      username: name || email.split('@')[0],
+      email,
+      googleId,
+      avatar: picture || '',
+      role: 'user'
     })
     await user.save()
-
-    // 7. Trả về kết quả
-    const userInfo = {
-      id: user._id,
-      username: user.username,
-      email: user.email,
-      address: user.address,
-      phoneNumber: user.phoneNumber,
-      avatar: user.avatar
-    }
-
-    res.json({
-      msg: 'Đăng nhập Google thành công',
-      accessToken,
-      refreshToken,
-      user: userInfo
-    })
-  } catch (err) {
-    console.error('Google login error:', err)
-    res
-      .status(401)
-      .json({ msg: 'Google Token không hợp lệ', error: err.message })
   }
-}
 
-// --- QUẢN LÝ FCM TOKEN (Push Notification) ---
-
-// @desc    Đăng ký FCM Token cho thiết bị (gọi khi user đăng nhập)
-// @route   POST /api/auth/fcm-token
-// @access  User (cần đăng nhập)
-export const registerFcmToken = async (req, res) => {
-  try {
-    const { fcmToken, deviceName } = req.body
-    const userId = req.user.id
-
-    if (!fcmToken) {
-      return res.status(400).json({ msg: 'Thiếu FCM Token' })
-    }
-
-    const user = await User.findById(userId)
-    if (!user) {
-      return res.status(404).json({ msg: 'Không tìm thấy user' })
-    }
-
-    // Kiểm tra xem token này đã tồn tại chưa (tránh trùng lặp)
-    const existingToken = user.fcmTokens.find(t => t.token === fcmToken)
-    if (existingToken) {
-      // Cập nhật thời gian và tên thiết bị
-      existingToken.device = deviceName || existingToken.device
-      existingToken.updatedAt = new Date()
-    } else {
-      // Thêm token mới
-      user.fcmTokens.push({
-        token: fcmToken,
-        device: deviceName || 'Unknown'
-      })
-    }
-
-    await user.save()
-
-    res.status(200).json({
-      msg: 'Đăng ký FCM Token thành công',
-      tokenCount: user.fcmTokens.length
-    })
-  } catch (error) {
-    console.error('Error in registerFcmToken:', error)
-    res.status(500).json({ msg: 'Lỗi server', error: error.message })
+  if (!user.isActive) {
+    throw new ApiError(403, 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên!')
   }
-}
 
-// @desc    Hủy đăng ký FCM Token (gọi khi user đăng xuất)
-// @route   DELETE /api/auth/fcm-token
-// @access  User (cần đăng nhập)
-export const unregisterFcmToken = async (req, res) => {
-  try {
-    const { fcmToken } = req.body
-    const userId = req.user.id
+  const accessToken = jwt.sign(
+    { id: user._id, email: user.email, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: '3m' }
+  )
 
-    if (!fcmToken) {
-      return res.status(400).json({ msg: 'Thiếu FCM Token' })
-    }
+  const refreshToken = jwt.sign(
+    { id: user._id },
+    process.env.JWT_REFRESH_SECRET,
+    { expiresIn: '7d' }
+  )
 
-    // Xóa token ra khỏi mảng fcmTokens
-    await User.findByIdAndUpdate(userId, {
-      $pull: { fcmTokens: { token: fcmToken } }
-    })
+  user.refreshTokens.push({
+    token: refreshToken,
+    device: deviceName || 'Unknown Device'
+  })
+  await user.save()
 
-    res.status(200).json({
-      msg: 'Hủy đăng ký FCM Token thành công'
-    })
-  } catch (error) {
-    console.error('Error in unregisterFcmToken:', error)
-    res.status(500).json({ msg: 'Lỗi server', error: error.message })
+  const userInfo = {
+    id: user._id,
+    username: user.username,
+    email: user.email,
+    address: user.address,
+    phoneNumber: user.phoneNumber,
+    avatar: user.avatar
   }
-}
+
+  res.json({
+    msg: 'Đăng nhập Google thành công',
+    accessToken,
+    refreshToken,
+    user: userInfo
+  })
+})
+
+// Register FCM Token
+export const registerFcmToken = asyncHandler(async (req, res) => {
+  const { fcmToken, deviceName } = req.body
+  const userId = req.user.id
+
+  if (!fcmToken) {
+    throw new ApiError(400, 'Thiếu FCM Token')
+  }
+
+  const user = await User.findById(userId)
+  if (!user) {
+    throw new ApiError(404, 'Không tìm thấy user')
+  }
+
+  const existingToken = user.fcmTokens.find(t => t.token === fcmToken)
+  if (existingToken) {
+    existingToken.device = deviceName || existingToken.device
+    existingToken.updatedAt = new Date()
+  } else {
+    user.fcmTokens.push({
+      token: fcmToken,
+      device: deviceName || 'Unknown'
+    })
+  }
+
+  await user.save()
+
+  res.status(200).json({
+    msg: 'Đăng ký FCM Token thành công',
+    tokenCount: user.fcmTokens.length
+  })
+})
+
+// Unregister FCM Token
+export const unregisterFcmToken = asyncHandler(async (req, res) => {
+  const { fcmToken } = req.body
+  const userId = req.user.id
+
+  if (!fcmToken) {
+    throw new ApiError(400, 'Thiếu FCM Token')
+  }
+
+  await User.findByIdAndUpdate(userId, {
+    $pull: { fcmTokens: { token: fcmToken } }
+  })
+
+  res.status(200).json({
+    msg: 'Hủy đăng ký FCM Token thành công'
+  })
+})

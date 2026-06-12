@@ -1,5 +1,6 @@
 import Notification from '../models/notification.js';
 import NotificationRead from '../models/notificationRead.js';
+import { ApiError } from '../middleware/errorMiddleware.js';
 
 /**
  * 🔔 Lấy thông báo của user (thông báo chung + thông báo riêng)
@@ -73,13 +74,13 @@ export const deleteOrReadNotification = async (notificationId, userId) => {
   const notification = await Notification.findById(notificationId);
 
   if (!notification) {
-    throw new Error('Không tìm thấy thông báo');
+    throw new ApiError(404, 'Không tìm thấy thông báo');
   }
 
   if (notification.userId) {
     // Thông báo cá nhân (ORDER): Đảm bảo đúng user mới được xóa
     if (notification.userId.toString() !== userId) {
-      throw new Error('Bạn không có quyền xóa thông báo này');
+      throw new ApiError(403, 'Bạn không có quyền xóa thông báo này');
     }
     await Notification.findByIdAndDelete(notificationId);
     return {
