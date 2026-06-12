@@ -356,7 +356,7 @@ export const payosWebhook = asyncHandler(async (req, res) => {
   console.log('\n📡 [PayOS Webhook] Nhận webhook thanh toán, tiến hành verify và xếp hàng...');
   try {
     // 1. Xác thực chữ ký số bằng thư viện của PayOS
-    const webhookData = paymentService.payos.webhooks.verify(req.body);
+    const webhookData = await paymentService.payos.webhooks.verify(req.body);
 
     if (webhookData.code === "00" || webhookData.success === true || webhookData.amount > 0) {
       try {

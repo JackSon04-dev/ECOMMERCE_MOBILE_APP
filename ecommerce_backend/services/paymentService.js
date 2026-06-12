@@ -278,7 +278,7 @@ export const checkPaymentStatus = async (orderId, userId) => {
   if (!order.isPaid && order.paymentMethod === 'PayOS' && order.payosOrderCode) {
     try {
       console.log(`🔍 [PayOS] Querying order status for orderCode: ${order.payosOrderCode}`);
-      const paymentLinkData = await payos.paymentRequests.getPaymentLinkInformation(order.payosOrderCode);
+      const paymentLinkData = await payos.paymentRequests.get(order.payosOrderCode);
 
       console.log(`📦 [PayOS Query] Status: ${paymentLinkData.status}`);
 
