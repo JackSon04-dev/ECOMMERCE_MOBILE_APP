@@ -4,6 +4,8 @@ import Product from '../models/productModel.js';
 import Voucher from '../models/voucherModel.js';
 import User from '../models/userModel.js';
 import { ApiError } from '../middleware/errorMiddleware.js';
+import redisClient from '../config/redis.js';
+import { publishToQueue } from './rabbitmqService.js';
 
 /**
  * 🔄 Retry helper dành riêng cho MongoDB Transient Transaction Errors.
@@ -98,8 +100,93 @@ export const getOrderById = async (orderId, userId) => {
   if (order.user.toString() !== userId) {
     throw new ApiError(403, 'Bạn không có quyền xem đơn hàng này')
   }
-  return order
-}
+  return order;
+};
+
+/**
+ * ✨ Khởi chạy tiến trình tạo đơn hàng & Caching vào Redis (dành cho Worker và Sync Fallback)
+ */
+export const processCreateOrder = async (userId, orderData, orderId) => {
+  try {
+    const result = await _executeCreateOrder(userId, orderData, orderId);
+
+    // Lưu trạng thái thành công và thông tin cache thanh toán vào Redis
+    try {
+      await redisClient.setEx(`order_status:${orderId}`, 600, JSON.stringify({ status: 'success' }));
+
+      // Caching dữ liệu đơn hàng nếu là thanh toán online để API tạo QR/Link không phải truy vấn DB
+      const onlinePaymentMethods = ['VNPay', 'ZaloPay', 'PayOS'];
+      if (onlinePaymentMethods.includes(result.order.paymentMethod)) {
+        const cacheData = {
+          _id: result.order._id.toString(),
+          user: result.order.user.toString(),
+          isPaid: result.order.isPaid,
+          paymentMethod: result.order.paymentMethod,
+          totalPrice: result.order.totalPrice
+        };
+        await redisClient.setEx(`payment_order_data:${orderId}`, 300, JSON.stringify(cacheData));
+        console.log(`💾 [OrderService] Cached online payment order data in Redis for order: ${orderId}`);
+      }
+    } catch (redisError) {
+      console.error('⚠️ [OrderService] Lỗi lưu cache Redis:', redisError.message);
+    }
+
+    return result;
+  } catch (error) {
+    const isApiError = error.statusCode !== undefined;
+    if (isApiError) {
+      // Lỗi nghiệp vụ (hết kho, sai voucher): Ghi status thất bại để Client biết
+      try {
+        await redisClient.setEx(
+          `order_status:${orderId}`,
+          600,
+          JSON.stringify({ status: 'failed', error: error.message || 'Đặt hàng thất bại' })
+        );
+      } catch (redisError) {
+        console.error('⚠️ [OrderService] Lỗi ghi nhận thất bại vào Redis:', redisError.message);
+      }
+    }
+    // Quăng lỗi ra để nơi gọi (Worker) biết cách xử lý ack/nack
+    throw error;
+  }
+};
+
+/**
+ * ✨ Khởi tạo đơn hàng (Đẩy vào Queue hoặc xử lý đồng bộ nếu lỗi)
+ */
+export const enqueueOrderCreation = async (userId, orderData) => {
+  // Sinh trước orderId
+  const orderId = new mongoose.Types.ObjectId();
+
+  // Lưu trạng thái processing vào Redis (hạn 10 phút)
+  try {
+    await redisClient.setEx(`order_status:${orderId}`, 600, JSON.stringify({ status: 'processing', error: null }));
+  } catch (redisError) {
+    console.error('❌ [enqueueOrderCreation] Lỗi ghi Redis:', redisError.message);
+  }
+
+  try {
+    // Đẩy vào RabbitMQ
+    await publishToQueue('order_creation_queue', { userId, orderData, orderId });
+    return {
+      success: true,
+      statusCode: 202,
+      trackingId: orderId,
+      message: 'Đơn hàng của bạn đang được xử lý...'
+    };
+  } catch (queueError) {
+    // Fallback: Xử lý đồng bộ trực tiếp nếu RabbitMQ sập
+    console.warn('⚠️ [enqueueOrderCreation] RabbitMQ lỗi, tự động chuyển sang xử lý đồng bộ:', queueError.message);
+    const result = await processCreateOrder(userId, orderData, orderId);
+    
+    return {
+      success: true,
+      statusCode: 201,
+      message: 'Đặt hàng thành công',
+      order: result.order
+    };
+  }
+};
 
 /**
  * ✨ Tạo đơn hàng mới (Áp dụng Transaction & Atomic Updates + Retry)
@@ -111,7 +198,7 @@ export const getOrderById = async (orderId, userId) => {
  * @param {string} orderData.voucherCode - Mã giảm giá áp dụng
  * @returns {Promise<object>} Kết quả tạo đơn hàng gồm thông tin chi tiết và chi phí
  */
-export const processCreateOrder = async (userId, { orderItems, paymentMethod, userInfo, voucherCode }, preAllocatedId) => {
+const _executeCreateOrder = async (userId, { orderItems, paymentMethod, userInfo, voucherCode }, preAllocatedId) => {
   console.log('\n📦 ========== BẮT ĐẦU TẠO ĐƠN HÀNG (SERVICE) ==========')
   // 1. Validate input
   if (!orderItems || orderItems.length === 0) {
@@ -367,3 +454,38 @@ export const processCancelOrder = async (orderId, userId) => {
     return sessionOrder;
   });
 }
+
+/**
+ * 🔍 Lấy trạng thái xử lý đơn hàng (Đọc từ Redis Cache / Fallback DB)
+ * @param {string} orderId - ID đơn hàng
+ * @param {string} userId - ID của người dùng gọi API
+ * @returns {Promise<object>} Đối tượng chứa trạng thái { status, message, order }
+ */
+export const getOrderStatus = async (orderId, userId) => {
+  // 1. Kiểm tra trạng thái trong Redis do worker đẩy lên
+  try {
+    const cachedStatus = await redisClient.get(`order_status:${orderId}`);
+    if (cachedStatus) {
+      const statusData = JSON.parse(cachedStatus);
+      if (statusData.status === 'success') {
+        return { status: 'success' };
+      }
+      if (statusData.status === 'failed') {
+        return { status: 'failed', message: statusData.error || 'Đặt hàng thất bại' };
+      }
+      return { status: 'processing' };
+    }
+  } catch (redisError) {
+    console.error('❌ [getOrderStatus] Lỗi đọc Redis:', redisError.message);
+  }
+
+  // 2. Fallback: Nếu không tìm thấy key trong Redis, truy vấn trực tiếp MongoDB
+  try {
+    // Không import getOrderById thì gọi hàm getOrderById trong file này luôn
+    const order = await getOrderById(orderId, userId);
+    return { status: 'success', order };
+  } catch (dbError) {
+    // Nếu chưa có trong DB thì chứng tỏ queue chưa xử lý xong, trả về processing
+    return { status: 'processing' };
+  }
+};

@@ -75,7 +75,6 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - backend
-      - chatbot # Đảm bảo Chatbot cũng khởi chạy trước
     networks:
       - ecommerce_local_net
 

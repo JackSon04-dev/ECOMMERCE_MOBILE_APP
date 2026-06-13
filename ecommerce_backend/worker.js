@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import connectDB from './config/db.js';
 import { connectRedis } from './config/redis.js';
 import redisClient from './config/redis.js';
-import { connectRabbitMQ, getChannel } from './services/rabbitmqService.js';
+import { connectRabbitMQ, getChannel } from './config/rabbitmq.js';
 import * as orderService from './services/orderService.js';
 import * as paymentService from './services/paymentService.js';
 import Order from './models/orderModel.js';
@@ -37,29 +37,8 @@ const initWorkers = async () => {
       console.log(`📥 [Worker] Nhận yêu cầu tạo đơn hàng: ID=${orderId}, User=${userId}`);
 
       try {
-        // Gọi Service tạo đơn hàng (đã cập nhật nhận preAllocatedId)
+        // Gọi Service tạo đơn hàng (đã cập nhật nhận preAllocatedId và tự lo Caching)
         const result = await orderService.processCreateOrder(userId, orderData, orderId);
-
-        // Lưu trạng thái thành công và thông tin cache thanh toán vào Redis (bọc try-catch riêng để tránh crash khi Redis sập)
-        try {
-          await redisClient.setEx(`order_status:${orderId}`, 600, JSON.stringify({ status: 'success' }));
-
-          // Caching dữ liệu đơn hàng nếu là thanh toán online để API tạo QR/Link không phải truy vấn DB
-          const onlinePaymentMethods = ['VNPay', 'ZaloPay', 'PayOS'];
-          if (onlinePaymentMethods.includes(result.order.paymentMethod)) {
-            const cacheData = {
-              _id: result.order._id.toString(),
-              user: result.order.user.toString(),
-              isPaid: result.order.isPaid,
-              paymentMethod: result.order.paymentMethod,
-              totalPrice: result.order.totalPrice
-            };
-            await redisClient.setEx(`payment_order_data:${orderId}`, 300, JSON.stringify(cacheData));
-            console.log(`💾 [Worker] Cached online payment order data in Redis for order: ${orderId}`);
-          }
-        } catch (redisError) {
-          console.error('⚠️ [Worker] Lỗi lưu cache Redis (tiến trình tạo đơn hàng vẫn tiếp tục):', redisError.message);
-        }
 
         console.log(`✅ [Worker] Xử lý đơn hàng THÀNH CÔNG: ID=${orderId}`);
         channel.ack(msg);
@@ -70,17 +49,8 @@ const initWorkers = async () => {
         const isApiError = error.statusCode !== undefined;
 
         if (isApiError) {
-          // Lỗi nghiệp vụ (hết kho, sai voucher): Ghi status thất bại để Client biết
-          try {
-            await redisClient.setEx(
-              `order_status:${orderId}`,
-              600,
-              JSON.stringify({ status: 'failed', error: error.message || 'Đặt hàng thất bại' })
-            );
-          } catch (redisError) {
-            console.error('⚠️ [Worker] Lỗi ghi nhận thất bại vào Redis:', redisError.message);
-          }
-          channel.ack(msg); // Xóa khỏi queue vì có thử lại vẫn lỗi
+          // Lỗi nghiệp vụ (đã được Service cache failed): Xóa khỏi queue vì có thử lại vẫn lỗi
+          channel.ack(msg); 
         } else {
           // Lỗi hệ thống (mất kết nối MongoDB...): Nack để RabbitMQ giữ lại tin nhắn và gửi lại sau khi DB phục hồi
           console.warn(`🔄 [Worker] Lỗi kết nối hệ thống/Database. Nack và Requeue tin nhắn đơn hàng: ${orderId}`);
@@ -108,6 +78,7 @@ const initWorkers = async () => {
         );
 
         console.log(`🎉 [Worker] Cập nhật thanh toán THÀNH CÔNG cho đơn hàng: ${order._id}`);
+
         channel.ack(msg);
       } catch (error) {
         console.error('❌ [Worker] Lỗi xử lý webhook PayOS:', error.message);

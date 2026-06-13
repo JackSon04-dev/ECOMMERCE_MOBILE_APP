@@ -51,6 +51,7 @@ class PaymentService {
           return {
             'orderUrl': data['orderUrl'],
             'zpTransToken': data['zpTransToken'],
+            'amount': data['amount'],
           };
         }
       }

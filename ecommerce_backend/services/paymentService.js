@@ -5,6 +5,46 @@ import moment from 'moment';
 import { PayOS } from '@payos/node';
 import { ApiError } from '../middleware/errorMiddleware.js';
 import redisClient from '../config/redis.js';
+import { publishToQueue } from './rabbitmqService.js';
+
+// Helper lưu cache trạng thái thanh toán siêu tốc cho Polling API
+const _cachePaymentSuccess = async (order) => {
+  try {
+    const paymentCache = {
+      isPaid: true,
+      paymentMethod: order.paymentMethod,
+      paidAt: order.paidAt,
+      user: order.user.toString()
+    };
+    await redisClient.setEx(`payment_status:${order._id}`, 300, JSON.stringify(paymentCache));
+  } catch (error) {
+    console.error('⚠️ [Redis] Lỗi lưu cache trạng thái thanh toán:', error.message);
+  }
+};
+
+// Helper đọc dữ liệu đơn hàng từ Redis (hoặc DB nếu Cache Miss)
+const _getOrderForPaymentCreation = async (orderId, providerName) => {
+  let order = null;
+
+  try {
+    const cached = await redisClient.get(`payment_order_data:${orderId}`);
+    if (cached) {
+      order = JSON.parse(cached);
+      console.log(`⚡ [${providerName}] Cache HIT: Lấy dữ liệu đơn hàng từ Redis`);
+    }
+  } catch (err) {
+    console.error(`❌ [${providerName}] Lỗi đọc cache Redis:`, err.message);
+  }
+
+  if (!order) {
+    order = await Order.findById(orderId);
+    if (!order) {
+      throw new ApiError(404, 'Không tìm thấy đơn hàng');
+    }
+  }
+
+  return order;
+};
 
 // Khởi tạo PayOS
 export const payos = new PayOS({
@@ -44,25 +84,7 @@ export const createPaymentUrl = async (orderId, userId, reqBaseUrl) => {
   console.log(`💳 [VNPay] Creating payment URL for order: ${orderId}`);
 
   // 1. Tìm đơn hàng (Thử đọc từ Redis trước)
-  let order = null;
-  let isFromCache = false;
-  try {
-    const cached = await redisClient.get(`payment_order_data:${orderId}`);
-    if (cached) {
-      order = JSON.parse(cached);
-      isFromCache = true;
-      console.log(`⚡ [VNPay] Cache HIT: Lấy dữ liệu đơn hàng từ Redis`);
-    }
-  } catch (err) {
-    console.error('❌ [VNPay] Lỗi đọc cache Redis:', err.message);
-  }
-
-  if (!order) {
-    order = await Order.findById(orderId);
-    if (!order) {
-      throw new ApiError(404, 'Không tìm thấy đơn hàng');
-    }
-  }
+  const order = await _getOrderForPaymentCreation(orderId, 'VNPay');
 
   // 2. Kiểm tra quyền
   if (order.user.toString() !== userId) {
@@ -88,7 +110,7 @@ export const createPaymentUrl = async (orderId, userId, reqBaseUrl) => {
   } else {
     throw new ApiError(500, 'Thiếu cấu hình VNP_RETURN_URL hoặc baseUrl');
   }
-  
+
   const returnUrl = process.env.VNP_RETURN_URL || `${baseUrl}/api/payment/vnpay_return`;
 
   // Tạo mã giao dịch unique từ orderId (lấy 8 ký tự cuối + timestamp)
@@ -105,12 +127,7 @@ export const createPaymentUrl = async (orderId, userId, reqBaseUrl) => {
   });
 
   // Lưu txnRef vào order để mapping sau này
-  if (isFromCache) {
-    await Order.updateOne({ _id: orderId }, { $set: { vnpayTxnRef: txnRef } });
-  } else {
-    order.vnpayTxnRef = txnRef;
-    await order.save();
-  }
+  await Order.updateOne({ _id: orderId }, { $set: { vnpayTxnRef: txnRef } });
 
   console.log(`✅ [VNPay] Payment URL created successfully: ${txnRef}`);
 
@@ -119,6 +136,7 @@ export const createPaymentUrl = async (orderId, userId, reqBaseUrl) => {
     txnRef
   };
 };
+
 
 /**
  * 🔄 VNPay Return URL - Xử lý verify kết quả từ VNPay redirect
@@ -145,67 +163,12 @@ export const processVnpayReturn = async (query) => {
       });
       await order.save();
       console.log(`✅ [VNPay Return] Order ${order._id} marked as paid`);
+      await _cachePaymentSuccess(order);
     }
     return { success: true, order };
   }
 
   return { success: false };
-};
-
-/**
- * 📡 VNPay IPN - Cập nhật DB từ VNPay IPN gọi trực tiếp
- * @param {object} query - Đối tượng query params do server VNPay gọi sang
- * @returns {Promise<object>} Đối tượng phản hồi VNPay { RspCode, Message }
- */
-export const processVnpayIpn = async (query) => {
-  const result = vnpay.verifyIpnCall(query);
-
-  if (!result.isVerified) {
-    console.log('❌ [VNPay IPN] Chữ ký không hợp lệ!');
-    return { RspCode: '97', Message: 'Invalid signature' };
-  }
-
-  // Tìm order theo txnRef
-  const txnRef = query.vnp_TxnRef;
-  const order = await Order.findOne({ vnpayTxnRef: txnRef });
-
-  if (!order) {
-    console.log(`❌ [VNPay IPN] Không tìm thấy đơn hàng với txnRef: ${txnRef}`);
-    return { RspCode: '01', Message: 'Order not found' };
-  }
-
-  // Kiểm tra số tiền
-  const vnpAmount = parseInt(query.vnp_Amount) / 100;
-  if (vnpAmount !== order.totalPrice) {
-    console.log(`❌ [VNPay IPN] Số tiền không khớp: VNPay=${vnpAmount}, Đơn hàng=${order.totalPrice}`);
-    return { RspCode: '04', Message: 'Amount invalid' };
-  }
-
-  // Kiểm tra IDEMPOTENCY
-  if (order.isPaid) {
-    console.log(`⚠️ [VNPay IPN] Đơn hàng ${order._id} ĐÃ ĐƯỢC XỬ LÝ TRƯỚC ĐÓ. Bỏ qua.`);
-    return { RspCode: '02', Message: 'Order already confirmed' };
-  }
-
-  if (result.isSuccess) {
-    order.isPaid = true;
-    order.paidAt = new Date();
-    if (order.status === 'Chờ xác nhận') {
-      order.status = 'Đã xác nhận';
-    }
-    order.statusHistory.push({
-      status: order.status,
-      note: `Thanh toán VNPay thành công (xác nhận qua IPN Server-to-Server)`,
-      updatedAt: new Date()
-    });
-    await order.save();
-
-    console.log(`🎉 [VNPay IPN] Cập nhật THÀNH CÔNG đơn hàng ${order._id}`);
-    return { RspCode: '00', Message: 'Confirm Success' };
-  } else {
-    console.log(`❌ [VNPay IPN] Giao dịch không thành công cho đơn hàng: ${order._id}`);
-    return { RspCode: '00', Message: 'Confirm Success' };
-  }
 };
 
 /**
@@ -215,6 +178,24 @@ export const processVnpayIpn = async (query) => {
  * @returns {Promise<object>} Đối tượng chứa trạng thái thanh toán { isPaid, paymentMethod, paidAt }
  */
 export const checkPaymentStatus = async (orderId, userId) => {
+  // 0. Ưu tiên kiểm tra cache từ Redis do worker webhook đẩy lên
+  try {
+    const cachedPayment = await redisClient.get(`payment_status:${orderId}`);
+    if (cachedPayment) {
+      const paymentData = JSON.parse(cachedPayment);
+      if (paymentData.user === userId) {
+        console.log(`⚡ [Payment Status] Cache HIT: Lấy trạng thái thanh toán từ Redis cho order: ${orderId}`);
+        return {
+          isPaid: paymentData.isPaid,
+          paymentMethod: paymentData.paymentMethod,
+          paidAt: paymentData.paidAt
+        };
+      }
+    }
+  } catch (redisError) {
+    console.error('❌ [checkPaymentStatus] Lỗi đọc Redis:', redisError.message);
+  }
+
   const order = await Order.findById(orderId);
 
   if (!order) {
@@ -223,6 +204,46 @@ export const checkPaymentStatus = async (orderId, userId) => {
 
   if (order.user.toString() !== userId) {
     throw new ApiError(403, 'Bạn không có quyền xem đơn hàng này');
+  }
+
+  // ─── Nếu là VNPay và chưa thanh toán → chủ động hỏi VNPay ───
+  if (!order.isPaid && order.paymentMethod === 'VNPay' && order.vnpayTxnRef) {
+    try {
+      console.log(`🔍 [VNPay] Querying order status for txnRef: ${order.vnpayTxnRef}`);
+      const parts = order.vnpayTxnRef.split('_');
+      const timestamp = parts.length > 1 ? parseInt(parts[1], 10) : order.createdAt.getTime();
+      const createDate = Number(moment(timestamp).format('YYYYMMDDHHmmss'));
+      const requestId = moment().format('HHmmss') + orderId.slice(-4);
+
+      const vnpData = await vnpay.queryDr({
+        vnp_RequestId: requestId,
+        vnp_TxnRef: order.vnpayTxnRef,
+        vnp_OrderInfo: `Kiem tra trang thai don hang ${orderId.slice(-8)}`,
+        vnp_CreateDate: createDate,
+        vnp_TransactionDate: createDate,
+        vnp_IpAddr: '127.0.0.1',
+        vnp_TransactionNo: 0,
+      });
+
+      console.log(`📦 [VNPay Query] Status:`, vnpData);
+
+      if (vnpData.isSuccess && vnpData.vnp_TransactionStatus == '00') {
+        order.isPaid = true;
+        order.paidAt = new Date();
+        if (order.status === 'Chờ xác nhận') {
+          order.status = 'Đã xác nhận';
+        }
+        order.statusHistory.push({
+          status: order.status,
+          note: `Thanh toán VNPay thành công (xác nhận qua polling)`,
+          updatedAt: new Date()
+        });
+        await order.save();
+        console.log(`✅ [VNPay Query] Đơn hàng ${order._id} cập nhật THÀNH CÔNG từ query!`);
+      }
+    } catch (vnpError) {
+      console.error('⚠️ [VNPay Query] Lỗi:', vnpError.message);
+    }
   }
 
   // ─── Nếu là ZaloPay và chưa thanh toán → chủ động hỏi ZaloPay ───
@@ -318,25 +339,7 @@ export const createZalopayPaymentUrl = async (orderId, userId) => {
   console.log(`💳 [ZaloPay] Creating payment URL for order: ${orderId}`);
 
   // Tìm đơn hàng (Thử đọc từ Redis trước)
-  let order = null;
-  let isFromCache = false;
-  try {
-    const cached = await redisClient.get(`payment_order_data:${orderId}`);
-    if (cached) {
-      order = JSON.parse(cached);
-      isFromCache = true;
-      console.log(`⚡ [ZaloPay] Cache HIT: Lấy dữ liệu đơn hàng từ Redis`);
-    }
-  } catch (err) {
-    console.error('❌ [ZaloPay] Lỗi đọc cache Redis:', err.message);
-  }
-
-  if (!order) {
-    order = await Order.findById(orderId);
-    if (!order) {
-      throw new ApiError(404, 'Không tìm thấy đơn hàng');
-    }
-  }
+  const order = await _getOrderForPaymentCreation(orderId, 'ZaloPay');
 
   if (order.user.toString() !== userId) {
     throw new ApiError(403, 'Bạn không có quyền thanh toán');
@@ -353,12 +356,7 @@ export const createZalopayPaymentUrl = async (orderId, userId) => {
   const transID = Math.floor(Math.random() * 1000000);
   const app_trans_id = `${moment().format('YYMMDD')}_${transID}`;
 
-  if (isFromCache) {
-    await Order.updateOne({ _id: orderId }, { $set: { zalopayTransId: app_trans_id } });
-  } else {
-    order.zalopayTransId = app_trans_id;
-    await order.save();
-  }
+  await Order.updateOne({ _id: orderId }, { $set: { zalopayTransId: app_trans_id } });
 
   const callbackUrl = configZaloPay.callback_url;
   if (!callbackUrl) {
@@ -396,67 +394,14 @@ export const createZalopayPaymentUrl = async (orderId, userId) => {
     console.log(`✅ [ZaloPay] Created URL: ${response.order_url}`);
     return {
       orderUrl: response.order_url,
-      zpTransToken: response.zp_trans_token
+      zpTransToken: response.zp_trans_token,
+      amount: order.totalPrice
     };
   } else {
     throw new ApiError(502, 'Lỗi từ ZaloPay: ' + response.return_message);
   }
 };
 
-/**
- * 📡 ZaloPay Callback (Webhook)
- * @param {object} body - Payload gửi sang từ server ZaloPay
- * @returns {Promise<object>} Đối tượng phản hồi ZaloPay { return_code, return_message }
- */
-export const processZalopayCallback = async (body) => {
-  console.log('📥 [ZaloPay Callback] Processing ZaloPay Webhook callback...');
-  const dataStr = body.data;
-  const reqMac = body.mac;
-
-  const mac = CryptoJS.HmacSHA256(dataStr, configZaloPay.key2).toString();
-
-  if (reqMac !== mac) {
-    console.log('❌ [ZaloPay Callback] MAC invalid!');
-    return { return_code: -1, return_message: 'mac not equal' };
-  }
-
-  const dataJson = JSON.parse(dataStr);
-  const { app_trans_id, zp_trans_id, amount } = dataJson;
-
-  const order = await Order.findOne({ zalopayTransId: app_trans_id });
-
-  if (!order) {
-    console.log(`⚠️ [ZaloPay Callback] Order not found: ${app_trans_id}`);
-    return { return_code: 1, return_message: 'order not found but acknowledged' };
-  }
-
-  // Kiểm tra số tiền thực nhận so với tổng giá trị đơn hàng
-  if (amount !== order.totalPrice) {
-    console.log(`❌ [ZaloPay Callback] Số tiền không khớp: Nhận=${amount}, Đơn hàng=${order.totalPrice}`);
-    return { return_code: -1, return_message: 'Amount invalid' };
-  }
-
-  if (order.isPaid) {
-    console.log(`⚠️ [ZaloPay Callback] Order already processed.`);
-    return { return_code: 1, return_message: 'success (already processed)' };
-  }
-
-  order.isPaid = true;
-  order.paidAt = new Date();
-  order.zalopayTransId = zp_trans_id || order.zalopayTransId;
-  if (order.status === 'Chờ xác nhận') {
-    order.status = 'Đã xác nhận';
-  }
-  order.statusHistory.push({
-    status: order.status,
-    note: `Thanh toán ZaloPay thành công (zp_trans_id: ${zp_trans_id})`,
-    updatedAt: new Date()
-  });
-  await order.save();
-
-  console.log(`🎉 [ZaloPay Callback] Cập nhật THÀNH CÔNG đơn hàng ${order._id}`);
-  return { return_code: 1, return_message: 'success' };
-};
 
 /**
  * 💳 Tạo URL/Mã QR thanh toán PayOS (VietQR)
@@ -468,25 +413,7 @@ export const createPayosPaymentUrl = async (orderId, userId) => {
   console.log(`💳 [PayOS] Creating payment link for order: ${orderId}`);
 
   // Tìm đơn hàng (Thử đọc từ Redis trước)
-  let order = null;
-  let isFromCache = false;
-  try {
-    const cached = await redisClient.get(`payment_order_data:${orderId}`);
-    if (cached) {
-      order = JSON.parse(cached);
-      isFromCache = true;
-      console.log(`⚡ [PayOS] Cache HIT: Lấy dữ liệu đơn hàng từ Redis`);
-    }
-  } catch (err) {
-    console.error('❌ [PayOS] Lỗi đọc cache Redis:', err.message);
-  }
-
-  if (!order) {
-    order = await Order.findById(orderId);
-    if (!order) {
-      throw new ApiError(404, 'Không tìm thấy đơn hàng');
-    }
-  }
+  const order = await _getOrderForPaymentCreation(orderId, 'PayOS');
 
   if (order.user.toString() !== userId) {
     throw new ApiError(403, 'Bạn không có quyền thanh toán');
@@ -503,19 +430,15 @@ export const createPayosPaymentUrl = async (orderId, userId) => {
   // PayOS orderCode là số nguyên dương <= 9007199254740991
   const orderCode = Number(String(Date.now()).slice(-6) + Math.floor(Math.random() * 1000).toString().padStart(3, '0'));
 
-  if (isFromCache) {
-    await Order.updateOne({ _id: orderId }, { $set: { payosOrderCode: orderCode.toString() } });
-  } else {
-    order.payosOrderCode = orderCode.toString();
-    await order.save();
-  }
+  await Order.updateOne({ _id: orderId }, { $set: { payosOrderCode: orderCode.toString() } });
 
-  const returnUrl = process.env.PAYOS_RETURN_URL || 'https://clothesstores.app/api/payment/payos_return';
-  const cancelUrl = process.env.PAYOS_CANCEL_URL || 'https://clothesstores.app/api/payment/payos_return';
+  const returnUrl = process.env.PAYOS_RETURN_URL;
+  const cancelUrl = process.env.PAYOS_CANCEL_URL;
 
   const body = {
     orderCode: orderCode,
-    amount: 2000, // FIXME: Đã ép giá 2000 VND để test
+    //amount: order.totalPrice, total price thật của order lấy từ database hoặc redis
+    amount: 2000, // Ép cứng 2000 VND để test cổng thanh toán PayOS
     description: `Thanh toan DH ${orderCode}`,
     returnUrl: returnUrl,
     cancelUrl: cancelUrl
@@ -531,7 +454,8 @@ export const createPayosPaymentUrl = async (orderId, userId) => {
     bin: paymentLinkData.bin,
     accountNumber: paymentLinkData.accountNumber,
     accountName: paymentLinkData.accountName,
-    amount: paymentLinkData.amount,
+    //amount: paymentLinkData.amount, // Trả về số tiền thực tế từ cổng thanh toán PayOS
+    amount: order.totalPrice, // Trả về số tiền THẬT của đơn hàng để giao diện hiển thị đúng
     description: paymentLinkData.description,
     orderCode: paymentLinkData.orderCode
   };
@@ -539,28 +463,18 @@ export const createPayosPaymentUrl = async (orderId, userId) => {
 
 /**
  * 🔄 PayOS Return URL
+ * CHÚ Ý: URL Return của PayOS không có chữ ký bảo mật (signature).
+ * KHÔNG ĐƯỢC cập nhật Database ở đây vì user có thể dễ dàng fake tham số trên URL.
+ * Chỉ dùng để render giao diện báo thành công/thất bại cho Web Browser.
+ * Database sẽ được cập nhật an toàn qua Webhook (processPayosWebhookSuccess).
  * @param {object} query - Các tham số query string nhận từ redirect của PayOS
- * @returns {Promise<object>} Đối tượng chứa trạng thái { success }
+ * @returns {Promise<object>} Đối tượng chứa trạng thái { success } để Controller render HTML
  */
 export const processPayosReturn = async (query) => {
-  const { orderCode, status, cancel } = query;
+  const { status, cancel } = query;
 
+  // Chỉ check string để Controller biết đường render UI HTML
   if (status === 'PAID' && cancel === 'false') {
-    const order = await Order.findOne({ payosOrderCode: orderCode });
-    if (order && !order.isPaid) {
-      order.isPaid = true;
-      order.paidAt = new Date();
-      if (order.status === 'Chờ xác nhận') {
-        order.status = 'Đã xác nhận';
-      }
-      order.statusHistory.push({
-        status: order.status,
-        note: `Thanh toán PayOS thành công (xác nhận qua Browser Return)`,
-        updatedAt: new Date()
-      });
-      await order.save();
-      console.log(`✅ [PayOS Return] Order ${order._id} marked as paid`);
-    }
     return { success: true };
   }
 
@@ -601,6 +515,31 @@ export const processPayosWebhookSuccess = async (webhookData, note) => {
     updatedAt: new Date()
   });
   await order.save();
+  await _cachePaymentSuccess(order);
 
   return order;
+};
+
+/**
+ * 📡 Xử lý PayOS Webhook (Verify và đẩy vào RabbitMQ)
+ * @param {object} webhookBody - Payload gửi sang từ server PayOS
+ */
+export const handlePayosWebhookRequest = async (webhookBody) => {
+  // 1. Xác thực chữ ký số bằng thư viện của PayOS
+  const webhookData = await payos.webhooks.verify(webhookBody);
+
+  if (webhookData.code === "00" || webhookData.success === true || webhookData.amount > 0) {
+    try {
+      // 2. Đẩy dữ liệu đã xác thực vào RabbitMQ
+      await publishToQueue('payos_payment_queue', webhookData);
+    } catch (queueError) {
+      console.warn('⚠️ [PayOS Webhook] Không thể đẩy vào RabbitMQ, chuyển sang xử lý đồng bộ fallback:', queueError.message);
+      // Fallback: Xử lý đồng bộ ngay lập tức để không bỏ lỡ giao dịch
+      await processPayosWebhookSuccess(
+        webhookData,
+        `Thanh toán PayOS thành công (xác nhận qua Webhook đồng bộ fallback)`
+      );
+    }
+  }
+  return { success: true, message: 'Đã nhận và xử lý' };
 };

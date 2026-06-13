@@ -32,6 +32,7 @@ export const createPaymentUrl = asyncHandler(async (req, res) => {
   });
 });
 
+
 /**
  * 🔄 VNPay Return URL - User được redirect về đây sau khi thanh toán
  * GET /api/payment/vnpay_return
@@ -243,22 +244,6 @@ export const vnpayReturn = asyncHandler(async (req, res) => {
 });
 
 /**
- * 📡 VNPay IPN (Instant Payment Notification)
- * VNPay server gọi endpoint này để thông báo kết quả thanh toán
- * GET /api/payment/vnpay_ipn
- */
-export const vnpayIpn = asyncHandler(async (req, res) => {
-  console.log('\n📡 [VNPay IPN] VNPay SERVER gọi thẳng vào backend');
-  try {
-    const result = await paymentService.processVnpayIpn(req.query);
-    return res.json(result);
-  } catch (error) {
-    // VNPay IPN requires custom response code on failure
-    return res.json({ RspCode: '99', Message: 'Unknown error' });
-  }
-});
-
-/**
  * 🔍 Kiểm tra trạng thái thanh toán của đơn hàng
  * GET /api/payment/status/:orderId
  */
@@ -293,19 +278,6 @@ export const createZalopayPaymentUrl = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * 📡 ZaloPay Callback (Webhook - Server to Server)
- * POST /api/payment/zalopay_callback
- */
-export const zalopayCallback = asyncHandler(async (req, res) => {
-  console.log('\n📥 [ZaloPay Callback] Nhận thông báo từ ZaloPay Server');
-  try {
-    const result = await paymentService.processZalopayCallback(req.body);
-    return res.json(result);
-  } catch (error) {
-    return res.json({ return_code: 0, return_message: error.message });
-  }
-});
 
 /**
  * 💳 Tạo URL/Mã QR thanh toán PayOS (VietQR)
@@ -353,31 +325,11 @@ export const payosReturn = asyncHandler(async (req, res) => {
  * POST /api/payment/payos_webhook
  */
 export const payosWebhook = asyncHandler(async (req, res) => {
-  console.log('\n📡 [PayOS Webhook] Nhận webhook thanh toán, tiến hành verify và xếp hàng...');
   try {
-    // 1. Xác thực chữ ký số bằng thư viện của PayOS
-    const webhookData = await paymentService.payos.webhooks.verify(req.body);
-
-    if (webhookData.code === "00" || webhookData.success === true || webhookData.amount > 0) {
-      try {
-        // 2. Đẩy dữ liệu đã xác thực vào RabbitMQ
-        await publishToQueue('payos_payment_queue', webhookData);
-        console.log(`📤 [PayOS Webhook] Đã push callback của orderCode: ${webhookData.orderCode} vào queue: payos_payment_queue thành công`);
-      } catch (queueError) {
-        console.warn('⚠️ [PayOS Webhook] Không thể đẩy vào RabbitMQ, chuyển sang xử lý đồng bộ fallback:', queueError.message);
-        // Fallback: Xử lý đồng bộ ngay lập tức để không bỏ lỡ giao dịch
-        await paymentService.processPayosWebhookSuccess(
-          webhookData,
-          `Thanh toán PayOS thành công (xác nhận qua Webhook đồng bộ fallback)`
-        );
-      }
-    }
-
-    // 3. Phản hồi ngay 200 cho PayOS
-    return res.status(200).json({ success: true, message: 'Đã nhận và xử lý' });
+    const result = await paymentService.handlePayosWebhookRequest(req.body);
+    return res.status(200).json(result);
   } catch (error) {
     console.error('❌ [PayOS Webhook] Lỗi xác thực chữ ký hoặc lỗi xử lý:', error.message);
-    // Trả về 500 để PayOS tự động thử lại sau (PayOS hỗ trợ gửi lại webhook nếu thất bại)
-    return res.status(500).json({ success: false, message: error.message || 'Lỗi xử lý webhook' });
+    throw new ApiError(500, error.message || 'Lỗi xử lý webhook');
   }
 });

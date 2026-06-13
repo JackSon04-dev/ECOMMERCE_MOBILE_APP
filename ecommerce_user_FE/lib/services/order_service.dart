@@ -53,7 +53,7 @@ class OrderService {
   }
 
   /// Tạo đơn hàng mới
-  static Future<Order?> createOrder({
+  static Future<String?> createOrder({
     required List<Map<String, dynamic>> orderItems,
     required String paymentMethod,
     required Map<String, dynamic> userInfo,
@@ -92,9 +92,8 @@ class OrderService {
             final status = statusData['status'] as String;
 
             if (status == 'success') {
-              final order = Order.fromJson(statusData['order']);
-              print('✅ [Order] Polled success: ${order.id}');
-              return order;
+              print('✅ [Order] Polled success: $trackingId');
+              return trackingId;
             } else if (status == 'failed') {
               final errorMessage = statusData['message'] ?? 'Đặt hàng thất bại';
               print('❌ [Order] Polled failed: $errorMessage');
@@ -102,16 +101,16 @@ class OrderService {
             }
           }
         }
-        throw Exception('Hệ thống đang bận. Đơn hàng đang được xử lý, vui lòng kiểm tra lại đơn hàng trong Lịch sử mua hàng.');
+        throw Exception('PROCESSING:$trackingId');
       }
 
       // Fallback: Nếu trả về 201 hoặc 200 trực tiếp (Xử lý đồng bộ)
       if (response.statusCode == 201 || response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final order = Order.fromJson(data['order'] ?? data);
+        final orderId = data['order']?['_id'] ?? data['order']?['id'] ?? data['orderId'];
 
-        print('✅ [Order] Create success (sync): ${order.id}');
-        return order;
+        print('✅ [Order] Create success (sync): $orderId');
+        return orderId;
       } else {
         try {
           final data = jsonDecode(response.body);

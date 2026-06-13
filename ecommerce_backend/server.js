@@ -4,7 +4,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import connectDB from './config/db.js'
 import { connectRedis } from './config/redis.js'
-import { connectRabbitMQ } from './services/rabbitmqService.js'
+import { connectRabbitMQ } from './config/rabbitmq.js'
 import authRoutes from './routes/authRoute.js'
 // Admin routes
 import adminProductRoutes from './routes/admin/productRoutes.js'

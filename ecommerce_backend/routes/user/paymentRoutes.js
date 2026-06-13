@@ -2,10 +2,8 @@ import express from 'express'
 import {
   createPaymentUrl,
   vnpayReturn,
-  vnpayIpn,
   checkPaymentStatus,
   createZalopayPaymentUrl,
-  zalopayCallback,
   createPayosPaymentUrl,
   payosReturn,
   payosWebhook
@@ -34,8 +32,7 @@ router.post('/create_payment_url', verifyToken, validate(createPaymentUrlSchema)
 // 🔄 VNPay Return URL - User redirect về đây (KHÔNG cần auth, VNPay redirect)
 router.get('/vnpay_return', vnpayReturn)
 
-// 📡 VNPay IPN - Server VNPay gọi (KHÔNG cần auth, VNPay server gọi)
-router.get('/vnpay_ipn', vnpayIpn)
+
 
 // ==========================================
 // THIẾT LẬP ROUTE CHO ZALOPAY
@@ -44,8 +41,7 @@ router.get('/vnpay_ipn', vnpayIpn)
 // 💳 Tạo URL/Mã QR thanh toán ZaloPay (cần auth)
 router.post('/create_zalopay_url', verifyToken, validate(zalopayPaymentUrlSchema), createZalopayPaymentUrl)
 
-// 📡 ZaloPay Callback - Server ZaloPay gọi (KHÔNG cần auth, ZaloPay server gọi)
-router.post('/zalopay_callback', zalopayCallback)
+
 
 // ==========================================
 // THIẾT LẬP ROUTE CHO PAYOS (VietQR)

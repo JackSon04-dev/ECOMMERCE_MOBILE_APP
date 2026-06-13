@@ -243,7 +243,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         'quantity': item.quantity,
       }).toList();
 
-      final order = await OrderService.createOrder(
+      final orderId = await OrderService.createOrder(
         orderItems: orderItems,
         paymentMethod: _paymentMethod,
         userInfo: {
@@ -254,7 +254,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         voucherCode: _voucherCode.isNotEmpty ? _voucherCode : null,
       );
 
-      if (order != null) {
+      if (orderId != null) {
         if (_mode == 'cart') {
           // Lấy các item trong cart đã mua
           final cartItemsPurchased = ref.read(cartProvider).selectedItems;
@@ -264,17 +264,17 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         if (mounted) {
           if (_paymentMethod == 'VNPay') {
             // ─── VNPAY: Tạo VNPay payment URL và chuyển sang trang thanh toán ───
-            await _handleVnpayPayment(order);
+            await _handleVnpayPayment(orderId);
           } else if (_paymentMethod == 'ZaloPay') {
             // ─── ZALOPAY: Chuyển sang màn hình ZaloPay ───
-            await _handleZalopayPayment(order);
+            await _handleZalopayPayment(orderId);
           } else if (_paymentMethod == 'PayOS') {
             // ─── PAYOS: Chuyển sang màn hình PayOS ───
-            await _handlePayosPayment(order);
+            await _handlePayosPayment(orderId);
           } else {
             // ─── COD: Hiển thị dialog thành công bình thường ───
             _showOrderSuccessDialog(
-              orderId: order.id,
+              orderId: orderId,
               message: 'Chúng tôi sẽ liên hệ xác nhận sớm nhất.',
               isPaid: false,
               isCod: true,
@@ -290,6 +290,29 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       }
     } catch (e) {
       String errorMessage = 'Lỗi khi đặt hàng';
+      
+      // Xử lý timeout 10s: Đơn hàng đang được worker xử lý ngầm
+      if (e.toString().contains('Exception: PROCESSING:')) {
+        final orderId = e.toString().split('PROCESSING:')[1].trim();
+        
+        // Vẫn xóa giỏ hàng vì order đã vào RabbitMQ an toàn
+        if (_mode == 'cart') {
+          final cartItemsPurchased = ref.read(cartProvider).selectedItems;
+          ref.read(cartProvider.notifier).removeCheckoutItems(cartItemsPurchased);
+        }
+        
+        if (mounted) {
+          setState(() => _isLoading = false);
+          _showOrderSuccessDialog(
+            orderId: orderId,
+            message: 'Hệ thống đang bận. Đơn hàng đang được xử lý ngầm, vui lòng theo dõi trong Lịch sử mua hàng.',
+            isPaid: false,
+            isCod: true, // Dùng icon COD (xe tải) hoặc warning để báo đang xử lý
+          );
+        }
+        return;
+      }
+
       if (e.toString().contains('Exception:')) {
         errorMessage = e.toString().replaceFirst('Exception: ', '');
       }
@@ -305,9 +328,9 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
 
   // ─── VNPAY PAYMENT ───────────────────────────────────────────────────
 
-  Future<void> _handleVnpayPayment(dynamic order) async {
+  Future<void> _handleVnpayPayment(String orderId) async {
     // Gọi backend tạo VNPay payment URL
-    final paymentUrl = await PaymentService.createVnpayPaymentUrl(order.id);
+    final paymentUrl = await PaymentService.createVnpayPaymentUrl(orderId);
 
     if (paymentUrl != null && mounted) {
       // Chuyển sang trang thanh toán VNPay
@@ -315,7 +338,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         context,
         AppRoutes.vnpayPayment,
         arguments: {
-          'orderId': order.id,
+          'orderId': orderId,
           'paymentUrl': paymentUrl,
         },
       );
@@ -323,7 +346,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       if (mounted) {
         final isPaid = result == true;
         _showOrderSuccessDialog(
-          orderId: order.id,
+          orderId: orderId,
           message: isPaid
               ? 'Đơn hàng đã được thanh toán thành công qua VNPay.'
               : 'Đơn hàng đã tạo. Bạn có thể thanh toán sau trong chi tiết đơn hàng.',
@@ -334,7 +357,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     } else if (mounted) {
       // Không tạo được payment URL → hiện dialog thông báo
       _showOrderSuccessDialog(
-        orderId: order.id,
+        orderId: orderId,
         message: 'Đơn hàng đã tạo nhưng không thể kết nối VNPay.\n'
             'Bạn có thể thanh toán sau trong chi tiết đơn hàng.',
         isPaid: false,
@@ -345,18 +368,18 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
 
   // ─── ZALOPAY PAYMENT ─────────────────────────────────────────────────
 
-  Future<void> _handleZalopayPayment(dynamic order) async {
+  Future<void> _handleZalopayPayment(String orderId) async {
     // Gọi backend tạo ZaloPay QR info
-    final zaloData = await PaymentService.createZalopayPayment(order.id);
+    final zaloData = await PaymentService.createZalopayPayment(orderId);
 
     if (zaloData != null && mounted) {
       final result = await Navigator.pushNamed(
         context,
         AppRoutes.zalopayPayment,
         arguments: {
-          'orderId': order.id,
+          'orderId': orderId,
           'orderUrl': zaloData['orderUrl'],
-          'amount': order.totalPrice,
+          'amount': zaloData['amount'],
           'zpTransToken': zaloData['zpTransToken'],
         },
       );
@@ -364,7 +387,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       if (mounted) {
         final isPaid = result == true;
         _showOrderSuccessDialog(
-          orderId: order.id,
+          orderId: orderId,
           message: isPaid
               ? 'Đơn hàng đã được thanh toán thành công qua ZaloPay.'
               : 'Đơn hàng đã tạo. Bạn có thể thanh toán sau trong chi tiết đơn hàng.',
@@ -374,7 +397,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       }
     } else if (mounted) {
       _showOrderSuccessDialog(
-        orderId: order.id,
+        orderId: orderId,
         message: 'Đơn hàng đã tạo nhưng không thể kết nối hệ thống ZaloPay.\n'
             'Bạn có thể thanh toán sau trong chi tiết đơn hàng.',
         isPaid: false,
@@ -385,16 +408,16 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
 
   // ─── PAYOS PAYMENT ───────────────────────────────────────────────────
 
-  Future<void> _handlePayosPayment(dynamic order) async {
+  Future<void> _handlePayosPayment(String orderId) async {
     // Gọi backend tạo PayOS QR info
-    final payosData = await PaymentService.createPayosPayment(order.id);
+    final payosData = await PaymentService.createPayosPayment(orderId);
 
     if (payosData != null && mounted) {
       final result = await Navigator.pushNamed(
         context,
         AppRoutes.payosPayment,
         arguments: {
-          'orderId': order.id,
+          'orderId': orderId,
           'qrCode': payosData['qrCode'],
           'checkoutUrl': payosData['checkoutUrl'],
           'amount': payosData['amount'],
@@ -407,7 +430,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       if (mounted) {
         final isPaid = result == true;
         _showOrderSuccessDialog(
-          orderId: order.id,
+          orderId: orderId,
           message: isPaid
               ? 'Đơn hàng đã được thanh toán thành công qua PayOS (VietQR).'
               : 'Đơn hàng đã tạo. Bạn có thể thanh toán sau trong chi tiết đơn hàng.',
@@ -417,7 +440,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
       }
     } else if (mounted) {
       _showOrderSuccessDialog(
-        orderId: order.id,
+        orderId: orderId,
         message: 'Đơn hàng đã tạo nhưng không thể kết nối hệ thống PayOS.\n'
             'Bạn có thể thanh toán sau trong chi tiết đơn hàng.',
         isPaid: false,
