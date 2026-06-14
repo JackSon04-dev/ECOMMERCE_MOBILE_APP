@@ -1,51 +1,51 @@
 # E-Commerce Mobile App & Admin Dashboard
 
 ## 1. Project Overview
-A comprehensive E-Commerce solution designed to provide a seamless shopping experience for users and powerful management tools for administrators. The system consists of a cross-platform mobile application, a web-based admin dashboard, a robust backend API, and an AI-powered chatbot for customer support.
+This is a complete E-Commerce system designed to offer an easy shopping experience for users and strong management tools for admins. The system includes a mobile app, a web-based admin dashboard, a fast backend API, and an AI chatbot for customer support.
 
-## 2. Project Architecture & Modules
-The repository is divided into four main modules:
+## 2. Project Structure
+The project is divided into four main parts:
 
-- **`ecommerce_user_FE`**: The mobile application for end-users, enabling them to browse products, manage their shopping carts, make secure payments, and track their orders.
-- **`ecommerce_admin_FE`**: The administrative web dashboard for shop owners to manage inventory, process orders, view revenue statistics, and monitor customer activity.
-- **`ecommerce_backend`**: The core RESTful API serving both the mobile app and the admin dashboard, handling business logic, database interactions, and third-party integrations (payments, cloud storage).
-- **`chatbotAI`**: A standalone AI service providing automated and intelligent customer support.
+- **`ecommerce_user_FE`**: The mobile app for users. They can use it to view products, add items to their cart, make secure payments, and track their orders.
+- **`ecommerce_admin_FE`**: The web dashboard for shop owners. It helps them manage products, process orders, view revenue stats, and track customer activities.
+- **`ecommerce_backend`**: The core API that connects the mobile app and the admin dashboard. It handles business logic, database tasks, background jobs (workers), and connects to outside services like payments.
+- **`chatbotAI`**: An independent AI service that provides automatic and smart customer support.
 
-## 3. Prominent Technologies Used
+## 3. Main Technologies Used
 
 ### Mobile App (`ecommerce_user_FE`)
-- **Framework**: Flutter (Dart) - for building natively compiled applications for mobile from a single codebase.
-- **State Management**: Provider, Riverpod
-- **Authentication**: Google Sign In, and JWT-based custom authentication.
-- **Local Storage**: `flutter_secure_storage` (for sensitive data like tokens) and `shared_preferences`.
-- **Networking**: `http` package for RESTful API communication.
-- **UI & Animations**: `flutter_animate`, `flutter_slidable`, `charts_flutter` (for data visualization), and various icon packs (`cupertino_icons`, `font_awesome_flutter`).
+- **Framework**: Flutter (Dart) - for building mobile apps for both iOS and Android from one codebase.
+- **State Management**: Provider, Riverpod.
+- **Authentication**: Google Sign In and custom JWT login.
+- **Local Storage**: `flutter_secure_storage` (to save safe data like tokens) and `shared_preferences`.
+- **Networking**: `http` package for API requests.
 
 ### Admin Dashboard (`ecommerce_admin_FE`)
 - **Framework**: Vue.js 3 (Composition API).
-- **Build Tool**: Vite (powered by Rolldown) for extremely fast development and optimized builds.
-- **Routing**: Vue Router for Single Page Application (SPA) navigation.
+- **Build Tool**: Vite for fast development.
 - **Networking**: Axios for API requests.
-- **Styling**: Tailwind CSS for rapid UI development and responsive design.
+- **Styling**: Tailwind CSS for quick and responsive design.
 
 ### Backend API (`ecommerce_backend`)
-- **Runtime Environment**: Node.js.
-- **Web Framework**: Express.js.
-- **Database**: MongoDB with Mongoose ODM for flexible, document-oriented data storage.
-- **Caching**: Redis for performance optimization and fast data retrieval.
-- **Authentication & Security**: JWT (JSON Web Tokens), `bcryptjs` for password hashing, and `crypto-js`.
-- **Media Storage**: Cloudinary integrated with `multer` for efficient image uploading and delivery.
-- **Payment Gateways**: Integration with VNPay and ZaloPay for secure transaction processing.
-- **Push Notifications**: Firebase Admin SDK for sending FCM (Firebase Cloud Messaging) notifications to mobile users.
+- **Environment**: Node.js.
+- **Framework**: Express.js.
+- **Architecture**: MVC (Model-View-Controller) combined with a Decoupled Worker system.
+- **Database**: MongoDB (Mongoose) for flexible data storage.
+- **Message Queue**: RabbitMQ for background tasks and load balancing.
+- **Caching**: Redis for better performance and fast data reading.
+- **Media Storage**: Cloudinary for uploading and serving images.
+- **Payment Gateways**: VNPay, ZaloPay, and PayOS for safe payments.
+- **Push Notifications**: Firebase Admin SDK for sending messages to mobile users.
 
 ### AI Chatbot (`chatbotAI`)
 - **Language**: Python.
-- **Functionality**: Serves as an intelligent assistant using AI models to process user queries and provide automated responses based on the store's data (`chatbot_data.json`).
+- **Functionality**: Uses AI models to understand user questions and give automatic answers based on store data.
 
 ## 4. Key Features
-- **Multi-platform Access**: Accessible via Android/iOS devices (Flutter) and Web browsers (Vue).
-- **Secure Payments**: Built-in support for popular Vietnamese payment gateways (VNPay, ZaloPay) with IPN/Webhook verifications.
-- **Real-time Analytics**: The admin dashboard features dynamic charts and statistics for revenue, top products, and top customers.
-- **Order Management**: Comprehensive order lifecycle management from "Pending" to "Delivered".
-- **Social Login**: Easy onboarding with Google and Facebook authentication.
-- **AI Integration**: 24/7 automated customer support through the integrated chatbot module.
+- **Multi-platform Support**: Works on Android/iOS phones (Flutter) and web browsers (Vue).
+- **Decoupled Architecture**: Uses RabbitMQ and Background Workers to handle heavy traffic and prevent server crashes during flash sales.
+- **Secure Payments**: Supports popular Vietnamese payment methods (VNPay, ZaloPay, PayOS) with automatic webhooks.
+- **Data Analytics**: The admin dashboard shows live charts and stats for revenue, top products, and top buyers.
+- **Order Management**: Full control over the order process, from "Pending" to "Delivered".
+- **Social Login**: Easy login using Google accounts.
+- **AI Chatbot**: 24/7 automatic customer support.
