@@ -21,16 +21,46 @@ axios.interceptors.request.use(
   }
 )
 
-// Xử lý response errors (401 Unauthorized -> redirect to login)
+// Xử lý response errors (401 Unauthorized -> Tự động xin cấp lại Token)
 axios.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      // Token hết hạn hoặc không hợp lệ
-      localStorage.removeItem('authToken')
-      localStorage.removeItem('currentUser')
-      router.push({ name: 'login' })
+  async (error) => {
+    const originalRequest = error.config
+
+    // Bắt lỗi 401 (Access Token hết hạn) và đảm bảo request này chưa được retry
+    if (error.response && error.response.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true // Đánh dấu đã thử retry để tránh lặp vô hạn
+      
+      const refreshToken = localStorage.getItem('refreshToken')
+      if (refreshToken) {
+        try {
+          // Gọi API xin cấp mới Access Token
+          const res = await axios.post('/api/auth/refresh', { token: refreshToken })
+          const newAccessToken = res.data.accessToken
+          
+          // Cập nhật Token mới vào Local Storage
+          localStorage.setItem('authToken', newAccessToken)
+          
+          // Gắn Token mới vào Header của Request bị lỗi ban đầu và gọi lại API đó
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
+          return axios(originalRequest)
+        } catch (refreshError) {
+          // Nếu Refresh Token cũng hết hạn hoặc bị lỗi -> Buộc đăng xuất triệt để
+          localStorage.removeItem('authToken')
+          localStorage.removeItem('refreshToken')
+          localStorage.removeItem('currentUser')
+          router.push({ name: 'login' })
+          return Promise.reject(refreshError)
+        }
+      } else {
+        // Nếu ngay từ đầu đã không có Refresh Token -> Buộc đăng xuất
+        localStorage.removeItem('authToken')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('currentUser')
+        router.push({ name: 'login' })
+      }
     }
+
     return Promise.reject(error)
   }
 )

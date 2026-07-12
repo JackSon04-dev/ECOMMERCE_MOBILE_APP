@@ -36,29 +36,22 @@ class NotificationModel {
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     String parsedType = (json['type'] ?? 'SYSTEM').toString().toUpperCase();
-    if (parsedType == 'PROMO') {
-      parsedType = 'PROMOTION';
-    }
+
     return NotificationModel(
-      id: json['_id'] is Map ? json['_id']['\$oid'] : json['_id'] ?? '',
+      id: json['id'] ?? '',
       title: json['title'] ?? '',
       message: json['message'] ?? '',
       type: parsedType,
       isRead: json['isRead'] ?? false,
-      createdAt: DateHelper.parseUtc(
-          json['createdAt'] is Map
-              ? json['createdAt']['\$date']
-              : json['createdAt']?.toString()),
-      referenceId: json['referenceId'] is Map
-          ? json['referenceId']['\$oid']
-          : json['referenceId'],
+      createdAt: DateHelper.parseUtc(json['createdAt']?.toString()),
+      referenceId: json['referenceId']?.toString(),
       imageUrl: json['imageUrl'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      '_id': id,
+      'id': id,
       'title': title,
       'message': message,
       'type': type,

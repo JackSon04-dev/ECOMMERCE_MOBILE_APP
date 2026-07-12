@@ -1,6 +1,5 @@
 import Notification from '../models/notification.js';
 import NotificationRead from '../models/notificationRead.js';
-import { ApiError } from '../middleware/errorMiddleware.js';
 
 /**
  * 🔔 Lấy thông báo của user (thông báo chung + thông báo riêng)
@@ -57,6 +56,7 @@ export const getNotifications = async (userId, type) => {
     }
     return {
       ...notification,
+      id: notification._id.toString(),
       isRead
     };
   });
@@ -66,39 +66,62 @@ export const getNotifications = async (userId, type) => {
 
 /**
  * 🔔 Xóa (ORDER) hoặc Đánh dấu đã đọc (PROMOTION/SYSTEM) thông báo
- * @param {string} notificationId - ID của thông báo cần xử lý
+ * @param {string} idOrIds - ID hoặc mảng các ID của thông báo cần xử lý
  * @param {string} userId - ID của người dùng thực hiện thao tác
  * @returns {Promise<object>} Đối tượng kết quả { success, message }
  */
-export const deleteOrReadNotification = async (notificationId, userId) => {
-  const notification = await Notification.findById(notificationId);
-
-  if (!notification) {
-    throw new ApiError(404, 'Không tìm thấy thông báo');
+export const deleteOrReadNotification = async (idOrIds, userId) => {
+  // Nếu nhận vào chuỗi chứa dấu phẩy (từ URL Params của Controller), tự động chẻ thành mảng
+  if (typeof idOrIds === 'string' && idOrIds.includes(',')) {
+    idOrIds = idOrIds.split(',');
   }
 
-  if (notification.userId) {
-    // Thông báo cá nhân (ORDER): Đảm bảo đúng user mới được xóa
-    if (notification.userId.toString() !== userId) {
-      throw new ApiError(403, 'Bạn không có quyền xóa thông báo này');
+  const isArray = Array.isArray(idOrIds);
+  const ids = isArray ? idOrIds : [idOrIds];
+
+  if (ids.length === 0) return { success: true, message: 'Không có thông báo nào được xử lý' };
+
+  // 1. Phải Query DB để lấy type và expireAt chính xác (Bảo mật: Không tin tưởng Client)
+  const notifications = await Notification.find({ _id: { $in: ids } });
+
+  const orderIds = [];
+  const bulkOps = [];
+
+  for (const notification of notifications) {
+    if (notification.type === 'ORDER') {
+      // Bảo mật: Chỉ cho phép xóa ORDER nếu đúng là của User đó
+      if (notification.userId && notification.userId.toString() === userId) {
+        orderIds.push(notification._id);
+      }
+    } else {
+      // Thông báo chung (PROMOTION, SYSTEM, GENERAL): Tạo lệnh Upsert vào bulkOps
+      bulkOps.push({
+        updateOne: {
+          filter: { userId, notificationId: notification._id },
+          update: { $setOnInsert: { readAt: new Date(), expireAt: notification.expireAt } },
+          upsert: true
+        }
+      });
     }
-    await Notification.findByIdAndDelete(notificationId);
-    return {
-      success: true,
-      message: 'Đã xóa thông báo đơn hàng thành công'
-    };
-  } else {
-    // Thông báo chung (PROMOTION, SYSTEM, GENERAL): Ghi nhận đã đọc
-    await NotificationRead.updateOne(
-      { userId, notificationId },
-      { $setOnInsert: { readAt: new Date() } },
-      { upsert: true }
-    );
-    return {
-      success: true,
-      message: 'Đã đánh dấu đã đọc thông báo chung thành công'
-    };
   }
+
+  // 2. Thực thi Bulk Operations song song (Chỉ mất 1 lần gọi DB)
+  const promises = [];
+
+  if (orderIds.length > 0) {
+    promises.push(Notification.deleteMany({ _id: { $in: orderIds }, userId }));
+  }
+
+  if (bulkOps.length > 0) {
+    promises.push(NotificationRead.bulkWrite(bulkOps));
+  }
+
+  await Promise.all(promises);
+
+  return {
+    success: true,
+    message: isArray ? 'Đã xử lý hàng loạt thông báo thành công' : 'Đã xử lý thông báo thành công'
+  };
 };
 
 /**

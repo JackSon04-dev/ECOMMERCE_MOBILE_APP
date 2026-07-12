@@ -4,8 +4,8 @@ let connection = null;
 let channel = null;
 let isConnecting = false;
 
-const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost';
-const QUEUES = ['order_creation_queue', 'payos_payment_queue'];
+const RABBITMQ_URL = process.env.RABBITMQ_URL;
+const QUEUES = ['order_creation_queue', 'payos_payment_queue', 'fcm_broadcast_queue', 'cancel_order_queue'];
 
 /**
  * Khởi tạo kết nối tới RabbitMQ và khai báo các Queue

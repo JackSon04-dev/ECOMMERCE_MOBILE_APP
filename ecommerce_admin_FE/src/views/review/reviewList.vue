@@ -190,7 +190,7 @@
         <tbody class="divide-y divide-gray-100">
           <tr
             v-for="review in displayReviews"
-            :key="review._id"
+            :key="review.id"
             class="hover:bg-gray-50 transition"
           >
             <!-- Product -->
@@ -273,7 +273,7 @@
             <!-- Actions -->
             <td class="px-6 py-4 text-center">
               <router-link
-                :to="{ name: 'review-detail', params: { id: review._id } }"
+                :to="{ name: 'review-detail', params: { id: review.id } }"
                 class="inline-flex items-center gap-1 bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-600 transition"
               >
                 <svg
@@ -441,7 +441,7 @@ const toggleReviewStatus = async (review) => {
   }
 
   try {
-    await axios.put(`/api/admin/reviews/status/${review._id}`, {
+    await axios.put(`/api/admin/reviews/status/${review.id}`, {
       isActive: newStatus
     })
 

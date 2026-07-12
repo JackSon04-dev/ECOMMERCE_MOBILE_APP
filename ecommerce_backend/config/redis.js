@@ -2,12 +2,12 @@ import { createClient } from 'redis';
 
 // Khởi tạo Redis client
 const redisClient = createClient({
-    url: process.env.REDIS_URL || 'redis://localhost:6379',
-    //disableOfflineQueue: true, // [CỰC KỲ QUAN TRỌNG] Không xếp hàng lệnh khi mất kết nối để tránh treo API
+    url: process.env.REDIS_URL,
+    disableOfflineQueue: true, // [CỰC KỲ QUAN TRỌNG] Không xếp hàng lệnh khi mất kết nối để tránh treo API
     socket: {
         reconnectStrategy: (retries) => {
             // Thử lại vĩnh viễn sau mỗi 5 giây để tự động phục hồi khi Redis sống lại
-            return 5000; 
+            return 5000;
         },
         connectTimeout: 5000 // Hủy kết nối nếu sau 5s không phản hồi
     }

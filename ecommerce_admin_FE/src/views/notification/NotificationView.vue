@@ -61,7 +61,7 @@
             <tr v-else-if="notifications.length === 0" class="hover:bg-slate-50/50 transition">
               <td colspan="5" class="px-6 py-10 text-center text-gray-400 font-medium">Chưa có thông báo nào được gửi</td>
             </tr>
-            <tr v-for="noti in notifications" :key="noti._id" class="hover:bg-slate-50/50 transition group">
+            <tr v-for="noti in notifications" :key="noti.id" class="hover:bg-slate-50/50 transition group">
               <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                 {{ formatDate(noti.createdAt) }}
               </td>
@@ -238,7 +238,7 @@ const handleCreate = async () => {
 const handleDelete = async (noti) => {
   if (confirm(`Bạn chắc chắn muốn xóa thông báo "${noti.title}"?`)) {
     try {
-      const res = await axios.delete(`/api/admin/notifications/${noti._id}`)
+      const res = await axios.delete(`/api/admin/notifications/${noti.id}`)
       if (res.data.success) {
         alert('Đã xóa thông báo thành công.')
         fetchNotifications()

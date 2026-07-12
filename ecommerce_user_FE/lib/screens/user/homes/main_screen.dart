@@ -51,7 +51,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     
     final auth = ref.read(authProvider);
     if (mounted && auth.isLoggedIn) {
-      print('✅ [Auth] Valid user: ${auth.user?['username']}');
+      print('✅ [Auth] Valid user: ${auth.user?.username}');
       
       Provider.of<NotificationProvider>(context, listen: false).fetchNotifications();
       

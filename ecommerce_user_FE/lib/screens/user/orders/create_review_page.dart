@@ -397,7 +397,7 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
       child: Row(
         children: List.generate(_totalProducts, (i) {
           final item = widget.order.orderItems[i];
-          final isReviewed = item.isRated || _existingReviews.containsKey(item.productId);
+          final isReviewed = widget.order.isRated || _existingReviews.containsKey(item.productId);
           final hasNewData = (_reviewData[item.productId]?['rating'] as int? ?? 0) > 0;
           final isCurrent = i == _currentProductIndex;
           return Expanded(

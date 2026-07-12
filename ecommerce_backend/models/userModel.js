@@ -64,15 +64,9 @@ const userSchema = new mongoose.Schema({
       device: { type: String, default: 'Unknown' },
       updatedAt: { type: Date, default: Date.now }
     }
-  ],
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
-})
+  ]
+}, { timestamps: true })
 
-// Thiết lập chỉ mục (Indexes) để tối ưu hiệu năng truy vấn
-userSchema.index({ email: 1 }, { unique: true })
 
 const User = mongoose.model('User', userSchema)
 export default User

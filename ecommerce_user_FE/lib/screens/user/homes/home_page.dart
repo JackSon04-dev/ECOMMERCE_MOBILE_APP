@@ -23,10 +23,6 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
-  bool _isLoading = true;
-  List<Product> _products = [];
-  List<Product> _featuredProducts = [];
-  String? _error;
 
   // Flash Sale countdown timer
   Timer? _flashSaleTimer;

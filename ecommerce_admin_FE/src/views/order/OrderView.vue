@@ -163,12 +163,12 @@
         <tbody class="divide-y divide-gray-100">
           <tr
             v-for="order in displayOrders"
-            :key="order._id"
+            :key="order.id"
             class="hover:bg-gray-50 transition"
           >
             <!-- Order ID -->
             <td class="px-6 py-4 font-mono text-sm text-gray-600">
-              #{{ order._id?.slice(-8).toUpperCase() }}
+              #{{ order.id?.slice(-8).toUpperCase() }}
             </td>
 
             <!-- Username -->
@@ -218,7 +218,7 @@
             <!-- Actions -->
             <td class="px-6 py-4 text-center">
               <router-link
-                :to="{ name: 'order-detail', params: { id: order._id } }"
+                :to="{ name: 'order-detail', params: { id: order.id } }"
                 class="inline-flex items-center gap-1 bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-600 transition"
               >
                 <svg

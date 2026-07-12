@@ -17,10 +17,9 @@ import '../../../utils/scroll_pagination_mixin.dart';
 
 /// 📦 Product Detail Page - Trang chi tiết sản phẩm
 class ProductDetailPage extends ConsumerStatefulWidget {
-  final Product? product;
   final String? productId;
 
-  const ProductDetailPage({super.key, this.product, this.productId});
+  const ProductDetailPage({super.key, this.productId});
 
   @override
   ConsumerState<ProductDetailPage> createState() => _ProductDetailPageState();
@@ -65,8 +64,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
     setState(() => _isLoading = true);
 
     try {
-      Product? product = widget.product;
-      if (product == null && widget.productId != null) {
+      Product? product;
+      if (widget.productId != null) {
         product = await ProductService.getProductById(widget.productId!);
       }
 
@@ -111,7 +110,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
       }
     } catch (e) {
       setState(() {
-        _product = widget.product ?? _getDemoProduct();
+        _product = _getDemoProduct();
         _reviews = []; // Không dùng demo reviews
         _isLoading = false;
       });

@@ -2,10 +2,11 @@ import 'dart:convert';
 import '../models/voucher_model.dart';
 import 'api_service.dart';
 
-/// 🎫 Voucher Service - API calls cho voucher
+/// 🎫 Voucher Service - API calls for voucher
 class VoucherService {
   static Future<VoucherModel?> applyVoucher(String voucherCode, double totalOrder) async {
     try {
+      // ---> LOG: INFO
       print('🎫 [Voucher] Applying: $voucherCode');
 
       final response = await ApiService.post(
@@ -14,25 +15,29 @@ class VoucherService {
           'voucherCode': voucherCode.toUpperCase(),
           'orderTotal': totalOrder,
         },
-        withAuth: false, // Không cần auth để check voucher
+        withAuth: false, // No auth needed to check voucher
       );
 
+      // ---> LOG: INFO
       print('🌐 [VoucherService] Response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        // ---> LOG: SUCCESS
         print('✅ [Voucher] Valid - Discount: ${data['voucher']['discountAmount']}');
         return VoucherModel.fromJson(data['voucher']);
       } else {
-        // Voucher không hợp lệ, lấy message từ server
+        // Invalid voucher, get message from server
         final data = jsonDecode(response.body);
-        final errorMessage = data['message'] ?? 'Mã giảm giá không hợp lệ';
+        final errorMessage = data['message'] ?? 'Invalid voucher code';
+        // ---> LOG: FAILURE
         print('❌ [Voucher] Invalid: $errorMessage');
         throw Exception(errorMessage);
       }
     } catch (e) {
+      // ---> LOG: FAILURE
       print('❌ [Voucher] Apply error: $e');
-      rethrow; // Ném lại exception để UI xử lý
+      rethrow; // Rethrow exception for UI to handle
     }
   }
 }

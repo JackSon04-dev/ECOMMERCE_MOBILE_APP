@@ -85,7 +85,7 @@
         <tbody class="divide-y divide-gray-100">
           <tr
             v-for="voucher in displayVouchers"
-            :key="voucher._id"
+            :key="voucher.id"
             class="hover:bg-gray-50 transition"
           >
             <td class="px-6 py-4 font-bold text-gray-800">
@@ -128,7 +128,7 @@
                 @click="
                   router.push({
                     name: 'voucher-detail',
-                    params: { id: voucher._id }
+                    params: { id: voucher.id }
                   })
                 "
                 class="text-emerald-600 hover:text-emerald-800 transition text-xs font-bold uppercase"
@@ -218,7 +218,7 @@ const toggleVoucherStatus = async (voucher) => {
   }
 
   try {
-    await axios.put(`/api/admin/vouchers/${voucher._id}`, {
+    await axios.put(`/api/admin/vouchers/${voucher.id}`, {
       isActive: newStatus
     })
 

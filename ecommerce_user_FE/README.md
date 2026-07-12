@@ -1,16 +1,41 @@
-# ecommerce
+# Coding Conventions (Services Layer)
 
-A new Flutter project.
+To maintain a clean, readable, and unified codebase across the `/services` layer, all developers must adhere to the following rules:
 
-## Getting Started
+## 1. English Comments & Exceptions
+All code comments, function descriptions (`///`), and thrown exception messages MUST be written in **English**. 
+- ✅ **Correct**: `/// Create a new order`, `throw Exception('Login failed');`
+- ❌ **Incorrect**: `/// Tạo đơn hàng mới`, `throw Exception('Đăng nhập thất bại');`
 
-This project is a starting point for a Flutter application.
+## 2. Log Highlighting Standard
+Whenever logging information (via `print` or `debugPrint`), you must place a prominent
+ `// ---> LOG: [TYPE]` marker directly above the log statement. This makes debugging and code reading significantly faster.
 
-A few resources to get you started if this is your first Flutter project:
+**Supported Log Markers:**
+- `// ---> LOG: INFO` : General information or starting a process (e.g., sending a request, polling).
+- `// ---> LOG: SUCCESS` : Successful API response or completed operation.
+- `// ---> LOG: FAILURE` : Failed business logic or API error (e.g., HTTP 400, 404).
+- `// ---> LOG: EXCEPTION` : System exceptions caught in `try-catch` blocks (e.g., Network drop, JSON parse error).
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+**Code Example:**
+```dart
+try {
+  // ---> LOG: INFO
+  print('📦 [Order] Creating order...');
+  
+  final response = await ApiService.post('/orders', body);
+  
+  if (response.statusCode == 200) {
+    // ---> LOG: SUCCESS
+    print('✅ [Order] Create success');
+  } else {
+    // ---> LOG: FAILURE
+    print('❌ [Order] Create failed: ${response.statusCode}');
+  }
+} catch (e) {
+  // ---> LOG: EXCEPTION
+  debugPrint("❌ [Order] Create error: $e");
+}
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+

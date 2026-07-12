@@ -20,7 +20,6 @@ import '../screens/user/payments/vnpay_payment_page.dart';
 import '../screens/user/payments/zalopay_payment_page.dart';
 import '../screens/user/payments/payos_payment_page.dart';
 import '../screens/user/orders/create_review_page.dart';
-import '../models/product_model.dart';
 import '../models/order_model.dart';
 
 /// 🚀 Route Generator - Xử lý route generation và guards
@@ -59,9 +58,7 @@ class RouteGenerator {
 
       case AppRoutes.productDetail:
         final args = settings.arguments;
-        if (args is Product) {
-          return _buildRoute(ProductDetailPage(product: args));
-        } else if (args is String) {
+        if (args is String) {
           return _buildRoute(ProductDetailPage(productId: args));
         }
         return _buildRoute(const ProductDetailPage());
@@ -146,7 +143,12 @@ class RouteGenerator {
 
       // ============ NOTIFICATION ROUTES ============
       case AppRoutes.notifications:
-        return _buildRoute(const NotificationsPage());
+        final args = settings.arguments;
+        String? initialType;
+        if (args is String) {
+          initialType = args;
+        }
+        return _buildRoute(NotificationsPage(initialType: initialType));
 
       // ============ ERROR ROUTES ============
       default:

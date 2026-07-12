@@ -37,10 +37,7 @@ const orderSchema = new mongoose.Schema(
         },
 
         // Tổng tiền của item này = finalPrice * quantity
-        itemTotal: { type: Number, required: true },
-
-        // Đánh dấu đã review hay chưa
-        isRated: { type: Boolean, default: false }
+        itemTotal: { type: Number, required: true }
       }
     ],
 
@@ -93,7 +90,11 @@ const orderSchema = new mongoose.Schema(
     zalopayTransId: { type: String },
     paidAt: { type: Date },
 
-    // 10. LỊCH SỬ TRẠNG THÁI ĐƠN HÀNG (Event Timeline)
+    // 10. TRẠNG THÁI ĐÁNH GIÁ ĐƠN HÀNG
+    // true khi toàn bộ sản phẩm trong đơn đã được đánh giá
+    isRated: { type: Boolean, default: false },
+
+    // 11. LỊCH SỬ TRẠNG THÁI ĐƠN HÀNG (Event Timeline)
     // Ghi lại từng mốc thời gian thay đổi status để hiển thị Timeline trên App
     statusHistory: [
       {

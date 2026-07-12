@@ -564,11 +564,11 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
       decoration: BoxDecoration(color: Colors.white),
       child: Column(
         children: [
-          _buildPriceRow('Tạm tính', _order!.totalPrice + (_order!.voucher.discountAmount ?? 0) - (_order!.shippingPrice ?? 0)),
+          _buildPriceRow('Tạm tính', _order!.totalPrice + _order!.voucher.discountAmount - _order!.shippingPrice),
           const SizedBox(height: 8),
-          _buildPriceRow('Phí vận chuyển', _order!.shippingPrice ?? 0),
+          _buildPriceRow('Phí vận chuyển', _order!.shippingPrice),
           const SizedBox(height: 8),
-          _buildPriceRow('Giảm giá', -(_order!.voucher.discountAmount ?? 0), color: Colors.green),
+          _buildPriceRow('Giảm giá', -_order!.voucher.discountAmount, color: Colors.green),
           const Divider(height: 24),
           _buildPriceRow('Tổng cộng', _order!.totalPrice, isBold: true, color: const Color(0xFFFF6B35), fontSize: 18),
         ],

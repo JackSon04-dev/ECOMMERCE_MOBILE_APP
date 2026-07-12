@@ -11,6 +11,12 @@ class NotificationProvider extends ChangeNotifier {
 
   int get unreadCount => _notifications.where((n) => !n.isRead).length;
 
+  void clearNotifications() {
+    _notifications = [];
+    _isLoading = false;
+    notifyListeners();
+  }
+
   Future<void> fetchNotifications() async {
     _isLoading = true;
     notifyListeners();
@@ -38,7 +44,7 @@ class NotificationProvider extends ChangeNotifier {
           if (notification.type == 'ORDER') {
             _notifications.removeAt(index);
           } else {
-            _notifications[index] = notification.copyWith(isRead: true);
+          _notifications[index] = notification.copyWith(isRead: true);
           }
           notifyListeners();
         }
@@ -53,19 +59,20 @@ class NotificationProvider extends ChangeNotifier {
     final unreadNotifications = _notifications.where((n) => !n.isRead).toList();
     if (unreadNotifications.isEmpty) return;
 
-    // Gọi API cho tất cả các thông báo chưa đọc song song
-    final futures = unreadNotifications.map((n) => NotificationService.markAsRead(n.id));
-    await Future.wait(futures);
+    // Nối tất cả ID chưa đọc bằng dấu phẩy
+    final idsString = unreadNotifications.map((n) => n.id).join(',');
 
-    // Cập nhật state cục bộ:
-    // - Lọc bỏ thông báo ORDER chưa đọc (vì đã bị xóa)
-    // - Chuyển trạng thái các loại khác sang isRead = true
-    _notifications = _notifications.map<NotificationModel?>((n) {
-      if (n.isRead) return n;
-      if (n.type == 'ORDER') return null;
-      return n.copyWith(isRead: true);
-    }).whereType<NotificationModel>().toList();
+    // Gọi 1 API duy nhất cho hàng loạt ID
+    final success = await NotificationService.markAsRead(idsString);
 
-    notifyListeners();
+    if (success) {
+      _notifications = _notifications.map<NotificationModel?>((n) {
+        if (n.isRead) return n;
+        if (n.type == 'ORDER') return null; // ORDER bị xóa
+        return n.copyWith(isRead: true); // SYSTEM/PROMOTION được đánh dấu đã đọc
+      }).whereType<NotificationModel>().toList();
+
+      notifyListeners();
+    }
   }
 }

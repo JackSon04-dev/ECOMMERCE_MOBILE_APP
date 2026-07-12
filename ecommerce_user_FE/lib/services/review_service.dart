@@ -2,16 +2,16 @@ import 'dart:convert';
 import '../models/review_model.dart';
 import 'api_service.dart';
 
-/// ⭐ Review Service - API calls cho đánh giá
+/// ⭐ Review Service - API calls for reviews
 class ReviewService {
-  /// Decode userId từ JWT access token (không cần verify signature)
+  /// Decode userId from JWT access token (no signature verification needed)
   static Future<String?> _getCurrentUserId() async {
     try {
       final token = await ApiService.getAccessToken();
       if (token == null) return null;
       final parts = token.split('.');
       if (parts.length != 3) return null;
-      // Padding base64
+      // Base64 padding
       String payload = parts[1];
       payload += '=' * ((4 - payload.length % 4) % 4);
       final decoded = jsonDecode(utf8.decode(base64Url.decode(payload)));
@@ -21,9 +21,10 @@ class ReviewService {
     }
   }
 
-  /// Lấy đánh giá theo sản phẩm
+  /// Get reviews by product
   static Future<List<ReviewModel>> getReviewsByProduct(String productId) async {
     try {
+      // ---> LOG: INFO
       print('🔍 [Review] Fetching reviews for: $productId');
 
       final response = await ApiService.get(
@@ -40,25 +41,30 @@ class ReviewService {
           try {
             reviews.add(ReviewModel.fromJson(reviewsJson[i]));
           } catch (e) {
+            // ---> LOG: FAILURE
             print('❌ [Review] Parse error at index $i: $e');
           }
         }
 
+        // ---> LOG: SUCCESS
         print('✅ [Review] Loaded ${reviews.length} reviews');
         return reviews;
       }
 
+      // ---> LOG: FAILURE
       print('❌ [Review] Fetch failed: ${response.statusCode}');
       return [];
     } catch (e) {
+      // ---> LOG: FAILURE
       print('❌ [Review] Fetch error: $e');
       return [];
     }
   }
 
-  /// 📦 Lấy tất cả đánh giá của một đơn hàng
+  /// 📦 Get all reviews for an order
   static Future<List<ReviewModel>> getReviewsByOrder(String orderId) async {
     try {
+      // ---> LOG: INFO
       print('🔍 [Review] Fetching reviews for order: $orderId');
 
       final response = await ApiService.get(
@@ -70,19 +76,22 @@ class ReviewService {
         final data = jsonDecode(response.body);
         final List<dynamic> reviewsJson = data['reviews'] ?? [];
         final reviews = reviewsJson.map((e) => ReviewModel.fromJson(e)).toList();
+        // ---> LOG: SUCCESS
         print('✅ [Review] Loaded ${reviews.length} order reviews');
         return reviews;
       }
 
+      // ---> LOG: FAILURE
       print('❌ [Review] Order reviews failed: ${response.statusCode}');
       return [];
     } catch (e) {
+      // ---> LOG: FAILURE
       print('❌ [Review] Order reviews error: $e');
       return [];
     }
   }
 
-  /// Tạo đánh giá mới
+  /// Create new review
   static Future<ReviewModel?> createReview({
     required String productId,
     required int rating,
@@ -92,6 +101,7 @@ class ReviewService {
     String? orderItemId,
   }) async {
     try {
+      // ---> LOG: INFO
       print('📝 [Review] Creating review for product: $productId');
 
       if (imagePaths != null && imagePaths.isNotEmpty) {
@@ -117,17 +127,19 @@ class ReviewService {
 
         if (response.statusCode == 201 || response.statusCode == 200) {
           final data = jsonDecode(responseBody);
+          // ---> LOG: SUCCESS
           print('✅ [Review] Review created with images');
           return ReviewModel.fromJson(data['review'] ?? data);
         }
 
         try {
           final errorData = jsonDecode(responseBody);
+          // ---> LOG: FAILURE
           print('❌ [Review] Create failed: ${errorData['message']}');
-          throw Exception(errorData['message'] ?? 'Tạo đánh giá thất bại');
+          throw Exception(errorData['message'] ?? 'Create review failed');
         } catch (e) {
           if (e is Exception) rethrow;
-          throw Exception('Tạo đánh giá thất bại (${response.statusCode})');
+          throw Exception('Create review failed (${response.statusCode})');
         }
       } else {
         final body = <String, dynamic>{
@@ -142,20 +154,23 @@ class ReviewService {
 
         if (response.statusCode == 201 || response.statusCode == 200) {
           final data = jsonDecode(response.body);
+          // ---> LOG: SUCCESS
           print('✅ [Review] Review created');
           return ReviewModel.fromJson(data['review'] ?? data);
         }
 
         try {
           final errorData = jsonDecode(response.body);
+          // ---> LOG: FAILURE
           print('❌ [Review] Create failed: ${errorData['message']}');
-          throw Exception(errorData['message'] ?? 'Tạo đánh giá thất bại');
+          throw Exception(errorData['message'] ?? 'Create review failed');
         } catch (e) {
           if (e is Exception) rethrow;
-          throw Exception('Tạo đánh giá thất bại (${response.statusCode})');
+          throw Exception('Create review failed (${response.statusCode})');
         }
       }
     } catch (e) {
+      // ---> LOG: FAILURE
       print('❌ [Review] Create error: $e');
       rethrow;
     }

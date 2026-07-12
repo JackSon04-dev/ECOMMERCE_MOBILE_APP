@@ -17,6 +17,17 @@ const validateStatusQuery = (value, helpers) => {
   return value;
 };
 
+// Custom validator cho mảng ID (phân tách bằng dấu phẩy)
+const validateObjectIdString = (value, helpers) => {
+  const parts = value.split(',');
+  for (const part of parts) {
+    if (!/^[0-9a-fA-F]{24}$/.test(part.trim())) {
+      return helpers.message('Một hoặc nhiều ID không đúng định dạng Hex 24 ký tự.');
+    }
+  }
+  return value;
+};
+
 // ==========================================
 // 🛒 GIỎ HÀNG (CART) SCHEMAS
 // ==========================================
@@ -43,13 +54,13 @@ export const updateCartSchema = Joi.object({
 // ==========================================
 export const getNotificationsSchema = Joi.object({
   query: Joi.object({
-    type: Joi.string().valid('PROMOTION', 'ORDER', 'SYSTEM', 'GENERAL').insensitive()
+    type: Joi.string().valid('PROMOTION', 'ORDER', 'SYSTEM').insensitive()
   })
 });
 
 export const deleteNotificationSchema = Joi.object({
   params: Joi.object({
-    id: objectId.required()
+    id: Joi.string().custom(validateObjectIdString).required()
   })
 });
 

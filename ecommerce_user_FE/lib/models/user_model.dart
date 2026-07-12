@@ -23,6 +23,30 @@ class UserModel {
     this.updatedAt,
   });
 
+  UserModel copyWith({
+    String? id,
+    String? username,
+    String? email,
+    String? address,
+    String? phoneNumber,
+    String? role,
+    bool? isActive,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return UserModel(
+      id: id ?? this.id,
+      username: username ?? this.username,
+      email: email ?? this.email,
+      address: address ?? this.address,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      role: role ?? this.role,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['id'] ?? '',
@@ -32,14 +56,8 @@ class UserModel {
       phoneNumber: json['phoneNumber'],
       role: json['role'] ?? 'user',
       isActive: json['isActive'] ?? true,
-      createdAt: DateHelper.parseUtc(
-          json['createdAt'] is Map
-              ? json['createdAt']['\$date']
-              : json['createdAt']?.toString()),
-      updatedAt: DateHelper.parseUtc(
-          json['updatedAt'] is Map
-              ? json['updatedAt']['\$date']
-              : json['updatedAt']?.toString()),
+      createdAt: DateHelper.parseUtc(json['createdAt']?.toString()),
+      updatedAt: DateHelper.parseUtc(json['updatedAt']?.toString()),
     );
   }
 

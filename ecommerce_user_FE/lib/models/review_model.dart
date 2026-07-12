@@ -39,15 +39,13 @@ class ReviewModel {
 
       if (json['user'] is Map) {
         final userMap = json['user'] as Map<String, dynamic>;
-        // Nếu là populated object có username
         if (userMap.containsKey('username')) {
-          userId = (userMap['_id'] ?? '').toString();
+          userId = (userMap['id'] ?? '').toString();
           userName = userMap['username']?.toString();
           // Server không có avatar field, để null
           userAvatar = null;
         } else {
-          // Nếu là ObjectId format
-          userId = (userMap['\$oid'] ?? '').toString();
+          userId = (userMap['id'] ?? '').toString();
         }
       } else if (json['user'] is String) {
         userId = json['user'];
@@ -55,30 +53,18 @@ class ReviewModel {
         userId = json['user'].toString();
       }
 
-      // Parse id
-      String id = '';
-      if (json['_id'] is Map) {
-        id = (json['_id']['\$oid'] ?? '').toString();
-      } else if (json['_id'] != null) {
-        id = json['_id'].toString();
-      }
-
-      // Parse productId
+      String id = json['id']?.toString() ?? '';
+      
       String productId = '';
       if (json['product'] is Map) {
-        productId = (json['product']['\$oid'] ?? '').toString();
-      } else if (json['product'] is String) {
-        productId = json['product'];
+        productId = (json['product']['id'] ?? '').toString();
       } else if (json['product'] != null) {
         productId = json['product'].toString();
       }
 
-      // Parse orderId
       String? orderId;
       if (json['order'] is Map) {
-        orderId = (json['order']['\$oid'] ?? '').toString();
-      } else if (json['order'] is String) {
-        orderId = json['order'];
+        orderId = (json['order']['id'] ?? '').toString();
       } else if (json['order'] != null) {
         orderId = json['order'].toString();
       }
@@ -94,14 +80,8 @@ class ReviewModel {
             ? List<String>.from(json['images'].map((e) => e.toString()))
             : [],
         isActive: json['isActive'] ?? true,
-        createdAt: DateHelper.parseUtc(
-            json['createdAt'] is Map
-                ? (json['createdAt']['\$date'] ?? '').toString()
-                : json['createdAt']?.toString()),
-        updatedAt: DateHelper.parseUtc(
-            json['updatedAt'] is Map
-                ? (json['updatedAt']['\$date'] ?? '').toString()
-                : json['updatedAt']?.toString()),
+        createdAt: DateHelper.parseUtc(json['createdAt']?.toString()),
+        updatedAt: DateHelper.parseUtc(json['updatedAt']?.toString()),
         userName: userName,
         userAvatar: userAvatar,
       );
@@ -114,7 +94,7 @@ class ReviewModel {
 
   Map<String, dynamic> toJson() {
     return {
-      '_id': id,
+      'id': id,
       'user': userId,
       'product': productId,
       if (orderId != null) 'order': orderId,

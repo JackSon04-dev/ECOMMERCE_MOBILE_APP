@@ -301,7 +301,7 @@
           <div class="bg-gray-50 rounded-2xl p-4 text-center">
             <div class="text-xs text-gray-400 uppercase">Mã đánh giá</div>
             <div class="font-mono text-sm text-gray-600 mt-1">
-              #{{ review._id?.slice(-8).toUpperCase() }}
+              #{{ review.id?.slice(-8).toUpperCase() }}
             </div>
           </div>
         </div>
@@ -398,7 +398,7 @@ const toggleReviewStatus = async () => {
 
   try {
     updating.value = true
-    await axios.put(`/api/admin/reviews/status/${review.value._id}`, {
+    await axios.put(`/api/admin/reviews/status/${review.value.id}`, {
       isActive: newStatus
     })
 

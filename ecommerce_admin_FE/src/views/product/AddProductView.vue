@@ -121,7 +121,7 @@
             <div class="relative w-20 h-20 mx-auto">
               <img
                 :src="
-                  colorGroup.images[0] ||
+                  colorGroup.imagePreview || colorGroup.images[0] ||
                   'https://via.placeholder.com/150?text=No+Img'
                 "
                 class="w-20 h-20 object-cover rounded-lg border shadow-inner"
@@ -247,7 +247,9 @@ const colorVariants = ref([
   {
     color: '',
     images: [],
-    sizes: [{ size: '', stock: 0 }]
+    sizes: [{ size: '', stock: 0 }],
+    imageFile: null,
+    imagePreview: null
   }
 ])
 
@@ -257,7 +259,9 @@ const addColorGroup = () => {
   colorVariants.value.push({
     color: '',
     images: [],
-    sizes: [{ size: '', stock: 0 }]
+    sizes: [{ size: '', stock: 0 }],
+    imageFile: null,
+    imagePreview: null
   })
 }
 // 2.2. Thêm size vào nhóm màu
@@ -274,31 +278,16 @@ const handleMainFileChange = (e) => {
   }
 }
 
-// 4. UPLOAD ẢNH CHO TỪNG NHÓM MÀU
-const handleVariantImageUpload = async (event, index) => {
+// 4. LƯU TẠM ẢNH CHO TỪNG NHÓM MÀU TRÊN RAM
+const handleVariantImageUpload = (event, index) => {
   //4.1. Lấy file từ input
   const file = event.target.files[0]
   if (!file) return
-  //4.2. Tạo FormData và đẩy file vào
-  const tempForm = new FormData()
-  tempForm.append('thumbnail', file)
-  // 4.3. Gửi lên server bằng axios
-  try {
-    const res = await axios.post('/api/admin/products/upload-single', tempForm)
-    // 4.3.1 Upload thành công
-    if (res.data.success) {
-      // 4.3.1.1 Lấy URL ảnh từ phản hồi server
-      const imageUrl = res.data.data.url
-      // 4.3.1.2 Cập nhật vào mảng colorVariants hiện hình ảnh của variant trên giao diện
-      if (imageUrl) {
-        colorVariants.value[index].images = [imageUrl]
-        console.log('Ảnh đã hiện lên với URL:', imageUrl) // Debug
-      }
-    }
-  } catch (err) {
-    // 4.3.2 Upload thất bại
-    alert('Lỗi upload ảnh biến thể')
-  }
+  
+  //4.2. Lưu tệp nhị phân vào biến thể để chuẩn bị gửi 1 lần duy nhất
+  colorVariants.value[index].imageFile = file
+  //4.3. Tạo URL ảo để hiển thị preview ngay lập tức
+  colorVariants.value[index].imagePreview = URL.createObjectURL(file)
 }
 
 // 5. SUBMIT FORM
@@ -364,10 +353,26 @@ const submitForm = async () => {
   formData.append('description', description.value)
   formData.append('price', price.value)
   formData.append('discount', discount.value)
-  // 3.2. Thêm mảng tags và biến thể (chuyển thành chuỗi JSON)
+  
+  // 3.2. Xử lý ảnh biến thể và tạo payload
+  let imageUploadIndex = 0;
+  const variantsPayload = colorVariants.value.map((variant) => {
+    const v = { ...variant }
+    // Nếu có file ảnh mới, đính kèm vào formData chung
+    if (v.imageFile) {
+      formData.append('images', v.imageFile)
+      v.imageUploadIndex = imageUploadIndex++
+    }
+    // Dọn dẹp dữ liệu thừa trước khi gửi stringify
+    delete v.imageFile
+    delete v.imagePreview
+    return v
+  })
+
+  // 3.3. Thêm mảng tags và biến thể (chuyển thành chuỗi JSON)
   formData.append('tags', JSON.stringify(tags.value))
-  formData.append('colorVariants', JSON.stringify(colorVariants.value))
-  // 3.3. Thêm ảnh đại diện dạng file
+  formData.append('colorVariants', JSON.stringify(variantsPayload))
+  // 3.4. Thêm ảnh đại diện dạng file
   formData.append('thumbnail', thumbnailFile.value)
 
   // 4. GỬI LÊN SERVER BẰNG AXIOS và XỬ LÝ KẾT QUẢ
@@ -401,7 +406,9 @@ const resetForm = () => {
     {
       color: '',
       images: [],
-      sizes: [{ size: '', stock: 0 }]
+      sizes: [{ size: '', stock: 0 }],
+      imageFile: null,
+      imagePreview: null
     }
   ]
 

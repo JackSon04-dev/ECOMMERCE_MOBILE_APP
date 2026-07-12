@@ -2,6 +2,7 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import compression from 'compression'
 import connectDB from './config/db.js'
 import { connectRedis } from './config/redis.js'
 import { connectRabbitMQ } from './config/rabbitmq.js'
@@ -35,6 +36,7 @@ const app = express()
 app.set('trust proxy', 1)
 
 // Middleware
+app.use(compression()) // Kích hoạt Gzip nén dữ liệu API
 app.use(express.json())
 app.use(cors())
 app.use(globalLimiter)

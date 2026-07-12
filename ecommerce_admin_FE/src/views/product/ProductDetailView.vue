@@ -120,7 +120,7 @@
                 <div class="relative w-16 h-16 group mx-auto">
                   <img
                     :src="
-                      colorGroup.images?.[0] ||
+                      colorGroup.imagePreview || colorGroup.images?.[0] ||
                       'https://placehold.co/150?text=No+Img'
                     "
                     class="w-16 h-16 object-cover rounded-lg border shadow-inner"
@@ -297,7 +297,9 @@ const addColorGroup = () => {
   product.value.colorVariants.push({
     color: '',
     images: [],
-    sizes: [{ size: '', stock: 0 }]
+    sizes: [{ size: '', stock: 0 }],
+    imageFile: null,
+    imagePreview: null
   })
 }
 
@@ -316,25 +318,13 @@ const prepareMainImage = (e) => {
   }
 }
 
-// 4.2. Upload ảnh biến thể cho từng màu (Gửi trực tiếp lên Cloudinary qua Server)
-const handleVariantImageUpload = async (event, index) => {
+// 4.2. Lưu tạm ảnh biến thể (chỉ gửi lên Cloudinary khi bấm Lưu thay đổi)
+const handleVariantImageUpload = (event, index) => {
   const file = event.target.files[0]
   if (!file) return
 
-  const tempForm = new FormData()
-  tempForm.append('thumbnail', file)
-
-  try {
-    const res = await axios.post('/api/admin/products/upload-single', tempForm)
-    if (res.data.success) {
-      // Lấy URL từ Cloudinary do server trả về và cập nhật vào biến thể
-      const url = res.data.data.url
-      product.value.colorVariants[index].images = [url]
-      alert('Đã cập nhật ảnh màu sắc thành công!')
-    }
-  } catch (err) {
-    alert('Lỗi upload ảnh biến thể')
-  }
+  product.value.colorVariants[index].imageFile = file
+  product.value.colorVariants[index].imagePreview = URL.createObjectURL(file)
 }
 
 // 5. LƯU THAY ĐỔI (UPDATE PRODUCT)
@@ -396,11 +386,21 @@ const handleUpdate = async () => {
     formData.append('shortDescription', product.value.shortDescription || '')
     formData.append('description', product.value.description || '')
 
+    // Xử lý ảnh biến thể
+    let imageUploadIndex = 0;
+    const variantsPayload = product.value.colorVariants.map((variant) => {
+      const v = { ...variant }
+      if (v.imageFile) {
+        formData.append('images', v.imageFile)
+        v.imageUploadIndex = imageUploadIndex++
+      }
+      delete v.imageFile
+      delete v.imagePreview
+      return v
+    })
+
     // Chuyển mảng và object sang chuỗi JSON để gửi qua FormData
-    formData.append(
-      'colorVariants',
-      JSON.stringify(product.value.colorVariants)
-    )
+    formData.append('colorVariants', JSON.stringify(variantsPayload))
     formData.append('tags', JSON.stringify(product.value.tags || []))
 
     // Nếu có chọn ảnh đại diện mới thì mới gửi lên
@@ -409,7 +409,7 @@ const handleUpdate = async () => {
     }
 
     const res = await axios.put(
-      `/api/admin/products/update/${product.value._id}`,
+      `/api/admin/products/update/${product.value.id}`,
       formData
     )
 

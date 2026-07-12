@@ -2,9 +2,9 @@ import 'dart:convert';
 import '../models/user_model.dart';
 import 'api_service.dart';
 
-/// 👤 User Service - API calls cho user
+/// 👤 User Service - API calls for user
 class UserService {
-  /// Lấy thông tin user hiện tại
+  /// Get current user information
   static Future<UserModel?> getMe() async {
     try {
       final response = await ApiService.get('/auth/me');
@@ -15,12 +15,13 @@ class UserService {
       }
       return null;
     } catch (e) {
+      // ---> LOG: FAILURE
       print('❌ [Auth] Get me error: $e');
       return null;
     }
   }
 
-  /// Cập nhật thông tin user
+  /// Update user information
   static Future<UserModel?> updateProfile({
     String? username,
     String? address,
@@ -40,12 +41,13 @@ class UserService {
       }
       return null;
     } catch (e) {
+      // ---> LOG: FAILURE
       print('❌ [Auth] Update profile error: $e');
       return null;
     }
   }
 
-  /// Đổi mật khẩu
+  /// Change password
   static Future<bool> changePassword({
     required String currentPassword,
     required String newPassword,
@@ -58,6 +60,7 @@ class UserService {
 
       return response.statusCode == 200;
     } catch (e) {
+      // ---> LOG: FAILURE
       print('❌ [Auth] Change password error: $e');
       return false;
     }

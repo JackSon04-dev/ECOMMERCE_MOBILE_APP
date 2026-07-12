@@ -196,7 +196,7 @@ class CartNotifier extends StateNotifier<CartState> {
       (item) => item?.uniqueKey == key, orElse: () => null
     );
     if (existingUIItem != null) {
-       currentQty = existingUIItem!.quantity;
+       currentQty = existingUIItem.quantity;
     }
 
     final newQuantity = currentQty + quantity;
@@ -226,7 +226,6 @@ class CartNotifier extends StateNotifier<CartState> {
         size: targetItem.size,
         newQuantity: quantity,
         stock: targetItem.stock,
-        isOutOfStock: targetItem.isOutOfStock,
       );
     }
   }
@@ -251,7 +250,6 @@ class CartNotifier extends StateNotifier<CartState> {
           size: targetItem.size,
           newQuantity: 0,
           stock: targetItem.stock,
-          isOutOfStock: targetItem.isOutOfStock,
         );
       }
     } else if (inUpdate) {

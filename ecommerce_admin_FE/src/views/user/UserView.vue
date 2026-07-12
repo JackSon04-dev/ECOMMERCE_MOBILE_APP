@@ -83,7 +83,7 @@
         <tbody class="divide-y divide-gray-100">
           <tr
             v-for="user in displayUsers"
-            :key="user._id"
+            :key="user.id"
             class="hover:bg-gray-50 transition"
           >
             <!-- Username -->
@@ -206,7 +206,7 @@ const toggleUserStatus = async (user) => {
   }
 
   try {
-    await axios.patch(`/api/admin/users/${user._id}/status`, {
+    await axios.patch(`/api/admin/users/${user.id}/status`, {
       isActive: newStatus
     })
 

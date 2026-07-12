@@ -5,12 +5,12 @@ import 'package:flutter/foundation.dart';
 import 'api_service.dart';
 import 'fcm_service.dart';
 
-/// 🔐 Auth Service - Xử lý logic networking cho Authentication
-/// Sử dụng ApiService để hưởng lợi từ logic Auto Refresh Token
+/// 🔐 Auth Service - Handles networking logic for Authentication
+/// Uses ApiService to leverage the Auto Refresh Token logic
 class AuthService {
   static const String _endpoint = '/auth';
 
-  /// Lấy tên thiết bị (Helper)
+  /// Get device name (Helper)
   static Future<String> getDeviceName() async {
     DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
     try {
@@ -23,12 +23,13 @@ class AuthService {
         return iosInfo.name;
       }
     } catch (e) {
+      // ---> LOG: EXCEPTION
       debugPrint("❌ [Auth] Device info error: $e");
     }
     return "Unknown Device";
   }
 
-  /// Đăng nhập bằng email và mật khẩu
+  /// Login using email and password
   static Future<Map<String, dynamic>> login({
     required String email,
     required String password,
@@ -42,26 +43,26 @@ class AuthService {
         'password': password,
         'deviceName': deviceName,
       },
-      withAuth: false, // Login không cần Auth header
+      withAuth: false, // Login doesn't require Auth header
     );
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      // Lưu token vào storage ngay khi login thành công
+      // Save tokens to storage immediately after successful login
       await ApiService.saveTokens(data['accessToken'], data['refreshToken']);
-      // Đăng ký FCM Token ngay sau khi login thành công
+      // Register FCM Token immediately after successful login
       await FcmService.getTokenAndRegister();
       return data;
     } else {
       final errorData = jsonDecode(response.body);
-      throw errorData['msg'] ?? 'Đăng nhập thất bại';
+      throw errorData['msg'] ?? 'Login failed';
     }
   }
 
-  /// Đăng xuất - Xóa token cả trên server và client
+  /// Logout - Delete tokens on both server and client
   static Future<void> logout() async {
     try {
-      // Hủy đăng ký FCM Token TRƯỚC khi logout (vì cần Auth header)
+      // Unregister FCM Token BEFORE logout (requires Auth header)
       await FcmService.unregisterToken();
       final refreshToken = await ApiService.getRefreshToken();
       if (refreshToken != null) {
@@ -71,15 +72,16 @@ class AuthService {
         );
       }
     } catch (e) {
-      debugPrint("Error during API logout: $e");
+      // ---> LOG: EXCEPTION
+      debugPrint("❌ [Auth] API logout error: $e");
     } finally {
-      // Luôn xóa token ở client bất kể API có thành công hay không
+      // Always clear tokens on client regardless of API success
       await ApiService.clearTokens();
     }
   }
 
-  /// Lấy thông tin user hiện tại (Sử dụng API /me)
-  /// ApiService sẽ tự động refresh token nếu cần
+  /// Get current user information (Uses /me API)
+  /// ApiService will automatically refresh token if needed
   static Future<Map<String, dynamic>?> getCurrentUser() async {
     final response = await ApiService.get('$_endpoint/me');
     
@@ -90,7 +92,7 @@ class AuthService {
     return null;
   }
 
-  /// Đăng ký tài khoản mới
+  /// Register a new account
   static Future<void> register({
     required String username,
     required String email,
@@ -108,11 +110,11 @@ class AuthService {
 
     if (response.statusCode != 201) {
       final errorData = jsonDecode(response.body);
-      throw errorData['msg'] ?? 'Đăng ký thất bại';
+      throw errorData['msg'] ?? 'Registration failed';
     }
   }
 
-  /// Đăng nhập bằng Google
+  /// Login with Google
   static Future<Map<String, dynamic>> googleLogin({
     required String idToken,
   }) async {
@@ -130,12 +132,12 @@ class AuthService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       await ApiService.saveTokens(data['accessToken'], data['refreshToken']);
-      // Đăng ký FCM Token ngay sau khi Google login thành công
+      // Register FCM Token immediately after successful Google login
       await FcmService.getTokenAndRegister();
       return data;
     } else {
       final errorData = jsonDecode(response.body);
-      throw errorData['msg'] ?? 'Đăng nhập Google thất bại';
+      throw errorData['msg'] ?? 'Google login failed';
     }
   }
 }

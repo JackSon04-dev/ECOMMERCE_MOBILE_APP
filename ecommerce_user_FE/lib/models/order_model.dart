@@ -2,14 +2,12 @@
 import '../utils/date_helper.dart';
 
 class OrderVariant {
-  final String colorVariantId;
   final String color;
   final String colorImage;
   final String size;
   final int quantity;
 
   OrderVariant({
-    required this.colorVariantId,
     required this.color,
     required this.colorImage,
     required this.size,
@@ -18,9 +16,6 @@ class OrderVariant {
 
   factory OrderVariant.fromJson(Map<String, dynamic> json) {
     return OrderVariant(
-      colorVariantId: json['colorVariantId'] is Map
-          ? json['colorVariantId']['\$oid']
-          : json['colorVariantId'] ?? '',
       color: json['color'] ?? '',
       colorImage: json['colorImage'] ?? '',
       size: json['size'] ?? '',
@@ -30,7 +25,6 @@ class OrderVariant {
 
   Map<String, dynamic> toJson() {
     return {
-      'colorVariantId': colorVariantId,
       'color': color,
       'colorImage': colorImage,
       'size': size,
@@ -46,7 +40,6 @@ class OrderItem {
   final double finalPrice;
   final OrderVariant variant;
   final double itemTotal;
-  final bool isRated;
 
   OrderItem({
     required this.id,
@@ -55,32 +48,29 @@ class OrderItem {
     required this.finalPrice,
     required this.variant,
     required this.itemTotal,
-    this.isRated = false,
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
     return OrderItem(
-      id: json['_id'] is Map ? json['_id']['\$oid'] : json['_id'] ?? '',
+      id: json['id'] ?? '',
       productId: json['product'] is Map
-          ? json['product']['\$oid']
+          ? json['product']['id']
           : json['product'] ?? '',
       productName: json['productName'] ?? '',
       finalPrice: (json['finalPrice'] ?? 0).toDouble(),
       variant: OrderVariant.fromJson(json['variant'] ?? {}),
       itemTotal: (json['itemTotal'] ?? 0).toDouble(),
-      isRated: json['isRated'] == true || json['isRated'] == 1,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      '_id': id,
+      'id': id,
       'product': productId,
       'productName': productName,
       'finalPrice': finalPrice,
       'variant': variant.toJson(),
       'itemTotal': itemTotal,
-      'isRated': isRated,
     };
   }
 }
@@ -101,7 +91,7 @@ class OrderVoucher {
   factory OrderVoucher.fromJson(Map<String, dynamic> json) {
     return OrderVoucher(
       voucherId: json['voucherId'] is Map
-          ? json['voucherId']['\$oid']
+          ? json['voucherId']['id']
           : json['voucherId'],
       voucherCode: json['voucherCode'],
       voucherName: json['voucherName'],
@@ -162,19 +152,16 @@ class OrderStatusHistory {
 
   factory OrderStatusHistory.fromJson(Map<String, dynamic> json) {
     return OrderStatusHistory(
-      id: json['_id'] is Map ? json['_id']['\$oid'] : json['_id'] ?? '',
+      id: json['id'] ?? '',
       status: json['status'] ?? '',
       note: json['note'] ?? '',
-      updatedAt: DateHelper.parseUtc(
-          json['updatedAt'] is Map
-              ? json['updatedAt']['\$date']
-              : json['updatedAt']?.toString()),
+      updatedAt: DateHelper.parseUtc(json['updatedAt']?.toString()),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      '_id': id,
+      'id': id,
       'status': status,
       'note': note,
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
@@ -198,24 +185,7 @@ class Order {
   final DateTime? updatedAt;
   final DateTime? paidAt;
   final List<OrderStatusHistory> statusHistory;
-
-  /// isRated giờ là computed property: true khi TẤT CẢ orderItems đã được đánh giá
-  bool get isRated {
-    if (orderItems.isEmpty) return false;
-    return orderItems.every((item) => item.isRated == true);
-  }
-
-  /// Kiểm tra xem có ít nhất 1 item đã được đánh giá
-  bool get hasAnyRated {
-    if (orderItems.isEmpty) return false;
-    return orderItems.any((item) => item.isRated == true);
-  }
-
-  /// Kiểm tra xem còn item nào chưa đánh giá không
-  bool get hasUnratedItems {
-    if (orderItems.isEmpty) return true;
-    return orderItems.any((item) => item.isRated != true);
-  }
+  final bool isRated;
 
   Order({
     required this.id,
@@ -233,12 +203,13 @@ class Order {
     this.updatedAt,
     this.paidAt,
     this.statusHistory = const [],
+    this.isRated = false,
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
     return Order(
-      id: json['_id'] is Map ? json['_id']['\$oid'] : json['_id'] ?? '',
-      userId: json['user'] is Map ? json['user']['\$oid'] : json['user'] ?? '',
+      id: json['id'] ?? '',
+      userId: json['user'] is Map ? json['user']['id'] : json['user'] ?? '',
       userInfo: UserInfo.fromJson(json['userInfo'] ?? {}),
       orderItems: (json['orderItems'] as List?)
               ?.map((e) => OrderItem.fromJson(e))
@@ -251,18 +222,10 @@ class Order {
       totalPrice: (json['totalPrice'] ?? 0).toDouble(),
       status: json['status'] ?? statusPending, // Dùng constant
       isPaid: json['isPaid'] == true || json['isPaid'] == 1,
-      createdAt: DateHelper.parseUtc(
-          json['createdAt'] is Map
-              ? json['createdAt']['\$date']
-              : json['createdAt']?.toString()),
-      updatedAt: DateHelper.parseUtc(
-          json['updatedAt'] is Map
-              ? json['updatedAt']['\$date']
-              : json['updatedAt']?.toString()),
-      paidAt: DateHelper.parseUtc(
-          json['paidAt'] is Map
-              ? json['paidAt']['\$date']
-              : json['paidAt']?.toString()),
+      isRated: json['isRated'] == true || json['isRated'] == 1,
+      createdAt: DateHelper.parseUtc(json['createdAt']?.toString()),
+      updatedAt: DateHelper.parseUtc(json['updatedAt']?.toString()),
+      paidAt: DateHelper.parseUtc(json['paidAt']?.toString()),
       statusHistory: (json['statusHistory'] as List?)
               ?.map((e) => OrderStatusHistory.fromJson(e))
               .toList() ??
@@ -272,7 +235,7 @@ class Order {
 
   Map<String, dynamic> toJson() {
     return {
-      '_id': id,
+      'id': id,
       'user': userId,
       'userInfo': userInfo.toJson(),
       'orderItems': orderItems.map((e) => e.toJson()).toList(),
@@ -283,6 +246,7 @@ class Order {
       'totalPrice': totalPrice,
       'status': status,
       'isPaid': isPaid,
+      'isRated': isRated,
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
       if (paidAt != null) 'paidAt': paidAt!.toIso8601String(),

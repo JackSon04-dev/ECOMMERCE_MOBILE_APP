@@ -1,7 +1,5 @@
 import * as orderService from '../../services/orderService.js';
 import { asyncHandler, ApiError } from '../../middleware/errorMiddleware.js';
-import mongoose from 'mongoose';
-import redisClient from '../../config/redis.js';
 
 // 📋 Lấy đơn hàng của user với tính năng phân trang
 export const getMyOrders = asyncHandler(async (req, res) => {

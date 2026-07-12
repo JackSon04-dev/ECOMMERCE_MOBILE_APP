@@ -78,12 +78,14 @@ export const createReview = async (userId, { product, rating, comment, images, o
     throw new ApiError(404, 'Không tìm thấy đơn hàng hợp lệ cho sản phẩm này');
   }
 
-  // Kiểm tra item cụ thể trong đơn hàng đã được đánh giá chưa
-  const orderItem = order.orderItems.find(
-    (item) => item.product.toString() === product
-  );
+  // Kiểm tra item cụ thể trong đơn hàng đã được đánh giá chưa bằng cách tìm Review đã tồn tại
+  const existingReview = await Review.findOne({
+    order: orderId,
+    product: product,
+    user: userId
+  });
 
-  if (orderItem.isRated) {
+  if (existingReview) {
     throw new ApiError(400, 'Bạn đã đánh giá sản phẩm này trong đơn hàng rồi');
   }
 
@@ -103,12 +105,11 @@ export const createReview = async (userId, { product, rating, comment, images, o
 
   await newReview.save();
 
-  // Cập nhật isRated cho item sản phẩm tương ứng trong đơn hàng
-  await Order.updateOne(
-    { _id: orderId },
-    { $set: { 'orderItems.$[elem].isRated': true } },
-    { arrayFilters: [{ 'elem.product': orderItem.product }] }
-  );
+  // Kiểm tra xem tất cả sản phẩm trong đơn hàng đã được đánh giá chưa
+  const reviewCountForOrder = await Review.countDocuments({ order: orderId });
+  if (reviewCountForOrder >= order.orderItems.length) {
+    await Order.updateOne({ _id: orderId }, { $set: { isRated: true } });
+  }
 
   // Cập nhật averageRating và reviewCount của product
   await updateProductRating(product);

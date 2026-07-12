@@ -18,7 +18,7 @@ class CartProduct {
 
   factory CartProduct.fromJson(Map<String, dynamic> json) {
     return CartProduct(
-      id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
+      id: json['id']?.toString() ?? '',
       name: json['name'] as String? ?? 'Chưa xác định',
       thumbnail: json['thumbnail'] as String? ?? '',
       price: (json['price'] as num?)?.toDouble() ?? 0.0,

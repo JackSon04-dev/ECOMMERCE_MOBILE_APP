@@ -146,7 +146,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
     // Cập nhật _user từ auth state nếu cần (khi user vừa login)
     if (isLoggedIn && auth.user != null) {
-      _user = UserModel.fromJson(auth.user!);
+      _user = auth.user;
     } else if (!isLoggedIn) {
       _user = null;
     }

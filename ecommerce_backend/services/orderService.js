@@ -405,7 +405,8 @@ export const processCancelOrder = async (orderId, userId) => {
     throw new ApiError(404, 'Không tìm thấy đơn hàng');
   }
 
-  if (order.user.toString() !== userId) {
+  // Nếu userId là 'SYSTEM', đây là lệnh từ Cron Job/Worker, bỏ qua check quyền
+  if (order.user.toString() !== userId && userId !== 'SYSTEM') {
     throw new ApiError(403, 'Bạn không có quyền hủy đơn hàng này')
   }
 
@@ -440,6 +441,15 @@ export const processCancelOrder = async (orderId, userId) => {
           session,
           arrayFilters: [{ 'colorIndex.color': item.variant.color }, { 'sizeIndex.size': item.variant.size }]
         }
+      );
+    }
+
+    // Hoàn trả lượt sử dụng Voucher (Nếu có)
+    if (sessionOrder.voucher && sessionOrder.voucher.voucherId) {
+      await Voucher.findByIdAndUpdate(
+        sessionOrder.voucher.voucherId,
+        { $inc: { usageLimit: 1 } },
+        { session }
       );
     }
 

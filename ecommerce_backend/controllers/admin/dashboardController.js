@@ -219,8 +219,8 @@ export const getTopCustomers = asyncHandler(async (req, res) => {
 // 5. Voucher được dùng nhiều nhất
 export const getTopVouchers = asyncHandler(async (req, res) => {
   const topVouchers = await Order.aggregate([
-    // Chỉ lấy đơn có sử dụng voucher
-    { $match: { 'voucher.voucherId': { $exists: true } } },
+    // Chỉ lấy đơn thành công có sử dụng voucher
+    { $match: { 'voucher.voucherId': { $exists: true }, status: { $in: ['Đã giao', 'Thành công'] } } },
     // Nhóm theo voucher
     {
       $group: {

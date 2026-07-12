@@ -250,7 +250,7 @@ const handleUpdate = async () => {
 
   // 2. GỬI API
   try {
-    const res = await axios.put(`/api/admin/vouchers/${voucher.value._id}`, {
+    const res = await axios.put(`/api/admin/vouchers/${voucher.value.id}`, {
       voucherName: voucher.value.voucherName.trim(),
       voucherCode: voucher.value.voucherCode.trim().toUpperCase(),
       minOrderAmount: voucher.value.minOrderAmount,

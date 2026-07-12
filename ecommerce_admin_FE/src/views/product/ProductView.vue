@@ -330,7 +330,7 @@
         <tbody class="divide-y divide-gray-100">
           <tr
             v-for="product in displayProducts"
-            :key="product._id"
+            :key="product.id"
             class="hover:bg-gray-50 transition"
           >
             <td class="px-6 py-4">
@@ -372,7 +372,7 @@
                 @click="
                   router.push({
                     name: 'product-detail',
-                    params: { id: product._id }
+                    params: { id: product.id }
                   })
                 "
                 class="text-emerald-600 hover:text-emerald-800 transition"
@@ -380,7 +380,7 @@
                 Chi tiết
               </button>
               <button
-                @click="handleDelete(product._id)"
+                @click="handleDelete(product.id)"
                 class="text-red-400 hover:text-red-600 transition"
               >
                 Xóa

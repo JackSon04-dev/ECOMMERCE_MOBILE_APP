@@ -2,9 +2,9 @@ import 'dart:convert';
 import '../models/product_model.dart';
 import 'api_service.dart';
 
-/// 🛍️ Product Service - API calls cho sản phẩm
+/// 🛍️ Product Service - API calls for products
 class ProductService {
-  /// Lấy tất cả sản phẩm
+  /// Get all products
   static Future<List<Product>> getAllProducts({
     String? tag,
     String? sortBy,
@@ -48,12 +48,13 @@ class ProductService {
 
       return [];
     } catch (e) {
+      // ---> LOG: FAILURE
       print('❌ [Product] Error: $e');
       return [];
     }
   }
 
-  /// Lấy sản phẩm theo ID
+  /// Get product by ID
   static Future<Product?> getProductById(String id) async {
     try {
       final response = await ApiService.get('/products/$id', withAuth: false);
@@ -65,12 +66,13 @@ class ProductService {
       }
       return null;
     } catch (e) {
+      // ---> LOG: FAILURE
       print('❌ [Product] Error: $e');
       return null;
     }
   }
 
-  /// Lấy sản phẩm nổi bật
+  /// Get featured products
   static Future<List<Product>> getFeaturedProducts() async {
     try {
       final response = await ApiService.get('/products/featured', withAuth: false);
@@ -83,6 +85,7 @@ class ProductService {
       }
       return [];
     } catch (e) {
+      // ---> LOG: FAILURE
       print('❌ [Product] Error: $e');
       return [];
     }

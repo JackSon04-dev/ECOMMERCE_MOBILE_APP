@@ -20,6 +20,21 @@ export const createProduct = asyncHandler(async (req, res) => {
   if (req.files && req.files['thumbnail']) {
     productData.thumbnail = req.files['thumbnail'][0].path
   }
+  
+  // 1.4 Xử lý mảng ảnh biến thể
+  if (req.files && req.files['images']) {
+    const uploadedImages = req.files['images']
+    if (Array.isArray(productData.colorVariants)) {
+      productData.colorVariants.forEach(variant => {
+        if (variant.imageUploadIndex !== undefined) {
+          const file = uploadedImages[variant.imageUploadIndex]
+          if (file) {
+            variant.images = [file.path]
+          }
+        }
+      })
+    }
+  }
 
   // 2. Đã đủ dữ liệu, tạo mới sản phẩm trong DB
   const product = new Product(productData)
@@ -74,6 +89,21 @@ export const updateProduct = asyncHandler(async (req, res) => {
   // Giải mã tags
   if (updateData.tags && typeof updateData.tags === 'string') {
     updateData.tags = JSON.parse(updateData.tags)
+  }
+
+  // Xử lý mảng ảnh biến thể mới
+  if (req.files && req.files['images']) {
+    const uploadedImages = req.files['images']
+    if (Array.isArray(updateData.colorVariants)) {
+      updateData.colorVariants.forEach(variant => {
+        if (variant.imageUploadIndex !== undefined) {
+          const file = uploadedImages[variant.imageUploadIndex]
+          if (file) {
+            variant.images = [file.path]
+          }
+        }
+      })
+    }
   }
 
   // Xử lý Boolean cho isActive (Vì FormData gửi lên là String "true"/"false")

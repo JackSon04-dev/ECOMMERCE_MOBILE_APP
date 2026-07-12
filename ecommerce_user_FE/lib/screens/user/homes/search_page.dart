@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../models/product_model.dart';
-import '../../../services/product_service.dart';
 import '../../../widgets/product_card_widget.dart';
 import '../../../widgets/common_widgets.dart';
 import '../../../widgets/add_to_cart_bottom_sheet.dart';
@@ -135,7 +134,7 @@ class _SearchPageState extends ConsumerState<SearchPage> with ScrollPaginationMi
                         subtitle: 'Thử tìm kiếm với từ khóa khác',
                       );
                     }
-                    final isFetchingMore = searchAsync != null && searchAsync.isLoading && searchAsync.value != null;
+                    final isFetchingMore = searchAsync.isLoading && searchAsync.value != null;
                     return _buildSearchResults(products, isFetchingMore);
                   },
                 ),

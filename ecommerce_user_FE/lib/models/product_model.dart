@@ -14,7 +14,7 @@ class SizeVariant {
 
   factory SizeVariant.fromJson(Map<String, dynamic> json) {
     return SizeVariant(
-      id: json['_id'] is Map ? json['_id']['\$oid'] : json['_id'] ?? '',
+      id: json['id'] ?? '',
       size: json['size'] ?? '',
       stock: json['stock'] ?? 0,
     );
@@ -22,7 +22,7 @@ class SizeVariant {
 
   Map<String, dynamic> toJson() {
     return {
-      '_id': id,
+      'id': id,
       'size': size,
       'stock': stock,
     };
@@ -44,7 +44,7 @@ class ColorVariant {
 
   factory ColorVariant.fromJson(Map<String, dynamic> json) {
     return ColorVariant(
-      id: json['_id'] is Map ? json['_id']['\$oid'] : json['_id'] ?? '',
+      id: json['id'] ?? '',
       color: json['color'] ?? '',
       images: List<String>.from(json['images'] ?? []),
       sizes: (json['sizes'] as List?)
@@ -56,7 +56,7 @@ class ColorVariant {
 
   Map<String, dynamic> toJson() {
     return {
-      '_id': id,
+      'id': id,
       'color': color,
       'images': images,
       'sizes': sizes.map((e) => e.toJson()).toList(),
@@ -114,7 +114,7 @@ class Product {
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
-      id: json['_id'] is Map ? json['_id']['\$oid'] : json['_id'] ?? '',
+      id: json['id'] ?? '',
       name: json['name'] ?? '',
       shortDescription: json['shortDescription'] ?? '',
       description: json['description'] ?? '',
@@ -128,14 +128,8 @@ class Product {
           [],
       tags: List<String>.from(json['tags'] ?? []),
       isActive: json['isActive'] ?? true,
-      createdAt: DateHelper.parseUtc(
-          json['createdAt'] is Map
-              ? json['createdAt']['\$date']
-              : json['createdAt']?.toString()),
-      updatedAt: DateHelper.parseUtc(
-          json['updatedAt'] is Map
-              ? json['updatedAt']['\$date']
-              : json['updatedAt']?.toString()),
+      createdAt: DateHelper.parseUtc(json['createdAt']?.toString()),
+      updatedAt: DateHelper.parseUtc(json['updatedAt']?.toString()),
       averageRating: (json['averageRating'] ?? 0).toDouble(),
       reviewCount: json['reviewCount'] ?? 0,
       soldCount: json['soldCount'] ?? 0,
@@ -145,7 +139,7 @@ class Product {
 
   Map<String, dynamic> toJson() {
     return {
-      '_id': id,
+      'id': id,
       'name': name,
       'shortDescription': shortDescription,
       'description': description,

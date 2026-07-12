@@ -9,7 +9,9 @@ import '../orders/order_detail_page.dart';
 
 /// 🔔 Notifications Page - Trang thông báo (Sử dụng Provider)
 class NotificationsPage extends StatefulWidget {
-  const NotificationsPage({super.key});
+  final String? initialType;
+
+  const NotificationsPage({super.key, this.initialType});
 
   @override
   State<NotificationsPage> createState() => _NotificationsPageState();
@@ -20,12 +22,32 @@ class _NotificationsPageState extends State<NotificationsPage> {
   bool _isPromoExpanded = false;
   bool _isSystemExpanded = false;
 
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialType != null) {
+      final type = widget.initialType!.trim().toUpperCase();
+      if (type == 'PROMOTION') {
+        _isPromoExpanded = true;
+        _isOrderExpanded = false;
+        _isSystemExpanded = false;
+      } else if (type == 'SYSTEM') {
+        _isSystemExpanded = true;
+        _isOrderExpanded = false;
+        _isPromoExpanded = false;
+      } else if (type == 'ORDER') {
+        _isOrderExpanded = true;
+        _isPromoExpanded = false;
+        _isSystemExpanded = false;
+      }
+    }
+  }
+
   IconData _getNotificationIcon(String type) {
     switch (type) {
       case 'PROMOTION':
         return Icons.local_offer_outlined;
       case 'SYSTEM':
-      case 'GENERAL':
         return Icons.campaign_outlined;
       case 'ORDER':
         return Icons.local_shipping_outlined;
@@ -39,7 +61,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
       case 'PROMOTION':
         return Colors.orange;
       case 'SYSTEM':
-      case 'GENERAL':
         return Colors.blue;
       case 'ORDER':
         return Colors.green;
@@ -57,7 +78,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         // Group notifications
         final orderNotifications = notifications.where((n) => n.type == 'ORDER').toList();
         final promoNotifications = notifications.where((n) => n.type == 'PROMOTION').toList();
-        final systemNotifications = notifications.where((n) => n.type == 'SYSTEM' || n.type == 'GENERAL').toList();
+        final systemNotifications = notifications.where((n) => n.type == 'SYSTEM').toList();
 
         // Calculate unread counts
         final unreadOrders = orderNotifications.where((n) => !n.isRead).length;

@@ -126,9 +126,7 @@ class OrderActionButtons extends ConsumerWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: order.isRated
                     ? Colors.grey[100]
-                    : order.hasAnyRated
-                        ? const Color(0xFFFF8F60)
-                        : const Color(0xFFFF6B35),
+                    : const Color(0xFFFF6B35),
                 foregroundColor: order.isRated
                     ? Colors.grey[600]
                     : Colors.white,

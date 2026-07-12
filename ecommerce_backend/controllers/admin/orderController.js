@@ -19,9 +19,15 @@ const statusMessages = {
 export const getAllOrders = asyncHandler(async (req, res) => {
   const orders = await Order.find().sort({ createdAt: -1 }).lean()
 
+  const mappedOrders = orders.map(order => {
+    order.id = order._id.toString()
+    delete order._id
+    return order
+  })
+
   res.status(200).json({
     success: true,
-    data: orders
+    data: mappedOrders
   })
 });
 
@@ -36,6 +42,9 @@ export const getOrderById = asyncHandler(async (req, res) => {
   if (!order) {
     throw new ApiError(404, 'Không tìm thấy đơn hàng')
   }
+
+  order.id = order._id.toString()
+  delete order._id
 
   res.status(200).json({
     success: true,
@@ -196,17 +205,9 @@ const _sendOrderNotification = async (order, status) => {
       type: 'ORDER', // Trùng khớp với type Flutter đang kiểm tra
       referenceId: orderId, // Trùng khớp với key Flutter lấy ra
       status: status,
-      notificationId: notification._id.toString(),
-      imageUrl: imageUrl || ''
+      notificationId: notification._id.toString()
     }, imageUrl)
 
-    // Dọn dẹp các token đã hết hạn hoặc không hợp lệ khỏi DB
-    if (result && result.failedTokens && result.failedTokens.length > 0) {
-      await User.findByIdAndUpdate(order.user, {
-        $pull: { fcmTokens: { token: { $in: result.failedTokens } } }
-      })
-      console.log(`🧹 FCM: Đã dọn dẹp ${result.failedTokens.length} token lỗi của user ${order.user}`)
-    }
   } catch (error) {
     // Lỗi gửi thông báo không ảnh hưởng đến logic cập nhật đơn hàng
     console.error('❌ Lỗi gửi thông báo đơn hàng:', error.message)

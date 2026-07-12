@@ -23,23 +23,20 @@
 
   factory VoucherModel.fromJson(Map<String, dynamic> json) {
     return VoucherModel(
-      id: json['_id'] is Map ? json['_id']['\$oid'] : json['_id'] ?? '',
+      id: json['id'] ?? '',
       voucherName: json['voucherName'] ?? '',
       voucherCode: json['voucherCode'] ?? '',
       minOrderAmount: json['minOrderAmount'] ?? 0,
       discountAmount: json['discountAmount'] ?? 0,
       usageLimit: json['usageLimit'] ?? 0,
       isActive: json['isActive'] ?? true,
-      createdAt: DateHelper.parseUtc(
-          json['createdAt'] is Map
-              ? json['createdAt']['\$date']
-              : json['createdAt']?.toString()),
+      createdAt: DateHelper.parseUtc(json['createdAt']?.toString()),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      '_id': id,
+      'id': id,
       'voucherName': voucherName,
       'voucherCode': voucherCode,
       'minOrderAmount': minOrderAmount,

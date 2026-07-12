@@ -25,7 +25,7 @@
         <div>
           <h2 class="text-2xl font-bold text-gray-800">Chi tiết đơn hàng</h2>
           <p class="text-sm text-gray-500">
-            Mã đơn: #{{ order._id?.slice(-8).toUpperCase() }}
+            Mã đơn: #{{ order.id?.slice(-8).toUpperCase() }}
           </p>
         </div>
       </div>

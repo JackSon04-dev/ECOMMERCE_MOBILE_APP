@@ -53,6 +53,24 @@ services:
     networks:
       - ecommerce_local_net
 
+  # 4b. Cron Job Worker (Producer)
+  cron_worker:
+    build:
+      context: ./ecommerce_backend
+      dockerfile: Dockerfile
+    container_name: local_cron
+    command: ["node", "cron.js"]
+    env_file:
+      - ./ecommerce_backend/.env
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+    depends_on:
+      - redis
+      - rabbitmq
+    networks:
+      - ecommerce_local_net
+
   # 5. Chatbot AI FastAPI
   chatbot:
     build:
@@ -68,6 +86,7 @@ services:
       context: ./ecommerce_admin_FE
       dockerfile: Dockerfile
     container_name: local_admin_web
+    
     ports:
       - "80:80"
       - "443:443"

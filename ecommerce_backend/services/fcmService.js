@@ -1,4 +1,5 @@
 import { messaging } from '../config/firebase.js'
+import User from '../models/userModel.js'
 
 /**
  * Gửi Push Notification đến một hoặc nhiều thiết bị
@@ -28,13 +29,13 @@ export const sendPushNotification = async (tokens, title, body, data = {}, image
     },
     android: {
       notification: {
-        channelId: "order_updates", // Phải trùng ID tạo trong Flutter
-        sound: "notification_sound", // Tên file âm thanh không có đuôi
+        channelId: "order_updates",
+        sound: "notification_sound",
         ...(imageUrl && { imageUrl: imageUrl })
       }
     },
     data: stringData,
-    tokens // Gửi tới nhiều thiết bị cùng lúc (multicast)
+    tokens
   }
 
   try {
@@ -47,9 +48,18 @@ export const sendPushNotification = async (tokens, title, body, data = {}, image
       response.responses.forEach((resp, idx) => {
         if (!resp.success) {
           failedTokens.push(tokens[idx])
-          console.log(`❌ FCM: Token lỗi - ${resp.error?.code}`)
         }
       })
+
+      // Tự động dọn dẹp các token lỗi khỏi Database
+      if (failedTokens.length > 0) {
+        await User.updateMany(
+          { 'fcmTokens.token': { $in: failedTokens } },
+          { $pull: { fcmTokens: { token: { $in: failedTokens } } } }
+        )
+        console.log(`🧹 FCM: Đã dọn dẹp tự động ${failedTokens.length} token lỗi khỏi Database.`)
+      }
+
       return { successCount: response.successCount, failedTokens }
     }
 

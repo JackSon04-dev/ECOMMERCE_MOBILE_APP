@@ -230,13 +230,13 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div
             v-for="order in pendingOrders.slice(0, 3)"
-            :key="order._id"
+            :key="order.id"
             class="bg-white p-3 rounded-xl border border-amber-100"
           >
             <div class="flex justify-between items-start">
               <div>
                 <p class="text-xs text-gray-400">
-                  #{{ order._id?.slice(-6).toUpperCase() }}
+                  #{{ order.id?.slice(-6).toUpperCase() }}
                 </p>
                 <p class="font-medium text-gray-800 text-sm">
                   {{ order.user?.username || 'Khách hàng' }}
@@ -596,7 +596,7 @@
           <div v-if="topProducts.length > 0" class="space-y-3">
             <div
               v-for="(product, index) in topProducts"
-              :key="product._id"
+              :key="product.id"
               class="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition"
             >
               <!-- Rank Badge -->
@@ -675,7 +675,7 @@
           <div v-if="topCustomers.length > 0" class="space-y-3">
             <div
               v-for="(customer, index) in topCustomers"
-              :key="customer._id"
+              :key="customer.id"
               class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50/30 transition"
             >
               <!-- Rank & Avatar -->
@@ -747,7 +747,7 @@
           <div v-if="topVouchers.length > 0" class="space-y-3">
             <div
               v-for="(voucher, index) in topVouchers"
-              :key="voucher._id"
+              :key="voucher.id"
               class="relative overflow-hidden"
             >
               <div

@@ -24,22 +24,6 @@ class DateHelper {
     return DateFormat('dd/MM/yyyy').format(localDate);
   }
 
-  /// Format DateTime (UTC từ server) → chỉ giờ, local timezone
-  /// Format: HH:mm
-  static String formatTime(DateTime? date) {
-    if (date == null) return '';
-    final localDate = date.toLocal();
-    return DateFormat('HH:mm').format(localDate);
-  }
-
-  /// Format DateTime (UTC từ server) → chuỗi ngày giờ đầy đủ, local timezone
-  /// Format: HH:mm dd/MM/yyyy
-  static String formatFullDateTime(DateTime? date) {
-    if (date == null) return '';
-    final localDate = date.toLocal();
-    return DateFormat('HH:mm dd/MM/yyyy').format(localDate);
-  }
-
   /// Format DateTime (UTC từ server) → dạng "vừa xong", "5 phút trước", ...
   static String formatTimeAgo(DateTime? date) {
     if (date == null) return '';
@@ -53,19 +37,6 @@ class DateHelper {
     if (diff.inDays < 7) return '${diff.inDays} ngày trước';
 
     return DateFormat('dd/MM/yyyy').format(localDate);
-  }
-
-  /// Lấy tên múi giờ hiện tại của device
-  /// Ví dụ: "UTC+7", "UTC-5"
-  static String getDeviceTimezone() {
-    final offset = DateTime.now().timeZoneOffset;
-    final hours = offset.inHours;
-    final minutes = offset.inMinutes.remainder(60).abs();
-    final sign = hours >= 0 ? '+' : '';
-    if (minutes > 0) {
-      return 'UTC$sign$hours:${minutes.toString().padLeft(2, '0')}';
-    }
-    return 'UTC$sign$hours';
   }
 
   /// Parse DateTime từ JSON string, đảm bảo luôn là UTC

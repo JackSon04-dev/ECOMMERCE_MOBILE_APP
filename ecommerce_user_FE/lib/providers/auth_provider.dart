@@ -5,32 +5,28 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
+import '../models/user_model.dart';
+import '../config/route_generator.dart';
+import 'package:provider/provider.dart' as legacy_provider;
+import '../providers/notification_provider.dart';
 
 class AuthState {
-  final String? accessToken;
-  final String? refreshToken;
-  final Map<String, dynamic>? user;
+  final UserModel? user;
   final bool isCheckingAuth;
 
   AuthState({
-    this.accessToken,
-    this.refreshToken,
     this.user,
     this.isCheckingAuth = false,
   });
 
-  bool get isLoggedIn => user != null && accessToken != null;
-  bool get isAdmin => user?['role'] == 'admin' ?? false;
+  bool get isLoggedIn => user != null;
+  bool get isAdmin => user?.role == 'admin';
 
   AuthState copyWith({
-    String? accessToken,
-    String? refreshToken,
-    Map<String, dynamic>? user,
+    UserModel? user,
     bool? isCheckingAuth,
   }) {
     return AuthState(
-      accessToken: accessToken ?? this.accessToken,
-      refreshToken: refreshToken ?? this.refreshToken,
       user: user ?? this.user,
       isCheckingAuth: isCheckingAuth ?? this.isCheckingAuth,
     );
@@ -47,20 +43,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isCheckingAuth: true);
 
     try {
-      // Đọc token từ storage (thông qua ApiService)
+      // Đọc token từ storage để kiểm tra nhanh (tránh gọi API thừa nếu chưa đăng nhập)
       final accessToken = await ApiService.getAccessToken();
-      final refreshToken = await ApiService.getRefreshToken();
 
       if (accessToken != null) {
         // Lấy thông tin user (ApiService sẽ tự động refresh token nếu cần)
         final userData = await AuthService.getCurrentUser();
         if (userData != null) {
-          // Cập nhật lại token mới nhất sau khi getCurrentUser (có thể đã được refresh)
-          final latestToken = await ApiService.getAccessToken();
           state = state.copyWith(
-            accessToken: latestToken,
-            refreshToken: refreshToken,
-            user: userData,
+            user: UserModel.fromJson(userData),
           );
         } else {
           // Nếu không lấy được user (401 lần 2 hoặc lỗi khác), clear state
@@ -80,9 +71,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final data = await AuthService.login(email: email, password: password);
       
       state = state.copyWith(
-        accessToken: data['accessToken'],
-        refreshToken: data['refreshToken'],
-        user: data['user'],
+        user: UserModel.fromJson(data['user']),
       );
     } catch (error) {
       rethrow;
@@ -97,6 +86,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
       debugPrint("Error logging out: $error");
     } finally {
       state = AuthState(); // Reset về mặc định
+
+      // Dọn dẹp Notification State bằng cách mượn context từ NavigatorKey toàn cục
+      try {
+        final context = RouteGenerator.navigatorKey.currentContext;
+        if (context != null) {
+          legacy_provider.Provider.of<NotificationProvider>(context, listen: false).clearNotifications();
+        }
+      } catch (e) {
+        debugPrint("❌ [Auth] Error clearing notifications: $e");
+      }
     }
   }
 
@@ -138,9 +137,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final data = await AuthService.googleLogin(idToken: idToken);
 
       state = state.copyWith(
-        accessToken: data['accessToken'],
-        refreshToken: data['refreshToken'],
-        user: data['user'],
+        user: UserModel.fromJson(data['user']),
       );
     } catch (e) {
       rethrow;
