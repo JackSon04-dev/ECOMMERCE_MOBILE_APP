@@ -1,5 +1,5 @@
-# Stage 1: Build Vue application (using Node 18 to share Docker cache with Backend)
-FROM node:18-alpine AS build-stage
+# Stage 1: Build Vue application (using Node 20 to support Rolldown-Vite engine requirements)
+FROM node:20-alpine AS build-stage
 
 WORKDIR /app
 
