@@ -12,7 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/product_provider.dart';
 import '../../../utils/scroll_pagination_mixin.dart';
 
-/// 🛍️ Products Page - Trang danh sách sản phẩm
+/// 🛍️ Products Page
 class ProductsPage extends ConsumerStatefulWidget {
   final String? initialTag;
 
@@ -25,9 +25,6 @@ class ProductsPage extends ConsumerStatefulWidget {
 class ProductsPageState extends ConsumerState<ProductsPage> with ScrollPaginationMixin<ProductsPage> {
   String? _selectedTag;
   String _sortBy = 'newest';
-  final TextEditingController _searchController = TextEditingController();
-  Timer? _debounce;
-  String _debouncedSearch = '';
 
   final List<Map<String, String>> _tags = [
     {'value': '', 'label': 'Tất cả'},
@@ -55,11 +52,11 @@ class ProductsPageState extends ConsumerState<ProductsPage> with ScrollPaginatio
     ref.read(paginatedProductsProvider((
       tag: _selectedTag,
       sortBy: _sortBy,
-      search: _debouncedSearch,
+      search: null,
     )).notifier).loadMore();
   }
 
-  /// Cho phép MainScreen gọi từ bên ngoài để thay đổi tag filter
+  /// Allow MainScreen to call from outside to change tag filter
   void filterByTag(String? tag) {
     setState(() {
       _selectedTag = tag ?? '';
@@ -70,7 +67,7 @@ class ProductsPageState extends ConsumerState<ProductsPage> with ScrollPaginatio
     ref.invalidate(paginatedProductsProvider((
       tag: _selectedTag,
       sortBy: _sortBy,
-      search: _debouncedSearch,
+      search: null,
     )));
   }
 
@@ -82,27 +79,23 @@ class ProductsPageState extends ConsumerState<ProductsPage> with ScrollPaginatio
     Navigator.pushNamed(context, '/cart');
   }
 
+  void _goToSearch() {
+    Navigator.pushNamed(context, '/search');
+  }
+
   @override
   Widget build(BuildContext context) {
     final productsAsync = ref.watch(paginatedProductsProvider((
       tag: _selectedTag,
       sortBy: _sortBy,
-      search: _debouncedSearch,
+      search: null,
     )));
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: CustomAppBar(
         showSearch: true,
-        searchController: _searchController,
-        onSearchChanged: (val) {
-          if (_debounce?.isActive ?? false) _debounce!.cancel();
-          _debounce = Timer(const Duration(milliseconds: 1000), () {
-            setState(() {
-              _debouncedSearch = val.trim();
-            });
-          });
-        },
+        onSearchTap: _goToSearch,
         showCart: true,
         cartItemCount: ref.watch(cartProvider).itemCount,
         onCartTap: _goToCart,
@@ -259,8 +252,6 @@ class ProductsPageState extends ConsumerState<ProductsPage> with ScrollPaginatio
 
   @override
   void dispose() {
-    _searchController.dispose();
-    _debounce?.cancel();
     super.dispose();
   }
 }

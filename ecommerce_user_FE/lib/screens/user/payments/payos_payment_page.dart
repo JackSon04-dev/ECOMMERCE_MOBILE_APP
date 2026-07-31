@@ -57,7 +57,7 @@ class _PayosPaymentPageState extends State<PayosPaymentPage> with WidgetsBinding
   }
 
   void _startPollingPaymentStatus() {
-    // Chạy định kỳ sau mỗi 5 giây
+    // Run periodically every 5 seconds
     _timer = Timer.periodic(const Duration(seconds: 5), (timer) async {
       await _checkPaymentStatus(isAuto: true);
     });
@@ -81,7 +81,7 @@ class _PayosPaymentPageState extends State<PayosPaymentPage> with WidgetsBinding
     }
   }
 
-  /// Kiểm tra trạng thái thanh toán từ backend
+  /// Check payment status from backend
   Future<void> _checkPaymentStatus({bool isAuto = false}) async {
     if (_isChecking || _paymentResult == true) return;
     
@@ -209,7 +209,7 @@ class _PayosPaymentPageState extends State<PayosPaymentPage> with WidgetsBinding
             ),
             const SizedBox(height: 24),
             
-            // Vẽ QR Code VietQR
+            // Draw VietQR QR Code
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(

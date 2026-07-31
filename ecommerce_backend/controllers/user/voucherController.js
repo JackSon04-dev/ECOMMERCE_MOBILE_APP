@@ -1,7 +1,7 @@
 import * as voucherService from '../../services/voucherService.js';
 import { asyncHandler } from '../../middleware/errorMiddleware.js';
 
-// 🎫 Áp dụng voucher
+// 🎫 Apply voucher
 export const applyVoucher = asyncHandler(async (req, res) => {
   const { voucherCode, orderTotal } = req.body;
   const voucher = await voucherService.applyVoucher(voucherCode, orderTotal);

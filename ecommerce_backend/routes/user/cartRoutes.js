@@ -6,10 +6,10 @@ import { updateCartSchema } from '../../validations/userValidation.js';
 
 const router = express.Router();
 
-// Lấy giỏ hàng (Kèm tự động check và cập nhật Tồn kho/Stock)
+// Get cart (With auto check and update Inventory/Stock)
 router.get('/', verifyToken, getCart);
 
-// Cập nhật/Thêm mới/Đồng bộ giỏ hàng
+// Update/Add new/Sync cart
 router.patch('/update', verifyToken, validate(updateCartSchema), updateCart);
 
 export default router;

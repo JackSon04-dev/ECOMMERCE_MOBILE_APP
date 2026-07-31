@@ -3,7 +3,7 @@ import { asyncHandler, ApiError } from '../../middleware/errorMiddleware.js';
 import { publishToQueue } from '../../services/rabbitmqService.js';
 
 /**
- * 💳 Tạo URL thanh toán VNPay
+ * 💳 Create VNPay payment URL
  * POST /api/payment/create_payment_url
  * Body: { orderId }
  */
@@ -12,7 +12,7 @@ export const createPaymentUrl = asyncHandler(async (req, res) => {
   const { orderId } = req.body;
   const userId = req.user.id;
 
-  // Lấy baseUrl từ body hoặc request host
+  // Get baseUrl from body or request host
   let reqBaseUrl = null;
   if (req.body.baseUrl) {
     reqBaseUrl = req.body.baseUrl;
@@ -22,7 +22,7 @@ export const createPaymentUrl = asyncHandler(async (req, res) => {
     reqBaseUrl = `${protocol}://${host}`;
   }
 
-  // Service tự throw ApiError với đúng status code → asyncHandler forward về errorHandler
+  // Service automatically throws ApiError with correct status code -> asyncHandler forwards to errorHandler
   const { paymentUrl, txnRef } = await paymentService.createPaymentUrl(orderId, userId, reqBaseUrl);
 
   res.status(200).json({
@@ -34,7 +34,7 @@ export const createPaymentUrl = asyncHandler(async (req, res) => {
 
 
 /**
- * 🔄 VNPay Return URL - User được redirect về đây sau khi thanh toán
+ * 🔄 VNPay Return URL - User is redirected here after payment
  * GET /api/payment/vnpay_return
  */
 export const vnpayReturn = asyncHandler(async (req, res) => {
@@ -43,7 +43,7 @@ export const vnpayReturn = asyncHandler(async (req, res) => {
     const result = await paymentService.processVnpayReturn(req.query);
 
     if (result.success) {
-      // Redirect về trang thành công
+      // Redirect to success page
       res.send(`
         <!DOCTYPE html>
         <html>
@@ -140,7 +140,7 @@ export const vnpayReturn = asyncHandler(async (req, res) => {
         </html>
       `);
     } else {
-      // Thanh toán thất bại
+      // Payment failed
       res.send(`
         <!DOCTYPE html>
         <html>
@@ -244,7 +244,7 @@ export const vnpayReturn = asyncHandler(async (req, res) => {
 });
 
 /**
- * 🔍 Kiểm tra trạng thái thanh toán của đơn hàng
+ * 🔍 Check order payment status
  * GET /api/payment/status/:orderId
  */
 export const checkPaymentStatus = asyncHandler(async (req, res) => {
@@ -261,7 +261,7 @@ export const checkPaymentStatus = asyncHandler(async (req, res) => {
 });
 
 /**
- * 💳 Tạo URL thanh toán ZaloPay
+ * 💳 Create ZaloPay payment URL
  * POST /api/payment/create_zalopay_url
  * Body: { orderId }
  */
@@ -280,7 +280,7 @@ export const createZalopayPaymentUrl = asyncHandler(async (req, res) => {
 
 
 /**
- * 💳 Tạo URL/Mã QR thanh toán PayOS (VietQR)
+ * 💳 Create PayOS payment URL/QR Code (VietQR)
  * POST /api/payment/create_payos_url
  * Body: { orderId }
  */
@@ -298,7 +298,7 @@ export const createPayosPaymentUrl = asyncHandler(async (req, res) => {
 });
 
 /**
- * 🔄 PayOS Return URL - User được redirect về đây sau khi thanh toán qua giao diện Web
+ * 🔄 PayOS Return URL - User is redirected here after Web payment
  * GET /api/payment/payos_return
  */
 export const payosReturn = asyncHandler(async (req, res) => {

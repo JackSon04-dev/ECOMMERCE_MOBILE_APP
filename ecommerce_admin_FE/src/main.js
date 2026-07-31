@@ -4,10 +4,10 @@ import App from './App.vue'
 import router from './router'
 import axios from 'axios'
 
-// Cấu hình baseURL cho API (Lấy từ .env hoặc mặc định là /api)
+// Configure API baseURL (from .env or default /api)
 axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || '';
 
-// Cấu hình axios để tự động gửi token trong headers
+// Configure axios to auto send token in headers
 axios.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('authToken')
@@ -21,47 +21,89 @@ axios.interceptors.request.use(
   }
 )
 
-// Xử lý response errors (401 Unauthorized -> Tự động xin cấp lại Token)
+// Handle Race condition when multiple requests call refresh simultaneously
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+// Handle response errors (401 Unauthorized -> Auto request new Token)
 axios.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config
+    const originalRequest = error.config;
 
-    // Bắt lỗi 401 (Access Token hết hạn) và đảm bảo request này chưa được retry
+    // Skip if this error comes from refresh token API itself to avoid infinite loop
+    if (originalRequest.url === '/api/auth/refresh') {
+      return Promise.reject(error);
+    }
+
+    // Catch 401 (Access Token expired) and ensure this request hasn't been retried
     if (error.response && error.response.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true // Đánh dấu đã thử retry để tránh lặp vô hạn
+      if (isRefreshing) {
+        // Queue it if a refresh token process is currently running
+        return new Promise(function(resolve, reject) {
+          failedQueue.push({ resolve, reject })
+        }).then(token => {
+          originalRequest.headers['Authorization'] = 'Bearer ' + token;
+          return axios(originalRequest);
+        }).catch(err => {
+          return Promise.reject(err);
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
       
-      const refreshToken = localStorage.getItem('refreshToken')
+      const refreshToken = localStorage.getItem('refreshToken');
+      
       if (refreshToken) {
         try {
-          // Gọi API xin cấp mới Access Token
-          const res = await axios.post('/api/auth/refresh', { token: refreshToken })
-          const newAccessToken = res.data.accessToken
+          // Call API to request new Access Token
+          const res = await axios.post('/api/auth/refresh', { token: refreshToken });
+          const newAccessToken = res.data.accessToken;
           
-          // Cập nhật Token mới vào Local Storage
-          localStorage.setItem('authToken', newAccessToken)
+          // Update new Token to Local Storage
+          localStorage.setItem('authToken', newAccessToken);
           
-          // Gắn Token mới vào Header của Request bị lỗi ban đầu và gọi lại API đó
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
-          return axios(originalRequest)
+          // Attach new Token to Header of the originally failed Request
+          originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
+          
+          // Notify queued requests to continue
+          processQueue(null, newAccessToken);
+          
+          // Recall that API
+          return axios(originalRequest);
         } catch (refreshError) {
-          // Nếu Refresh Token cũng hết hạn hoặc bị lỗi -> Buộc đăng xuất triệt để
-          localStorage.removeItem('authToken')
-          localStorage.removeItem('refreshToken')
-          localStorage.removeItem('currentUser')
-          router.push({ name: 'login' })
-          return Promise.reject(refreshError)
+          processQueue(refreshError, null);
+          // If Refresh Token also expired or errored -> Force total logout
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('currentUser');
+          router.push({ name: 'login' });
+          return Promise.reject(refreshError);
+        } finally {
+          isRefreshing = false;
         }
       } else {
-        // Nếu ngay từ đầu đã không có Refresh Token -> Buộc đăng xuất
-        localStorage.removeItem('authToken')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('currentUser')
-        router.push({ name: 'login' })
+        // If no Refresh Token from the start -> Force logout
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('currentUser');
+        router.push({ name: 'login' });
       }
     }
 
-    return Promise.reject(error)
+    return Promise.reject(error);
   }
 )
 

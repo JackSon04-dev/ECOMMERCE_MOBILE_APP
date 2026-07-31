@@ -1,4 +1,4 @@
-# Stage 1: Build Vue application (using Node 20 to support Rolldown-Vite engine requirements)
+# Stage 1: Build Vue application
 FROM node:20-alpine AS build-stage
 
 WORKDIR /app

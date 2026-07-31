@@ -36,25 +36,25 @@ class AuthState {
 class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier() : super(AuthState());
 
-  /// ✅ Kiểm tra trạng thái đăng nhập khi mở app
+  /// ✅ Check login status when opening app
   Future<void> checkLoginStatus() async {
     if (state.isCheckingAuth) return;
     
     state = state.copyWith(isCheckingAuth: true);
 
     try {
-      // Đọc token từ storage để kiểm tra nhanh (tránh gọi API thừa nếu chưa đăng nhập)
+      // Read token from storage for quick check (avoid redundant API calls if not logged in)
       final accessToken = await ApiService.getAccessToken();
 
       if (accessToken != null) {
-        // Lấy thông tin user (ApiService sẽ tự động refresh token nếu cần)
+        // Get user info (ApiService will auto refresh token if needed)
         final userData = await AuthService.getCurrentUser();
         if (userData != null) {
           state = state.copyWith(
             user: UserModel.fromJson(userData),
           );
         } else {
-          // Nếu không lấy được user (401 lần 2 hoặc lỗi khác), clear state
+          // If user cannot be fetched (401 twice or other error), clear state
           await logout();
         }
       }
@@ -65,7 +65,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// 🔑 Đăng nhập
+  /// 🔑 Login
   Future<void> login({required String email, required String password}) async {
     try {
       final data = await AuthService.login(email: email, password: password);
@@ -78,16 +78,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// 🚪 Đăng xuất
+  /// 🚪 Logout
   Future<void> logout() async {
     try {
       await AuthService.logout();
     } catch (error) {
       debugPrint("Error logging out: $error");
     } finally {
-      state = AuthState(); // Reset về mặc định
+      state = AuthState(); // Reset to default
 
-      // Dọn dẹp Notification State bằng cách mượn context từ NavigatorKey toàn cục
+      // Cleanup Notification State by borrowing context from global NavigatorKey
       try {
         final context = RouteGenerator.navigatorKey.currentContext;
         if (context != null) {
@@ -99,7 +99,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// 📝 Đăng ký
+  /// 📝 Register
   Future<void> register({
     required String username,
     required String email,
@@ -116,7 +116,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// 🌐 Đăng nhập Google
+  /// 🌐 Google Login
   Future<void> googleLogin() async {
     final GoogleSignIn googleSignIn = GoogleSignIn(
       scopes: ['email', 'profile'],

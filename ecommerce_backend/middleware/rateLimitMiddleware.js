@@ -9,20 +9,20 @@ class HybridStore {
         // RAM Storage: key -> { count, resetTime }
         this.ramStore = new Map();
         
-        // Theo dõi trạng thái kết nối Redis
+        // Track Redis connection status
         this.wasRedisConnected = redisClient.isReady;
         
-        // Chạy loop check kết nối định kỳ
+        // Run periodic connection check loop
         this.initConnectionMonitor();
     }
 
-    // Bắt buộc đối với express-rate-limit Store
+    // Required for express-rate-limit Store
     init(options) {
         this.windowMs = options.windowMs;
     }
 
     /**
-     * Tăng lượt truy cập cho một key.
+     * Increment access hits for a key.
      * @param {string} key 
      * @returns {Promise<{ totalHits: number, resetTime: Date }>}
      */
@@ -32,15 +32,15 @@ class HybridStore {
 
         if (redisClient.isReady) {
             try {
-                // 1. Tăng số lượt truy cập trong Redis
+                // 1. Increment hit count in Redis
                 const hits = await redisClient.incrBy(fullKey, 1);
 
-                // 2. Thiết lập TTL nếu là lượt hit đầu tiên
+                // 2. Set TTL if it is the first hit
                 if (hits === 1) {
                     await redisClient.expire(fullKey, Math.ceil(this.windowMs / 1000));
                 }
 
-                // 3. Lấy TTL còn lại để tính toán resetTime chính xác
+                // 3. Get remaining TTL to calculate accurate resetTime
                 const ttl = await redisClient.ttl(fullKey);
                 const resetTime = new Date(now + (ttl > 0 ? ttl * 1000 : this.windowMs));
 
@@ -59,7 +59,7 @@ class HybridStore {
     }
 
     /**
-     * Giảm lượt truy cập cho một key.
+     * Decrement access hits for a key.
      * @param {string} key 
      */
     async decrement(key) {
@@ -76,7 +76,7 @@ class HybridStore {
     }
 
     /**
-     * Reset lượt truy cập của một key.
+     * Reset access hits for a key.
      * @param {string} key 
      */
     async resetKey(key) {
@@ -86,15 +86,15 @@ class HybridStore {
             try {
                 await redisClient.del(fullKey);
             } catch (err) {
-                // Bỏ qua lỗi
+                // Ignore error
             }
         }
     }
 
-    // --- Các hàm phụ trợ bộ nhớ RAM ---
+    // --- RAM memory auxiliary functions ---
 
     incrementRam(fullKey, now) {
-        // Dọn dẹp định kỳ các key RAM đã hết hạn
+        // Periodically cleanup expired RAM keys
         this.cleanExpiredRamKeys(now);
 
         let record = this.ramStore.get(fullKey);
@@ -131,10 +131,10 @@ class HybridStore {
         }
     }
 
-    // --- Cơ chế giám sát kết nối và đồng bộ dữ liệu ---
+    // --- Connection monitoring and data synchronization mechanism ---
 
     initConnectionMonitor() {
-        // Chạy vòng lặp ngầm (loop check connect) sau mỗi 5 giây
+        // Run background loop (check connect) every 5 seconds
         setInterval(async () => {
             const isConnected = redisClient.isReady;
             if (isConnected && !this.wasRedisConnected) {
@@ -147,7 +147,7 @@ class HybridStore {
             }
         }, 5000);
 
-        // Lắng nghe thêm sự kiện ready để thực hiện đồng bộ ngay lập tức khi kết nối lại thành công
+        // Listen to ready event to sync immediately upon successful reconnection
         redisClient.on('ready', async () => {
             if (!this.wasRedisConnected) {
                 console.log(`🔄 [Rate Limit] Redis sự kiện 'ready' được kích hoạt! Tiến hành đồng bộ dữ liệu RAM lên Redis cho store ${this.prefix}...`);
@@ -175,10 +175,10 @@ class HybridStore {
 
             const remainingSec = Math.ceil(remainingMs / 1000);
             try {
-                // Cộng dồn count của RAM lên Redis
+                // Accumulate RAM count to Redis
                 await redisClient.incrBy(fullKey, record.count);
                 
-                // Đồng bộ TTL
+                // Sync TTL
                 const currentTtl = await redisClient.ttl(fullKey);
                 let newTtl = remainingSec;
                 if (currentTtl > 0) {
@@ -196,17 +196,17 @@ class HybridStore {
     }
 }
 
-// Khởi tạo các stores riêng để có thể export và kiểm soát/đồng bộ từ bên ngoài nếu cần
-// Local default: Global = 100 req/min, Sensitive = 20 req/min để tránh block khi dev hoặc chạy máy ảo
+// Initialize separate stores for exporting and monitoring/syncing externally if needed
+// Local default: Global = 100 req/min, Sensitive = 20 req/min to avoid blocking during dev or VM
 const globalMax = parseInt(process.env.RATE_LIMIT_GLOBAL_MAX) || 100;
 const sensitiveMax = parseInt(process.env.RATE_LIMIT_SENSITIVE_MAX) || 20;
 
 export const globalLimiterStore = new HybridStore('rl-global:', 1 * 60 * 1000);
 export const sensitiveLimiterStore = new HybridStore('rl-sensitive:', 1 * 60 * 1000);
 
-// Khởi tạo các rate limiters
+// Initialize rate limiters
 export const globalLimiter = rateLimit({
-    windowMs: 1 * 60 * 1000, // 1 phút
+    windowMs: 1 * 60 * 1000, // 1 minute
     max: globalMax,
     message: 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau 1 phút.',
     standardHeaders: true,
@@ -221,7 +221,7 @@ export const globalLimiter = rateLimit({
 });
 
 export const sensitiveLimiter = rateLimit({
-    windowMs: 1 * 60 * 1000, // 1 phút
+    windowMs: 1 * 60 * 1000, // 1 minute
     max: sensitiveMax,
     message: 'Bạn đã thực hiện thao tác quá nhiều lần. Vui lòng thử lại sau 1 phút.',
     standardHeaders: true,

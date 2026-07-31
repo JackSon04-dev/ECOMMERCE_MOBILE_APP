@@ -148,8 +148,8 @@ import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
 // State
-const allUsers = ref([]) // Chứa dữ liệu gốc từ API
-const displayUsers = ref([]) // Chứa dữ liệu sau khi lọc
+const allUsers = ref([]) // Contains original data from API
+const displayUsers = ref([]) // Contains data after filtering
 
 const searchQuery = ref('')
 const filterStatus = ref('')
@@ -165,26 +165,26 @@ const formatDate = (dateString) => {
   })
 }
 
-// 1. Lấy dữ liệu ban đầu từ API
+// 1. Get initial data from API
 const fetchUsers = async () => {
   try {
     const res = await axios.get('/api/admin/users')
     allUsers.value = res.data.data
-    displayUsers.value = res.data.data // Mặc định hiển thị tất cả
+    displayUsers.value = res.data.data // Display all by default
   } catch (error) {
     console.error('Lỗi lấy dữ liệu:', error)
   }
 }
 
-// 2. Hàm xử lý tìm kiếm (Chỉ thực hiện khi nhấn nút)
+// 2. Search handling function (Only executed on button click)
 const handleSearch = () => {
   displayUsers.value = allUsers.value.filter((user) => {
-    // Kiểm tra email (không phân biệt hoa thường)
+    // Check email (case insensitive)
     const matchEmail = user.email
       ?.toLowerCase()
       .includes(searchQuery.value.toLowerCase())
 
-    // Kiểm tra trạng thái (Nếu không chọn thì mặc định là đúng)
+    // Check status (If none selected, default is true)
     let matchStatus = true
     if (filterStatus.value === 'active') {
       matchStatus = user.isActive === true
@@ -196,7 +196,7 @@ const handleSearch = () => {
   })
 }
 
-// 3. Toggle trạng thái user (Khóa/Mở khóa)
+// 3. Toggle user status (Lock/Unlock)
 const toggleUserStatus = async (user) => {
   const newStatus = !user.isActive
   const action = newStatus ? 'mở khóa' : 'khóa'

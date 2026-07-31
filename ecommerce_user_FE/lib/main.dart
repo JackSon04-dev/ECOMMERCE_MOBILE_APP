@@ -12,11 +12,11 @@ import 'services/fcm_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
-  // Khởi tạo SharedPreferences trước để CartProvider load cart ngay lập tức
+  // Initialize SharedPreferences first so CartProvider loads cart immediately
   await SharedPreferences.getInstance();
-  // Khởi tạo Firebase (BẮT BUỘC trước khi dùng bất kỳ dịch vụ Firebase nào)
+  // Initialize Firebase (MANDATORY before using any Firebase services)
   await Firebase.initializeApp();
-  // Khởi tạo FCM (Đăng ký listeners cho 3 trạng thái nhận thông báo)
+  // Initialize FCM (Register listeners for 3 notification receiving states)
   await FcmService.initialize();
   runApp( 
     const ProviderScope( 

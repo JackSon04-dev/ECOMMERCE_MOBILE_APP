@@ -1,9 +1,9 @@
 import { getChannel } from '../config/rabbitmq.js';
 
 /**
- * Đẩy tin nhắn vào hàng đợi
- * @param {string} queueName - Tên hàng đợi
- * @param {object} data - Dữ liệu cần gửi (object)
+ * Push message to queue
+ * @param {string} queueName - Queue name
+ * @param {object} data - Data to send (object)
  */
 export const publishToQueue = async (queueName, data) => {
   const channel = getChannel();

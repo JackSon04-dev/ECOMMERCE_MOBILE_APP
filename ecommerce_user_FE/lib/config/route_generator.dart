@@ -22,13 +22,13 @@ import '../screens/user/payments/payos_payment_page.dart';
 import '../screens/user/orders/create_review_page.dart';
 import '../models/order_model.dart';
 
-/// 🚀 Route Generator - Xử lý route generation và guards
-/// Hiện tại support: login, register, homes (và các tab bên trong)
-/// Thêm routes mới khi tạo screens mới
+/// 🚀 Route Generator - Handle route generation and guards
+/// Currently support: login, register, homes (and internal tabs)
+/// Add new routes when creating new screens
 class RouteGenerator {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-  /// ⭐ Main function - Được gọi mỗi khi navigate
+  /// ⭐ Main function - Called on every navigation
   /// settings.name = route name (e.g., '/homes')
   static Route<dynamic> generateRoute(RouteSettings settings) {
     print('🔀 Navigate: ${settings.name}');
@@ -156,7 +156,7 @@ class RouteGenerator {
     }
   }
 
-  /// 🛣️ Helper 1: Build route với Material animation
+  /// 🛣️ Helper 1: Build route with Material animation
   static MaterialPageRoute<dynamic> _buildRoute(Widget screen) {
     return MaterialPageRoute(builder: (_) => screen);
   }

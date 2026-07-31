@@ -7,18 +7,18 @@ const router = express.Router()
 
 router.use(verifyToken, restrictToRoles(['ADMIN']))
 
-// Quản lý sản phẩm:
+// Product management:
 
-// Lấy thống kê sản phẩm (phải đặt trước /:id)
+// Get product statistics (must precede /:id)
 router.get('/stats/overview', adminController.getProductStats)
 
-// Lấy tất cả sản phẩm
+// Get all products
 router.get('/', adminController.getAllProducts)
 
-// Lấy sản phẩm theo ID
+// Get product by ID
 router.get('/:id', adminController.getProductByID)
 
-// Thêm sản phẩm mới, upload hình ảnh lên Cloudinary với multer
+// Add new product, upload images to Cloudinary with multer
 router.post(
   '/add',
   uploadCloud.fields([
@@ -28,7 +28,7 @@ router.post(
   adminController.createProduct
 )
 
-// Cập nhật sản phẩm mới, upload hình ảnh lên Cloudinary với multer
+// Update product, upload images to Cloudinary with multer
 router.put(
   '/update/:id',
   uploadCloud.fields([
@@ -37,7 +37,7 @@ router.put(
   ]),
   adminController.updateProduct
 )
-router.delete('/delete/:id', adminController.deleteProduct) // Xóa sản phẩm
-router.put('/stock/:productId/:variantId', adminController.updateVariantStock) // Cập nhật kho
+router.delete('/delete/:id', adminController.deleteProduct) // Delete product
+router.put('/stock/:productId/:variantId', adminController.updateVariantStock) // Update inventory
 
 export default router

@@ -14,9 +14,9 @@ class CartState {
   final CartData? cartAPI;
   final List<CartItem> cartUpdate;
   final bool isCheckoutPaused;
-  final Set<String> selectedKeys; // Danh sách định danh Item được tích v để thanh toán
-  final Set<String> apiKeys; // Cache unique keys của cartAPI
-  final Set<String> updateKeys; // Cache unique keys của cartUpdate
+  final Set<String> selectedKeys; // List of ticked Item identifiers for checkout
+  final Set<String> apiKeys; // Cache unique keys of cartAPI
+  final Set<String> updateKeys; // Cache unique keys of cartUpdate
 
   CartState({
     this.cartAPI,
@@ -27,34 +27,34 @@ class CartState {
     this.updateKeys = const {},
   });
 
-  /// 🔥 Lõi: Gộp Dữ liệu thực (cartAPI) và Dữ liệu tạm (cartUpdate)
+  /// 🔥 Core: Merge Real data (cartAPI) and Temp data (cartUpdate)
   List<CartItem> get cartUI {
     List<CartItem> mergedList = [];
     if (cartAPI != null && cartAPI!.items.isNotEmpty) {
       mergedList.addAll(cartAPI!.items);
     }
 
-    // Map Hashmap để tra cứu nhanh Update
+    // Hashmap for quick Update lookup
     final Map<String, CartItem> updates = {
       for (var item in cartUpdate) item.uniqueKey: item
     };
 
     List<CartItem> result = [];
 
-    // 1. Đè item API
+    // 1. Overwrite API item
     for (var apiItem in mergedList) {
       if (updates.containsKey(apiItem.uniqueKey)) {
         var updatedItem = updates[apiItem.uniqueKey]!;
         if (updatedItem.quantity > 0) {
           result.add(updatedItem);
         }
-        updates.remove(apiItem.uniqueKey); // Gạch tên sau khi xử lý
+        updates.remove(apiItem.uniqueKey); // Cross out name after processing
       } else {
         result.add(apiItem);
       }
     }
 
-    // 2. Nhồi các item hoàn toàn mới (còn xót lại trong updates)
+    // 2. Stuff completely new items (left over in updates)
     for (var newItem in updates.values) {
       if (newItem.quantity > 0) {
         result.add(newItem);
@@ -64,14 +64,14 @@ class CartState {
     return result;
   }
 
-  // Tiện ích UI chung
+  // General UI utilities
   int get itemCount => cartUI.length;
   int get totalItems => cartUI.fold(0, (sum, item) => sum + item.quantity);
   double get totalPrice => cartUI.fold(0.0, (sum, item) => sum + item.totalPrice);
 
   bool get isEmpty => cartUI.isEmpty;
 
-  // Tiện ích Selection Checkout
+  // Selection Checkout utilities
   double get selectedTotalPrice {
     return cartUI
         .where((item) => selectedKeys.contains(item.uniqueKey))
@@ -91,7 +91,7 @@ class CartState {
   bool isSelected(String key) => selectedKeys.contains(key);
 
   bool get isAllSelected {
-    final selectable = cartUI.where((i) => !i.isOutOfStock); // Không tính hàng hết
+    final selectable = cartUI.where((i) => !i.isOutOfStock); // Don't count out of stock items
     return selectable.isNotEmpty && selectable.every((i) => selectedKeys.contains(i.uniqueKey));
   }
 
@@ -122,7 +122,7 @@ class CartNotifier extends StateNotifier<CartState> {
   Timer? _debounceTimer;
 
   CartNotifier(this.ref) : super(CartState()) {
-    loadCart(); // Khởi động 
+    loadCart(); // Startup
   }
 
   // ======== 1. BOOTSTRAP ========
@@ -146,10 +146,10 @@ class CartNotifier extends StateNotifier<CartState> {
 
   Future<void> loadCart() async {
     try {
-      // 1. Tải Giỏ hàng từ Server (Chỉ nếu logged in)
+      // 1. Load Cart from Server (Only if logged in)
       await _loadServerCart();
 
-      // 2. Đọc chuyển tiếp từ Local Storage
+      // 2. Read forward from Local Storage
       final prefs = await SharedPreferences.getInstance();
       List<CartItem> localUpdates = [];
       final String? updatesJson = prefs.getString('cart_update');
@@ -164,7 +164,7 @@ class CartNotifier extends StateNotifier<CartState> {
         updateKeys: localUpdates.map((i) => i.uniqueKey).toSet(),
       );
       
-      // Nếu lúc mở App lên mà rổ Update vẫn còn chứa rác, tự động chạy Timer quăng nó lên Server nốt
+      // If App opens and Update basket still contains garbage, auto run Timer to throw it to Server
       if (localUpdates.isNotEmpty && !state.isCheckoutPaused) {
         _startDebounceTimer();
       }
@@ -188,7 +188,7 @@ class CartNotifier extends StateNotifier<CartState> {
   bool addItem(app_product.Product product, String color, String size, {int quantity = 1}) {
     final key = '${product.id}_${color}_$size';
     
-    // Tự động validate stock nhẹ trên UI nếu product truyền vào có chứa Array Varients
+    // Auto lightweight stock validation on UI if passed product contains Variants Array
     final stock = product.getStockByVariant(color, size);
     
     int currentQty = 0;
@@ -202,7 +202,7 @@ class CartNotifier extends StateNotifier<CartState> {
     final newQuantity = currentQty + quantity;
     if (newQuantity > stock) {
       print('⚠️ [Cart] Local stock limit: Only $stock items left');
-      return false; // Quá giới hạn UI
+      return false; // UI limit exceeded
     }
 
     _patchLocalUpdate(
@@ -230,16 +230,16 @@ class CartNotifier extends StateNotifier<CartState> {
     }
   }
 
-  /// Case 2: Xóa Item
+  /// Case 2: Delete Item
   void removeItem(String uniqueKey) {
-    // 1. Kiểm tra tồn tại trong cartAPI
+    // 1. Check existence in cartAPI
     final inApi = state.apiKeys.contains(uniqueKey);
-    // 2. Kiểm tra tồn tại trong cartUpdate
+    // 2. Check existence in cartUpdate
     final inUpdate = state.updateKeys.contains(uniqueKey);
 
     if (inApi) {
-      // Nếu tồn tại trong cartAPI (và có thể cả cartUpdate):
-      // Ghi đè bằng entry quantity = 0 để đồng bộ xóa trên server
+      // If exists in cartAPI (and possibly cartUpdate):
+      // Overwrite with entry quantity = 0 to sync deletion on server
       CartItem? targetItem = state.cartUI.cast<CartItem?>().firstWhere(
         (item) => item?.uniqueKey == uniqueKey, orElse: () => null
       );
@@ -253,8 +253,8 @@ class CartNotifier extends StateNotifier<CartState> {
         );
       }
     } else if (inUpdate) {
-      // Nếu CHỈ tồn tại trong cartUpdate (hàng mới thêm chưa kịp sync):
-      // Xóa thẳng khỏi list local và cập nhật keys
+      // If ONLY exists in cartUpdate (newly added item not yet synced):
+      // Delete directly from local list and update keys
       List<CartItem> pending = List.from(state.cartUpdate);
       pending.removeWhere((item) => item.uniqueKey == uniqueKey);
       
@@ -265,7 +265,7 @@ class CartNotifier extends StateNotifier<CartState> {
       _saveLocalUpdate(pending);
     }
     
-    // Luôn bỏ tick khi chọn xóa
+    // Always untick when selecting delete
     if (state.selectedKeys.contains(uniqueKey)) {
       final s = Set<String>.from(state.selectedKeys);
       s.remove(uniqueKey);
@@ -273,7 +273,7 @@ class CartNotifier extends StateNotifier<CartState> {
     }
   }
 
-  /// Ghi đè vào danh sách chờ đồng bộ
+  /// Overwrite into pending sync list
   void _patchLocalUpdate({
     required CartProduct cartProduct,
     required String color,
@@ -310,7 +310,7 @@ class CartNotifier extends StateNotifier<CartState> {
     _saveLocalUpdate(pending);
 
     if (!state.isCheckoutPaused) {
-      _startDebounceTimer(); // Gia hạn 5s Timer
+      _startDebounceTimer(); // Extend 5s Timer
     }
   }
 
@@ -329,12 +329,12 @@ class CartNotifier extends StateNotifier<CartState> {
   void _startDebounceTimer() {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(seconds: 5), () {
-      update(); // Tự động sync sau 5s
+      update(); // Auto sync after 5s
     });
   }
 
-  /// Hàm update chính: Đồng bộ dữ liệu mới vào dữ liệu cart trên MongoDB
-  /// Trả về true nếu thành công, false nếu thất bại hoặc đang pause
+  /// Main update function: Sync new data to cart data on MongoDB
+  /// Returns true if successful, false if failed or paused
   Future<bool> update() async {
     if (state.cartUpdate.isEmpty) return true;
     if (state.isCheckoutPaused) return false;
@@ -355,8 +355,8 @@ class CartNotifier extends StateNotifier<CartState> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('cart_update');
       
-      state = state.copyWith(cartUpdate: [], updateKeys: {}); // Trả về cartUpdate = null (empty list)
-      await loadCart(); // Load lại toàn bộ data để cập nhật cartAPI
+      state = state.copyWith(cartUpdate: [], updateKeys: {}); // Return cartUpdate = null (empty list)
+      await loadCart(); // Reload all data to update cartAPI
       return true;
     } else {
       print('❌ [Cart] Sync failed!');
@@ -380,11 +380,11 @@ class CartNotifier extends StateNotifier<CartState> {
     }
   }
 
-  /// Khi user MUA XONG -> Tiến hành dọn kho Giỏ hàng bằng cưỡng ép
+  /// When user FINISHES PURCHASE -> Forcibly cleanup Cart inventory
   Future<void> removeCheckoutItems(List<CartItem> purchasedItems) async {
     pauseSyncForCheckout(); 
 
-    // Kiểm tra xem có item nào trong checkout đang nằm trong danh sách update local không
+    // Check if any checkout item is in local update list
     final hasLocalItems = purchasedItems.any((p) => state.updateKeys.contains(p.uniqueKey));
     if (hasLocalItems) {
       print('🗑️ [Cart] Removing purchased items from local...');
@@ -395,17 +395,17 @@ class CartNotifier extends StateNotifier<CartState> {
     List<Map<String, dynamic>> itemsToRemoveFromServer = [];
 
     for (var purchased in purchasedItems) {
-      // 1. Kiểm tra dọn dẹp ở mảng Local (cartUpdate)
+      // 1. Check cleanup in Local array (cartUpdate)
       newUpdateList.removeWhere((item) => item.uniqueKey == purchased.uniqueKey);
       
-      // Bỏ Tick chọn
+      // Untick selection
       if (state.selectedKeys.contains(purchased.uniqueKey)) {
         final s = Set<String>.from(state.selectedKeys);
         s.remove(purchased.uniqueKey);
         state = state.copyWith(selectedKeys: s);
       }
 
-      // 2. Dò ở cartAPI qua hash lookup
+      // 2. Scan cartAPI via hash lookup
       final inApi = state.apiKeys.contains(purchased.uniqueKey);
       if (inApi) {
         shouldTriggerApi = true;
@@ -421,11 +421,11 @@ class CartNotifier extends StateNotifier<CartState> {
     // Refresh updateKeys
     final keys = newUpdateList.map((i) => i.uniqueKey).toSet();
 
-    // Save thay đổi Local RAM
+    // Save Local RAM changes
     state = state.copyWith(cartUpdate: newUpdateList, updateKeys: keys);
     await _saveLocalUpdate(newUpdateList);
 
-    // Call API xóa item
+    // Call API to delete item
     if (shouldTriggerApi) {
       print('🗑️ [Cart] Removing purchased items from server...');
       await CartService.updateCart({'items': itemsToRemoveFromServer});
@@ -455,7 +455,7 @@ class CartNotifier extends StateNotifier<CartState> {
     state = state.copyWith(selectedKeys: const {});
   }
 
-  // Tiện ích: Mua lại (Reorder) -> Tái gọi logic Cart
+  // Utility: Reorder -> Recall Cart logic
   Future<Map<String, List<String>>> reorder(List<OrderItem> orderItems) async {
     final List<String> added = [];
     final List<String> outOfStock = [];
@@ -493,9 +493,9 @@ class CartNotifier extends StateNotifier<CartState> {
   }
 } // End Builder
 
-// TẠO PROVIDER RIVERSIDE
+// CREATE RIVERSIDE PROVIDER
 final cartProvider = StateNotifierProvider<CartNotifier, CartState>((ref) {
-  // Watch isLoggedIn to re-create CartNotifier khi trạng thái login thay đổi
+  // Watch isLoggedIn to re-create CartNotifier when login status changes
   ref.watch(authProvider.select((s) => s.isLoggedIn));
   return CartNotifier(ref);
 });

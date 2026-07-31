@@ -8,7 +8,7 @@ import '../../../widgets/common_widgets.dart';
 import '../../../widgets/order/order_action_buttons.dart';
 import '../../../widgets/order/order_action_helper.dart';
 
-/// 📦 Order Detail Page - Trang chi tiết đơn hàng
+/// 📦 Order Detail Page
 class OrderDetailPage extends ConsumerStatefulWidget {
   final String? orderId;
   final Order? order;

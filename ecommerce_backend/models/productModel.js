@@ -13,7 +13,7 @@ const productSchema = new mongoose.Schema(
     colorVariants: [
       {
         color: { type: String, required: true },
-        images: [{ type: String }], // Ảnh dùng chung cho tất cả size của màu này
+        images: [{ type: String }], // Image shared for all sizes of this color
         sizes: [
           {
             size: { type: String, required: true },
@@ -38,8 +38,18 @@ productSchema.pre('save', function (next) {
   next()
 })
 
-productSchema.index({ createdAt: -1 })
-productSchema.index({ tags: 1, createdAt: -1 })
+// 1. Basic Index (Newest) - Skipped because MongoDB automatically indexes _id
+productSchema.index({ tags: 1, _id: -1 })
+
+// 2. Index for Sort by Best Selling feature
+productSchema.index({ soldCount: -1, _id: -1 })
+productSchema.index({ tags: 1, soldCount: -1, _id: -1 })
+
+// 3. Index for Sort by Price Asc/Desc feature
+productSchema.index({ finalPrice: 1, _id: 1 })
+productSchema.index({ tags: 1, finalPrice: 1, _id: 1 })
+
+
 
 const Product = mongoose.model('Product', productSchema)
 export default Product

@@ -10,12 +10,12 @@ dotenv.config();
 const initCron = async () => {
   console.log('⏰ Khởi động hệ thống Cron Job...');
   
-  // Kết nối Database & RabbitMQ
+  // Connect Database & RabbitMQ
   await connectDB();
   await connectRabbitMQ();
   console.log('✔ [Cron] Đã kết nối DB và RabbitMQ');
 
-  // Job 1: Mỗi 15 phút - Quét đơn hàng online chưa thanh toán quá 30 phút
+  // Job 1: Every 15 minutes - Scan online orders unpaid for more than 30 minutes
   cron.schedule('*/15 * * * *', async () => {
     console.log('⏳ [Cron Job] Đang quét đơn hàng cần hủy...');
     try {

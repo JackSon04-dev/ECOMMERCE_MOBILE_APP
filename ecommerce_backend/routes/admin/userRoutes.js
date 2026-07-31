@@ -9,10 +9,10 @@ const router = express.Router()
 
 router.use(verifyToken, restrictToRoles(['ADMIN']))
 
-// GET /api/admin/users - Lấy danh sách tất cả users
+// GET /api/admin/users - Get all users list
 router.get('/', getAllUsers)
 
-// PATCH /api/admin/users/:id/status - Cập nhật trạng thái isActive
+// PATCH /api/admin/users/:id/status - Update isActive status
 router.patch('/:id/status', updateUserStatus)
 
 export default router

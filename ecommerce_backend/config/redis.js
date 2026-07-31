@@ -6,7 +6,7 @@ const redisClient = createClient({
     disableOfflineQueue: true, // [CỰC KỲ QUAN TRỌNG] Không xếp hàng lệnh khi mất kết nối để tránh treo API
     socket: {
         reconnectStrategy: (retries) => {
-            // Thử lại vĩnh viễn sau mỗi 5 giây để tự động phục hồi khi Redis sống lại
+            // Retry vĩnh viễn sau mỗi 5 giây để tự động phục hồi khi Redis sống lại
             return 5000;
         },
         connectTimeout: 5000 // Hủy kết nối nếu sau 5s không phản hồi
@@ -15,7 +15,7 @@ const redisClient = createClient({
 
 // Bắt sự kiện lỗi và thành công
 redisClient.on('error', (err) => {
-    // Chỉ log lỗi vắn tắt để tránh làm tràn màn hình Terminal
+    // Log errors briefly to avoid flooding the Terminal screen
     console.log(`❌ Redis Error: ${err.message || 'Mất kết nối tới máy chủ Redis'}`);
 });
 redisClient.on('connect', () => console.log('✔ Redis đang kết nối...'));
@@ -25,7 +25,7 @@ export const connectRedis = async () => {
     try {
         await redisClient.connect();
     } catch (error) {
-        // Chỉ log dòng thông báo vắn tắt, không in cả stack trace gây rối mắt
+        // Log brief notification lines only, do not print the entire stack trace to avoid clutter
         console.error(`❌ Kết nối Redis thất bại: ${error.message || 'Không thể thiết lập kết nối'}`);
     }
 };

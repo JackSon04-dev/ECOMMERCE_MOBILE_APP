@@ -3,10 +3,10 @@ import { asyncHandler } from '../../middleware/errorMiddleware.js';
 
 /**
  * 🛒 [GET] /api/cart
- * Lấy giỏ hàng của User và tự động check Stock (Tồn kho thực tế)
+ * Get User's cart and auto check Stock (Actual inventory)
  */
 export const getCart = asyncHandler(async (req, res) => {
-  const userId = req.user.id; // Lấy từ middleware verifyToken
+  const userId = req.user.id; // Get from verifyToken middleware
   const cartData = await cartService.getCart(userId);
 
   return res.status(200).json({
@@ -17,7 +17,7 @@ export const getCart = asyncHandler(async (req, res) => {
 
 /**
  * 🛒 [PUT/POST] /api/cart/update
- * Cập nhật Giỏ hàng (Hỗ trợ đồng bộ Sync mảng Items từ LocalStorage sau 15s hoặc 1 item lẻ)
+ * Update Cart (Supports syncing Items array from LocalStorage after 15s or 1 single item)
  */
 export const updateCart = asyncHandler(async (req, res) => {
   const userId = req.user.id;

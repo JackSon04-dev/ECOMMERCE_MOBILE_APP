@@ -2,20 +2,20 @@ import { messaging } from '../config/firebase.js'
 import User from '../models/userModel.js'
 
 /**
- * Gửi Push Notification đến một hoặc nhiều thiết bị
- * @param {string[]} tokens - Mảng FCM tokens của các thiết bị
- * @param {string} title - Tiêu đề thông báo
- * @param {string} body - Nội dung thông báo
- * @param {object} data - Dữ liệu đính kèm (để App xử lý khi click vào thông báo)
+ * Send Push Notification to one or more devices
+ * @param {string[]} tokens - Array of devices' FCM tokens
+ * @param {string} title - Notification title
+ * @param {string} body - Notification body
+ * @param {object} data - Attached data (for App to handle on notification click)
  */
 export const sendPushNotification = async (tokens, title, body, data = {}, imageUrl = null) => {
-  // Nếu không có token nào thì bỏ qua
+  // If no tokens, skip
   if (!tokens || tokens.length === 0) {
     console.log('⚠️ FCM: Không có device token nào để gửi thông báo')
     return null
   }
 
-  // Chuyển mọi giá trị trong data sang string (yêu cầu bắt buộc của FCM)
+  // Convert all values in data to string (strict FCM requirement)
   const stringData = {}
   for (const key in data) {
     stringData[key] = String(data[key])
@@ -42,7 +42,7 @@ export const sendPushNotification = async (tokens, title, body, data = {}, image
     const response = await messaging.sendEachForMulticast(message)
     console.log(`✅ FCM: Gửi thành công ${response.successCount}/${tokens.length} thiết bị`)
 
-    // Xử lý các token không hợp lệ (thiết bị đã gỡ app hoặc token hết hạn)
+    // Handle invalid tokens (device uninstalled app or token expired)
     if (response.failureCount > 0) {
       const failedTokens = []
       response.responses.forEach((resp, idx) => {
@@ -51,7 +51,7 @@ export const sendPushNotification = async (tokens, title, body, data = {}, image
         }
       })
 
-      // Tự động dọn dẹp các token lỗi khỏi Database
+      // Auto cleanup invalid tokens from Database
       if (failedTokens.length > 0) {
         await User.updateMany(
           { 'fcmTokens.token': { $in: failedTokens } },

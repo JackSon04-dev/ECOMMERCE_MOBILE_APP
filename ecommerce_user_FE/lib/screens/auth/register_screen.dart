@@ -54,7 +54,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Register successful! Please login.')),
       );
-      // Chuyển sang màn hình Login và thay thế màn hình Register hiện tại
+      // Switch to Login screen and replace current Register screen
       Navigator.pushReplacementNamed(context, AppRoutes.login);
     } catch (error) {
       // show error

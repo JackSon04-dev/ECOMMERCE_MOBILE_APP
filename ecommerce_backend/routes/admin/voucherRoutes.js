@@ -10,13 +10,13 @@ const router = express.Router()
 
 router.use(verifyToken, restrictToRoles(['ADMIN']))
 
-// GET /api/admin/vouchers - Lấy danh sách tất cả vouchers
+// GET /api/admin/vouchers - Get all vouchers list
 router.get('/', getAllVouchers)
 
-// POST /api/admin/vouchers - Tạo voucher mới
+// POST /api/admin/vouchers - Create new voucher
 router.post('/', createVoucher)
 
-// PUT /api/admin/vouchers/:id - Cập nhật voucher
+// PUT /api/admin/vouchers/:id - Update voucher
 router.put('/:id', updateVoucher)
 
 export default router

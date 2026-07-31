@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/notification_provider.dart';
 
-/// 🧭 Bottom Navigation Bar Widget - Thanh điều hướng dưới màn hình
+/// 🧭 Bottom Navigation Bar Widget
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;

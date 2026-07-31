@@ -3,7 +3,7 @@ import '../models/product_model.dart';
 import '../utils/currency_helper.dart';
 import 'common_widgets.dart';
 
-/// 🛍️ Product Card Widget - Thẻ sản phẩm dùng chung
+/// 🛍️ Product Card Widget - Shared product card
 class ProductCard extends StatelessWidget {
   final Product product;
   final VoidCallback? onTap;
@@ -163,12 +163,12 @@ class ProductCard extends StatelessWidget {
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
-                    // Original Price & Stock (Giá gốc & Tồn kho cùng hàng)
+                    // Original Price & Stock (same row)
                     if (product.discount > 0 || product.totalStock > 0)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // Giá gốc
+                          // Original price
                           if (product.discount > 0)
                             Flexible(
                               child: Text(
@@ -183,7 +183,7 @@ class ProductCard extends StatelessWidget {
                             ),
                           if (product.discount <= 0)
                             const SizedBox.shrink(),
-                          // Tồn kho
+                          // Inventory
                           Row(
                             children: [
                               Icon(
@@ -244,7 +244,7 @@ class ProductCard extends StatelessWidget {
   }
 }
 
-/// 🛍️ Product Card Horizontal - Thẻ sản phẩm ngang (cho giỏ hàng, đơn hàng)
+/// 🛍️ Product Card Horizontal - Horizontal product card (for cart, orders)
 class ProductCardHorizontal extends StatelessWidget {
   final String imageUrl;
   final String name;
@@ -258,7 +258,7 @@ class ProductCardHorizontal extends StatelessWidget {
   final VoidCallback? onRemove;
   final Function(int)? onQuantityChanged;
   final BuildContext? snackBarContext;
-  // Checkbox để chọn sản phẩm thanh toán
+  // Checkbox to select product for checkout
   final bool? isSelected;
   final VoidCallback? onToggleSelect;
 
@@ -300,7 +300,7 @@ class ProductCardHorizontal extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Checkbox bên trái ảnh, canh giữa dọc
+            // Checkbox left of image, vertical center alignment
             if (isSelected != null) ...[
               GestureDetector(
                 onTap: onToggleSelect,
@@ -373,7 +373,7 @@ class ProductCardHorizontal extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Giá dùng Flexible để co lại khi không đủ chỗ
+                      // Price uses Flexible to shrink when not enough space
                       Flexible(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -401,7 +401,7 @@ class ProductCardHorizontal extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Quantity controls — kích thước cố định, không bị ép
+                      // Quantity controls — fixed size, not squeezed
                       if (onQuantityChanged != null)
                         QuantitySelector(
                           quantity: quantity,

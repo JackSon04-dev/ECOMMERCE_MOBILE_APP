@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../services/user_service.dart';
 
-/// 🔒 Change Password Page - Trang đổi mật khẩu
+/// 🔒 Change Password Page
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
 
@@ -32,7 +32,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     super.dispose();
   }
 
-  /// Validate form trước khi submit
+  /// Validate form before submit
   bool _validateForm() {
     setState(() {
       _currentPasswordError = null;

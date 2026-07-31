@@ -1,6 +1,6 @@
 // lib/models/cart_model.dart
 
-/// 📦 Model rút gọn cho Product trả về bên trong Cart JSON
+/// 📦 Simplified Model for Product returned inside Cart JSON
 class CartProduct {
   final String id;
   final String name;
@@ -37,7 +37,7 @@ class CartProduct {
   }
 }
 
-/// 🛒 Định nghĩa 1 sản phẩm trong Giỏ hàng
+/// 🛒 Define 1 product in the Cart
 class CartItem {
   final String? cartItemId;
   final CartProduct product;
@@ -57,10 +57,10 @@ class CartItem {
     this.isOutOfStock = false,
   });
 
-  /// Khóa định danh độc nhất dùng để gộp dữ liệu (Merge Data)
+  /// Unique identifier key used for merging data (Merge Data)
   String get uniqueKey => '${product.id}_${color}_$size';
 
-  /// Tính tổng tiền của item này
+  /// Calculate total price of this item
   double get totalPrice => product.finalPrice * quantity;
 
   factory CartItem.fromJson(Map<String, dynamic> json) {
@@ -87,7 +87,7 @@ class CartItem {
     };
   }
 
-  /// Trình sao chép (Merge / Update) giúp chỉnh sửa giá trị cục bộ dễ dàng
+  /// Copier (Merge / Update) to easily edit local values
   CartItem copyWith({
     String? cartItemId,
     CartProduct? product,
@@ -109,7 +109,7 @@ class CartItem {
   }
 }
 
-/// 🗃️ Container tổng chứa cả Giỏ hàng (dùng khi fetch GET API)
+/// 🗃️ Master container containing entire Cart (used on fetch GET API)
 class CartData {
   final String cartId;
   final String userId;

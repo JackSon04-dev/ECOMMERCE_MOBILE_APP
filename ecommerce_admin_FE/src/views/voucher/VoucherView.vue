@@ -157,8 +157,8 @@ import axios from 'axios'
 
 const router = useRouter()
 
-const allVouchers = ref([]) // Chứa dữ liệu gốc từ API
-const displayVouchers = ref([]) // Chứa dữ liệu sau khi lọc
+const allVouchers = ref([]) // Contains original data from API
+const displayVouchers = ref([]) // Contains data after filtering
 
 const searchQuery = ref('')
 const filterStatus = ref('')
@@ -174,27 +174,27 @@ const formatDate = (dateString) => {
   })
 }
 
-// 1. Lấy dữ liệu ban đầu từ API
+// 1. Get initial data from API
 const fetchVouchers = async () => {
   try {
     const res = await axios.get('/api/admin/vouchers')
     allVouchers.value = res.data.data
-    displayVouchers.value = res.data.data // Mặc định hiển thị tất cả
+    displayVouchers.value = res.data.data // Display all by default
   } catch (error) {
     console.error('Lỗi lấy dữ liệu:', error)
   }
 }
 
-// 2. Hàm xử lý tìm kiếm (Chỉ thực hiện khi nhấn nút)
+// 2. Search handling function (Only executed on button click)
 const handleSearch = () => {
   displayVouchers.value = allVouchers.value.filter((v) => {
-    // Kiểm tra tên hoặc mã voucher
+    // Check voucher name or code
     const query = searchQuery.value.toLowerCase()
     const matchSearch =
       v.voucherName?.toLowerCase().includes(query) ||
       v.voucherCode?.toLowerCase().includes(query)
 
-    // Kiểm tra trạng thái
+    // Check status
     let matchStatus = true
     if (filterStatus.value === 'active') {
       matchStatus = v.isActive === true
@@ -206,7 +206,7 @@ const handleSearch = () => {
   })
 }
 
-// 3. Toggle trạng thái voucher
+// 3. Toggle voucher status
 const toggleVoucherStatus = async (voucher) => {
   const newStatus = !voucher.isActive
   const action = newStatus ? 'kích hoạt' : 'tắt'

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// 📊 Empty State Widget - Hiển thị khi không có dữ liệu
+/// 📊 Empty State Widget - Display when no data
 class EmptyStateWidget extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -100,24 +100,24 @@ class LoadingWidget extends StatelessWidget {
   }
 }
 
-/// 🔢 Quantity Selector Widget - Widget chọn số lượng dùng chung
-/// Hỗ trợ 2 size: large (bottom sheet) và small (card/checkout)
-/// Tự động disable nút + khi đạt maxStock và hiện SnackBar thông báo
+/// 🔢 Quantity Selector Widget - Shared quantity selector widget
+/// Supports 2 sizes: large (bottom sheet) and small (card/checkout)
+/// Auto disable + button when maxStock reached and show SnackBar notification
 class QuantitySelector extends StatelessWidget {
   final int quantity;
   final int maxStock;
 
-  /// Callback khi số lượng thay đổi — trả về giá trị mới
+  /// Callback when quantity changes — returns new value
   final ValueChanged<int> onChanged;
 
-  /// Số lượng tối thiểu (mặc định 1)
+  /// Minimum quantity (default 1)
   final int minQuantity;
 
-  /// Size lớn: dùng trong bottom sheet (padding 8, icon 20, font 16)
-  /// Size nhỏ: dùng trong card/checkout (size 26x26, icon 15, font 13)
+  /// Large size: used in bottom sheet (padding 8, icon 20, font 16)
+  /// Small size: used in card/checkout (size 26x26, icon 15, font 13)
   final bool large;
 
-  /// Context để hiện SnackBar khi vượt stock
+  /// Context to show SnackBar when exceeding stock
   final BuildContext? snackBarContext;
 
   const QuantitySelector({
@@ -132,7 +132,7 @@ class QuantitySelector extends StatelessWidget {
 
   void _handleIncrease() {
     if (quantity >= maxStock) {
-      // Hiện thông báo khi đạt giới hạn
+      // Show notification when limit reached
       final ctx = snackBarContext;
       if (ctx != null) {
         ScaffoldMessenger.of(ctx).clearSnackBars();
@@ -160,7 +160,7 @@ class QuantitySelector extends StatelessWidget {
     final canIncrease = quantity < maxStock;
 
     if (large) {
-      // ── Large style: dùng trong bottom sheet ──────────────────────────
+      // ── Large style: used in bottom sheet ──────────────────────────
       return Container(
         decoration: BoxDecoration(
           border: Border.all(color: Colors.grey[300]!),
@@ -185,7 +185,7 @@ class QuantitySelector extends StatelessWidget {
               ),
             ),
             InkWell(
-              // Vẫn cho bấm khi hết stock để hiện SnackBar
+              // Still allow clicking when out of stock to show SnackBar
               onTap: _handleIncrease,
               borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
               child: Padding(
@@ -198,7 +198,7 @@ class QuantitySelector extends StatelessWidget {
       );
     }
 
-    // ── Small style: dùng trong product card và checkout ─────────────────
+    // ── Small style: used in product card and checkout ─────────────────
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -215,7 +215,7 @@ class QuantitySelector extends StatelessWidget {
         ),
         _SmallQtyButton(
           icon: Icons.add,
-          // Vẫn cho bấm khi hết stock để hiện SnackBar
+          // Still allow clicking when out of stock to show SnackBar
           onTap: _handleIncrease,
           disabled: !canIncrease,
         ),
@@ -224,7 +224,7 @@ class QuantitySelector extends StatelessWidget {
   }
 }
 
-/// Nút nhỏ +/- dùng trong QuantitySelector small style
+/// Small +/- button used in QuantitySelector small style
 class _SmallQtyButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onTap;

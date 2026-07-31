@@ -1,111 +1,111 @@
 // ============================================================================
 // FILE: router/index.js
-// MỤC ĐÍCH: Cấu hình Vue Router - Quản lý điều hướng và bảo vệ các trang
+// PURPOSE: Configure Vue Router - Manage navigation and protect pages
 // ============================================================================
 
 // -----------------------------------------------------------------------------
-// 1. IMPORT CÁC HÀM TỪ THƯ VIỆN VUE-ROUTER
+// 1. IMPORT FUNCTIONS FROM VUE-ROUTER LIBRARY
 // -----------------------------------------------------------------------------
-// createRouter: Hàm tạo instance router cho ứng dụng
-// createWebHistory: Sử dụng History API của trình duyệt (URL sạch, không có #)
-//   - Ví dụ: /dashboard thay vì /#/dashboard
+// createRouter: Function creating router instance for the app
+// createWebHistory: Uses browser's History API (clean URL, no #)
+//   - Example: /dashboard instead of /#/dashboard
 import { createRouter, createWebHistory } from 'vue-router'
 
 // -----------------------------------------------------------------------------
-// 2. IMPORT COMPOSABLE useAuth TỪ FILE useAuth.js
+// 2. IMPORT useAuth COMPOSABLE FROM useAuth.js
 // -----------------------------------------------------------------------------
-// useAuth() trả về:
-//   - isAuthenticated: computed(() => !!token.value) → true nếu có token
-//   - currentUser: thông tin user đang đăng nhập
-//   - login(), logout(): hàm đăng nhập/đăng xuất
-// DÙNG ĐỂ: Kiểm tra trạng thái đăng nhập trong Navigation Guard
+// useAuth() returns:
+//   - isAuthenticated: computed(() => !!token.value) -> true if token exists
+//   - currentUser: current logged in user info
+//   - login(), logout(): login/logout functions
+// USED TO: Check login status in Navigation Guard
 import { useAuth } from '../composables/useAuth'
 
 // -----------------------------------------------------------------------------
-// 3. LAZY LOAD COMPONENTS - TẢI COMPONENT KHI CẦN (TỐI ƯU HIỆU NĂNG)
+// 3. LAZY LOAD COMPONENTS - LOAD COMPONENT WHEN NEEDED (PERFORMANCE OPTIMIZATION)
 // -----------------------------------------------------------------------------
-// Thay vì: import LoginView from '../views/LoginView.vue' (tải ngay lập tức)
-// Dùng: () => import(...) (chỉ tải khi user truy cập route đó)
-// LỢI ÍCH: Giảm kích thước bundle ban đầu, tăng tốc độ tải trang
+// Instead of: import LoginView from '../views/LoginView.vue' (immediate load)
+// Use: () => import(...) (only load when user accesses that route)
+// BENEFIT: Reduce initial bundle size, improve page load speed
 
 const LoginView = () => import('../views/LoginView.vue')
-// → Trang đăng nhập (full screen, không có sidebar)
+// -> Login page (full screen, no sidebar)
 
 const MainLayout = () => import('../layouts/MainLayout.vue')
-// → Layout chính chứa Sidebar + Header + <router-view/> cho các trang con
+// -> Main layout contains Sidebar + Header + <router-view/> for sub pages
 
 const DashboardView = () => import('../views/DashboardView.vue')
-// → Trang tổng quan (báo cáo, thống kê)
+// -> Overview page (reports, statistics)
 
 const ProductView = () => import('../views/product/ProductView.vue')
-// → Trang danh sách sản phẩm
+// -> Product list page
 
 const AddProductView = () => import('../views/product/AddProductView.vue')
-// → Trang thêm sản phẩm mới
+// -> Add new product page
 
 const ProductDetailView = () => import('../views/product/ProductDetailView.vue')
-// → Trang chi tiết/chỉnh sửa sản phẩm (nhận id từ URL)
+// -> Product details/edit page (receives id from URL)
 
 const UserView = () => import('../views/user/UserView.vue')
-// → Trang quản lý người dùng
+// -> User management page
 
 const VoucherView = () => import('../views/voucher/VoucherView.vue')
-// → Trang danh sách voucher
+// -> Voucher list page
 
 const AddVoucherView = () => import('../views/voucher/AddVoucherView.vue')
-// → Trang thêm voucher mới
+// -> Add new voucher page
 
 const VoucherDetailView = () => import('../views/voucher/VoucherDetailView.vue')
-// → Trang chi tiết/chỉnh sửa voucher
+// -> Voucher details/edit page
 
 const OrderView = () => import('../views/order/OrderView.vue')
-// → Trang danh sách đơn hàng
+// -> Order list page
 
 const OrderDetailView = () => import('../views/order/OrderDetailView.vue')
-// → Trang chi tiết đơn hàng
+// -> Order details page
 
 const ReviewListView = () => import('../views/review/reviewList.vue')
-// → Trang danh sách đánh giá
+// -> Review list page
 
 const ReviewDetailView = () => import('../views/review/reviewDetail.vue')
-// → Trang chi tiết đánh giá
+// -> Review details page
 
 const NotificationView = () => import('../views/notification/NotificationView.vue')
-// → Trang quản lý thông báo
+// -> Notification management page
 
 // -----------------------------------------------------------------------------
-// 4. ĐỊNH NGHĨA CÁC ROUTES - BẢNG ÁNH XẠ URL ↔ COMPONENT
+// 4. DEFINE ROUTES - URL <-> COMPONENT MAPPING TABLE
 // -----------------------------------------------------------------------------
 const routes = [
   // -------------------------------------------------------------------------
-  // ROUTE 1: Trang đăng nhập (KHÔNG cần đăng nhập để truy cập)
+  // ROUTE 1: Login page (NO login required to access)
   // -------------------------------------------------------------------------
   {
-    path: '/login', // URL trong trình duyệt
-    name: 'login', // Tên route (dùng cho router.push({ name: 'login' }))
-    component: LoginView, // Component được render
-    meta: { requiresAuth: false } // Metadata: KHÔNG yêu cầu đăng nhập
+    path: '/login', // URL in browser
+    name: 'login', // Route name (used for router.push({ name: 'login' }))
+    component: LoginView, // Rendered component
+    meta: { requiresAuth: false } // Metadata: NO login required
   },
 
   // -------------------------------------------------------------------------
-  // ROUTE 2: Layout chính (CẦN đăng nhập để truy cập)
+  // ROUTE 2: Main layout (LOGIN REQUIRED to access)
   // -------------------------------------------------------------------------
   {
-    path: '/', // Route gốc
+    path: '/', // Root route
     component: MainLayout, // Render MainLayout (Sidebar + Header)
-    meta: { requiresAuth: true }, // Metadata: YÊU CẦU đăng nhập
+    meta: { requiresAuth: true }, // Metadata: LOGIN REQUIRED
     // -----------------------------------------------------------------------
-    // CHILDREN: Các route con được render vào <router-view/> của MainLayout
+    // CHILDREN: Child routes rendered into <router-view/> of MainLayout
     // -----------------------------------------------------------------------
     children: [
       {
-        path: '', // URL: / (trống)
-        redirect: '/dashboard' // Tự động chuyển hướng đến /dashboard
+        path: '', // URL: / (empty)
+        redirect: '/dashboard' // Automatically redirect to /dashboard
       },
       {
         path: 'dashboard', // URL: /dashboard
         name: 'dashboard',
-        component: DashboardView // Render vào <router-view/> của MainLayout
+        component: DashboardView // Render into <router-view/> of MainLayout
       },
       {
         path: 'products', // URL: /products
@@ -118,18 +118,18 @@ const routes = [
         component: AddProductView
       },
       {
-        path: 'products/:id', // URL động: /products/123, /products/abc
+        path: 'products/:id', // Dynamic URL: /products/123, /products/abc
         name: 'product-detail',
         component: ProductDetailView,
-        props: true // Truyền :id thành props cho component
+        props: true // Pass :id as props to component
         // → Trong ProductDetailView: const props = defineProps(['id'])
-        // → props.id = "123" khi URL là /products/123
+        // -> props.id = "123" when URL is /products/123
       },
       {
         path: 'users', // URL: /users
         name: 'users',
         component: UserView
-        // → Trang quản lý danh sách người dùng
+        // -> User list management page
       },
       {
         path: 'vouchers', // URL: /vouchers
@@ -142,7 +142,7 @@ const routes = [
         component: AddVoucherView
       },
       {
-        path: 'vouchers/:id', // URL động: /vouchers/123
+        path: 'vouchers/:id', // Dynamic URL: /vouchers/123
         name: 'voucher-detail',
         component: VoucherDetailView,
         props: true
@@ -151,95 +151,95 @@ const routes = [
         path: 'orders', // URL: /orders
         name: 'orders',
         component: OrderView
-        // → Trang quản lý danh sách đơn hàng
+        // -> Order list management page
       },
       {
-        path: 'orders/:id', // URL động: /orders/123
+        path: 'orders/:id', // Dynamic URL: /orders/123
         name: 'order-detail',
         component: OrderDetailView,
         props: true
-        // → Trang chi tiết đơn hàng
+        // -> Order details page
       },
       {
         path: 'reviews', // URL: /reviews
         name: 'reviews',
         component: ReviewListView
-        // → Trang quản lý danh sách đánh giá
+        // -> Review list management page
       },
       {
-        path: 'reviews/:id', // URL động: /reviews/123
+        path: 'reviews/:id', // Dynamic URL: /reviews/123
         name: 'review-detail',
         component: ReviewDetailView,
         props: true
-        // → Trang chi tiết đánh giá
+        // -> Review details page
       },
       {
         path: 'notifications', // URL: /notifications
         name: 'notifications',
         component: NotificationView
-        // → Trang quản lý thông báo
+        // -> Notification management page
       }
     ]
   }
 ]
 
 // -----------------------------------------------------------------------------
-// 5. TẠO INSTANCE ROUTER
+// 5. CREATE ROUTER INSTANCE
 // -----------------------------------------------------------------------------
 const router = createRouter({
-  // createWebHistory(): Sử dụng History API (URL sạch)
-  // - /dashboard (có history)
-  // - Nếu dùng createWebHashHistory(): /#/dashboard (có hash)
+  // createWebHistory(): Use History API (clean URL)
+  // - /dashboard (with history)
+  // - If using createWebHashHistory(): /#/dashboard (with hash)
   history: createWebHistory(),
 
-  // Mảng routes đã định nghĩa ở trên
+  // Array of defined routes above
   routes
 })
 
 // -----------------------------------------------------------------------------
-// 6. NAVIGATION GUARD - BẢO VỆ ROUTE TRƯỚC KHI TRUY CẬP
+// 6. NAVIGATION GUARD - PROTECT ROUTES BEFORE ACCESS
 // -----------------------------------------------------------------------------
-// beforeEach() được gọi TRƯỚC MỖI LẦN chuyển trang
-// Tham số:
-//   - to: Route đích (user muốn đến)
-//   - from: Route hiện tại (user đang ở)
-//   - next: Hàm điều khiển (cho phép/chặn/chuyển hướng)
+// beforeEach() is called BEFORE EVERY page navigation
+// Parameters:
+//   - to: Target route (where user wants to go)
+//   - from: Current route (where user is)
+//   - next: Control function (allow/block/redirect)
 router.beforeEach((to, from, next) => {
-  // Gọi useAuth() từ file composables/useAuth.js
-  // Lấy isAuthenticated: computed trả về true nếu có token trong localStorage
+  // Call useAuth() from composables/useAuth.js file
+  // Get isAuthenticated: computed returns true if token exists in localStorage
   const { isAuthenticated } = useAuth()
 
   // -------------------------------------------------------------------------
-  // TRƯỜNG HỢP 1: Trang YÊU CẦU đăng nhập + User CHƯA đăng nhập
+  // CASE 1: Page REQUIRES login + User is NOT logged in
   // -------------------------------------------------------------------------
-  // Ví dụ: User gõ /dashboard nhưng chưa login
+  // Example: User types /dashboard but not logged in
   // → to.meta.requiresAuth = true
   // → isAuthenticated.value = false
-  // → Chuyển hướng về trang login
+  // -> Redirect to login page
   if (to.meta.requiresAuth && !isAuthenticated.value) {
-    next({ name: 'login' }) // Gọi next() với object → Chuyển hướng
+    next({ name: 'login' }) // Call next() with object -> Redirect
   }
 
   // -------------------------------------------------------------------------
-  // TRƯỜNG HỢP 2: User ĐÃ đăng nhập + Đang cố vào trang login
+  // CASE 2: User ALREADY logged in + Trying to access login page
   // -------------------------------------------------------------------------
-  // Ví dụ: User đã login, gõ /login
-  // → Không cần vào login nữa, chuyển thẳng về dashboard
+  // Example: User already logged in, types /login
+  // -> No need to login again, redirect straight to dashboard
   else if (to.name === 'login' && isAuthenticated.value) {
-    next({ name: 'dashboard' }) // Chuyển hướng về dashboard
+    next({ name: 'dashboard' }) // Redirect to dashboard
   }
 
   // -------------------------------------------------------------------------
-  // TRƯỜNG HỢP 3: Các trường hợp khác → Cho phép truy cập bình thường
+  // CASE 3: Other cases -> Allow normal access
   // -------------------------------------------------------------------------
   else {
-    next() // Gọi next() không tham số → Cho phép đi tiếp
+    next() // Call next() without parameters -> Allow proceeding
   }
 })
 
 // -----------------------------------------------------------------------------
-// 7. EXPORT ROUTER ĐỂ SỬ DỤNG TRONG main.js
+// 7. EXPORT ROUTER FOR USE IN main.js
 // -----------------------------------------------------------------------------
 // Trong main.js: createApp(App).use(router).mount('#app')
-// → Đăng ký router vào ứng dụng Vue
+// -> Register router into Vue app
 export default router

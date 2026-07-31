@@ -12,7 +12,7 @@ import '../../../models/voucher_model.dart';
 import '../../../widgets/common_widgets.dart';
 import '../../../services/payment_service.dart';
 
-/// Checkout item dùng nội bộ trong trang thanh toán
+/// Checkout item used internally in checkout page
 class _CheckoutItem {
   final dynamic product; // Product or CartProduct
   final String color;
@@ -39,7 +39,7 @@ class _CheckoutItem {
   }
 }
 
-/// 💳 Checkout Page - Trang thanh toán
+/// 💳 Checkout Page
 class CheckoutPage extends ConsumerStatefulWidget {
   final Map<String, dynamic>? args;
 
@@ -59,9 +59,9 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   final _voucherController = TextEditingController();
   final double _shippingFee = 20000;
 
-  /// Danh sách items trong checkout (có thể từ cart hoặc buyNow)
+  /// List of checkout items (can be from cart or buyNow)
   List<_CheckoutItem> _checkoutItems = [];
-  String _mode = 'cart'; // 'cart' hoặc 'buyNow'
+  String _mode = 'cart'; // 'cart' or 'buyNow'
 
   @override
   void initState() {
@@ -70,12 +70,12 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     _initCheckoutItems();
   }
 
-  /// Khởi tạo danh sách checkout items từ arguments
+  /// Initialize checkout items list from arguments
   void _initCheckoutItems() {
     final args = widget.args;
 
     if (args != null && args['mode'] == 'buyNow') {
-      // Mua ngay: lấy items từ arguments
+      // Buy now: get items from arguments
       _mode = 'buyNow';
       final itemsList = args['items'] as List<Map<String, dynamic>>;
       _checkoutItems = itemsList.map((item) {
@@ -90,7 +90,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         );
       }).toList();
     } else {
-      // Từ cart: lấy selected items
+      // From cart: get selected items
       _mode = 'cart';
       final cartState = ref.read(cartProvider);
       _checkoutItems = cartState.selectedItems.map((item) => _CheckoutItem(
@@ -140,7 +140,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
 
     setState(() => _checkoutItems[index].quantity = newQty);
 
-    // Đồng bộ ngược lại cart nếu mode = cart
+    // Reverse sync to cart if mode = cart
     if (_mode == 'cart' && item.cartUniqueKey != null) {
       ref.read(cartProvider.notifier).updateQuantity(item.cartUniqueKey!, newQty);
     }
@@ -149,14 +149,14 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   void _removeItem(int index) {
     final item = _checkoutItems[index];
 
-    // Xóa khỏi cart nếu mode = cart
+    // Delete from cart if mode = cart
     if (_mode == 'cart' && item.cartUniqueKey != null) {
       ref.read(cartProvider.notifier).removeItem(item.cartUniqueKey!);
     }
 
     setState(() {
       _checkoutItems.removeAt(index);
-      // Reset voucher khi xóa item vì tổng tiền thay đổi
+      // Reset voucher on item delete since total changes
       if (_voucherDiscount > 0) {
         _voucherCode = '';
         _voucherDiscount = 0;
@@ -256,23 +256,23 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
 
       if (orderId != null) {
         if (_mode == 'cart') {
-          // Lấy các item trong cart đã mua
+          // Get purchased cart items
           final cartItemsPurchased = ref.read(cartProvider).selectedItems;
           await ref.read(cartProvider.notifier).removeCheckoutItems(cartItemsPurchased);
         }
 
         if (mounted) {
           if (_paymentMethod == 'VNPay') {
-            // ─── VNPAY: Tạo VNPay payment URL và chuyển sang trang thanh toán ───
+            // ─── VNPAY: Create VNPay payment URL and switch to payment page ───
             await _handleVnpayPayment(orderId);
           } else if (_paymentMethod == 'ZaloPay') {
-            // ─── ZALOPAY: Chuyển sang màn hình ZaloPay ───
+            // ─── ZALOPAY: Switch to ZaloPay screen ───
             await _handleZalopayPayment(orderId);
           } else if (_paymentMethod == 'PayOS') {
-            // ─── PAYOS: Chuyển sang màn hình PayOS ───
+            // ─── PAYOS: Switch to PayOS screen ───
             await _handlePayosPayment(orderId);
           } else {
-            // ─── COD: Hiển thị dialog thành công bình thường ───
+            // ─── COD: Show normal success dialog ───
             _showOrderSuccessDialog(
               orderId: orderId,
               message: 'Chúng tôi sẽ liên hệ xác nhận sớm nhất.',
@@ -291,11 +291,11 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     } catch (e) {
       String errorMessage = 'Lỗi khi đặt hàng';
       
-      // Xử lý timeout 10s: Đơn hàng đang được worker xử lý ngầm
+      // Handle 10s timeout: Order is being processed by background worker
       if (e.toString().contains('Exception: PROCESSING:')) {
         final orderId = e.toString().split('PROCESSING:')[1].trim();
         
-        // Vẫn xóa giỏ hàng vì order đã vào RabbitMQ an toàn
+        // Still clear cart because order safely entered RabbitMQ
         if (_mode == 'cart') {
           final cartItemsPurchased = ref.read(cartProvider).selectedItems;
           ref.read(cartProvider.notifier).removeCheckoutItems(cartItemsPurchased);
@@ -307,7 +307,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
             orderId: orderId,
             message: 'Hệ thống đang bận. Đơn hàng đang được xử lý ngầm, vui lòng theo dõi trong Lịch sử mua hàng.',
             isPaid: false,
-            isCod: true, // Dùng icon COD (xe tải) hoặc warning để báo đang xử lý
+            isCod: true, // Use COD icon (truck) or warning to indicate processing
           );
         }
         return;
@@ -329,11 +329,11 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   // ─── VNPAY PAYMENT ───────────────────────────────────────────────────
 
   Future<void> _handleVnpayPayment(String orderId) async {
-    // Gọi backend tạo VNPay payment URL
+    // Call backend to create VNPay payment URL
     final paymentUrl = await PaymentService.createVnpayPaymentUrl(orderId);
 
     if (paymentUrl != null && mounted) {
-      // Chuyển sang trang thanh toán VNPay
+      // Switch to VNPay payment page
       final result = await Navigator.pushNamed(
         context,
         AppRoutes.vnpayPayment,
@@ -355,7 +355,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
         );
       }
     } else if (mounted) {
-      // Không tạo được payment URL → hiện dialog thông báo
+      // Failed to create payment URL -> show notification dialog
       _showOrderSuccessDialog(
         orderId: orderId,
         message: 'Đơn hàng đã tạo nhưng không thể kết nối VNPay.\n'
@@ -369,7 +369,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   // ─── ZALOPAY PAYMENT ─────────────────────────────────────────────────
 
   Future<void> _handleZalopayPayment(String orderId) async {
-    // Gọi backend tạo ZaloPay QR info
+    // Call backend to create ZaloPay QR info
     final zaloData = await PaymentService.createZalopayPayment(orderId);
 
     if (zaloData != null && mounted) {
@@ -409,7 +409,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   // ─── PAYOS PAYMENT ───────────────────────────────────────────────────
 
   Future<void> _handlePayosPayment(String orderId) async {
-    // Gọi backend tạo PayOS QR info
+    // Call backend to create PayOS QR info
     final payosData = await PaymentService.createPayosPayment(orderId);
 
     if (payosData != null && mounted) {
@@ -487,7 +487,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
               style: TextStyle(color: Colors.grey[600]),
             ),
             const SizedBox(height: 12),
-            // Trạng thái thanh toán
+            // Payment status
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
@@ -694,7 +694,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Ảnh
+                  // Image
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(
@@ -706,7 +706,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // Thông tin
+                  // Info
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -731,7 +731,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                       ],
                     ),
                   ),
-                  // Nút xóa
+                  // Delete button
                   IconButton(
                     onPressed: () => _removeItem(index),
                     icon: const Icon(Icons.close, size: 18, color: Colors.grey),
@@ -840,7 +840,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
           GestureDetector(
              onTap: () => setState(() {
                if (!_isOnlinePayment) {
-                  _paymentMethod = 'ZaloPay'; // Mặc định chọn ZaloPay khi click vào group này
+                  _paymentMethod = 'ZaloPay'; // Default select ZaloPay when clicking this group
                }
              }),
              child: Container(

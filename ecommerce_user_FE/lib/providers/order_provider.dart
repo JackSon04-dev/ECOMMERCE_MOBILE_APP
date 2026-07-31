@@ -30,12 +30,12 @@ class OrderNotifier extends AutoDisposeFamilyAsyncNotifier<List<Order>, String> 
 
   String? _getApiStatus(String tabName) {
     if (tabName == 'Tất cả') return null;
-    if (tabName == 'Đang giao') return 'Đang giao,Đã giao'; // Hỗ trợ multi status ở backend bằng dấu phẩy
+    if (tabName == 'Đang giao') return 'Đang giao,Đã giao'; // Supports multi status on backend separated by commas
     if (tabName == 'Đã giao') return 'Thành công';
     return tabName;
   }
 
-  // Hàm tải thêm dữ liệu (Pagination)
+  // Load more data function (Pagination)
   Future<void> loadMore() async {
     if (_isFetchingMore || !_hasMore) return;
 
@@ -64,7 +64,7 @@ class OrderNotifier extends AutoDisposeFamilyAsyncNotifier<List<Order>, String> 
     }
   }
 
-  // Cập nhật Order ngay trên RAM mà không cần gọi lại API
+  // Update Order directly on RAM without recalling API
   void updateOrderInCache(Order updatedOrder) {
     if (state.value == null) return;
     
@@ -78,21 +78,21 @@ class OrderNotifier extends AutoDisposeFamilyAsyncNotifier<List<Order>, String> 
       if (expectedStatus != null) {
         final statuses = expectedStatus.split(',');
         if (!statuses.contains(updatedOrder.status)) {
-           // Đơn hàng đổi trạng thái -> Không còn thuộc tab này nữa -> Xóa đi
+           // Order changed status -> No longer belongs to this tab -> Delete it
            newList.removeAt(index);
            state = AsyncData(newList);
            return;
         }
       }
 
-      // Vẫn thuộc tab này (hoặc là tab Tất cả) -> Cập nhật thông tin mới
+      // Still belongs to this tab (or is All tab) -> Update new info
       newList[index] = updatedOrder;
       state = AsyncData(newList);
     }
   }
 }
 
-// Khai báo Provider toàn cục
+// Declare global Provider
 final orderProvider = AsyncNotifierProvider.autoDispose.family<OrderNotifier, List<Order>, String>(() {
   return OrderNotifier();
 });

@@ -1,27 +1,27 @@
 import Product from '../../models/productModel.js'
 import { asyncHandler, ApiError } from '../../middleware/errorMiddleware.js'
 
-// 1. Tạo sản phẩm mới
+// 1. Create new product
 export const createProduct = asyncHandler(async (req, res) => {
-  // 1.Get dữ liệu từ req.body và req.files
+  // 1. Get data from req.body and req.files
   const productData = req.body
-  // 1.1 Giải mã biến colorVariants (vì gửi qua FormData nên đang là String)
+  // 1.1 Decode colorVariants variable (sent via FormData so it is a String)
   if (
     productData.colorVariants &&
     typeof productData.colorVariants === 'string'
   ) {
     productData.colorVariants = JSON.parse(productData.colorVariants)
   }
-  // 1.2 Giải mã tags nếu có, vì gửi qua FormData ép kiểu nên đang là String
+  // 1.2 Decode tags if any, cast via FormData so it is a String
   if (productData.tags && typeof productData.tags === 'string') {
     productData.tags = JSON.parse(productData.tags)
   }
-  // 1.3 Xử lý ảnh thumbnail từ Cloudinary
+  // 1.3 Process thumbnail image from Cloudinary
   if (req.files && req.files['thumbnail']) {
     productData.thumbnail = req.files['thumbnail'][0].path
   }
-  
-  // 1.4 Xử lý mảng ảnh biến thể
+
+  // 1.4 Process variant images array
   if (req.files && req.files['images']) {
     const uploadedImages = req.files['images']
     if (Array.isArray(productData.colorVariants)) {
@@ -36,13 +36,13 @@ export const createProduct = asyncHandler(async (req, res) => {
     }
   }
 
-  // 2. Đã đủ dữ liệu, tạo mới sản phẩm trong DB
+  // 2. Data is ready, create new product in DB
   const product = new Product(productData)
-  await product.save() // Kích hoạt pre-save để tính finalPrice
+  await product.save() // Trigger pre-save to calculate finalPrice
   res.status(201).json({ success: true, data: product })
 });
 
-// 2. Lấy toàn bộ sản phẩm
+// 2. Get all products
 export const getAllProducts = asyncHandler(async (req, res) => {
   const products = await Product.find().sort({ createdAt: -1 })
   res
@@ -50,7 +50,7 @@ export const getAllProducts = asyncHandler(async (req, res) => {
     .json({ success: true, count: products.length, data: products })
 });
 
-// 3. Lấy sản phẩm theo ID
+// 3. Get product by ID
 export const getProductByID = asyncHandler(async (req, res) => {
   const { id } = req.params
   const product = await Product.findById(id)
@@ -59,7 +59,7 @@ export const getProductByID = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Không tìm thấy sản phẩm')
   }
 
-  // Đảm bảo sản phẩm có finalPrice để tránh lỗi Frontend
+  // Ensure product has finalPrice to avoid Frontend error
   const safeProduct = product.toObject()
   safeProduct.finalPrice =
     safeProduct.finalPrice ||
@@ -68,17 +68,17 @@ export const getProductByID = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: safeProduct })
 });
 
-// 4. Cập nhật thông tin chung và hình ảnh
+// 4. Update general info and images
 export const updateProduct = asyncHandler(async (req, res) => {
   const { id } = req.params
   let updateData = { ...req.body }
 
-  // 1. XỬ LÝ FILE ẢNH MỚI (Thumbnail chính)
+  // 1. PROCESS NEW IMAGE FILE (Main Thumbnail)
   if (req.files && req.files['thumbnail']) {
     updateData.thumbnail = req.files['thumbnail'][0].path
   }
 
-  // 2. GIẢI MÃ DỮ LIỆU TỪ FORMDATA (Sửa lỗi Cast Error)
+  // 2. DECODE DATA FROM FORMDATA (Fix Cast Error)
   if (
     updateData.colorVariants &&
     typeof updateData.colorVariants === 'string'
@@ -86,12 +86,12 @@ export const updateProduct = asyncHandler(async (req, res) => {
     updateData.colorVariants = JSON.parse(updateData.colorVariants)
   }
 
-  // Giải mã tags
+  // Decode tags
   if (updateData.tags && typeof updateData.tags === 'string') {
     updateData.tags = JSON.parse(updateData.tags)
   }
 
-  // Xử lý mảng ảnh biến thể mới
+  // Process new variant images array
   if (req.files && req.files['images']) {
     const uploadedImages = req.files['images']
     if (Array.isArray(updateData.colorVariants)) {
@@ -106,12 +106,12 @@ export const updateProduct = asyncHandler(async (req, res) => {
     }
   }
 
-  // Xử lý Boolean cho isActive (Vì FormData gửi lên là String "true"/"false")
+  // Process Boolean for isActive (FormData sends it as String "true"/"false")
   if (updateData.isActive !== undefined) {
     updateData.isActive = updateData.isActive === 'true'
   }
 
-  // 3. CẬP NHẬT VÀO DATABASE
+  // 3. UPDATE DATABASE
   const product = await Product.findByIdAndUpdate(id, updateData, {
     new: true,
     runValidators: true
@@ -121,13 +121,13 @@ export const updateProduct = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Không tìm thấy sản phẩm')
   }
 
-  // 4. TÍNH LẠI FINAL PRICE (Kích hoạt middleware pre-save)
+  // 4. RECALCULATE FINAL PRICE (Trigger pre-save middleware)
   await product.save()
 
   res.status(200).json({ success: true, data: product })
 });
 
-// 5. Cập nhật kho biến thể
+// 5. Update variant inventory
 export const updateVariantStock = asyncHandler(async (req, res) => {
   const { productId, variantId } = req.params
   const { newStock } = req.body
@@ -145,7 +145,7 @@ export const updateVariantStock = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: product })
 });
 
-// 6. Xóa sản phẩm
+// 6. Delete product
 export const deleteProduct = asyncHandler(async (req, res) => {
   const product = await Product.findByIdAndDelete(req.params.id)
   if (!product) {
@@ -154,16 +154,16 @@ export const deleteProduct = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: 'Đã xóa sản phẩm' })
 });
 
-// 7. Thống kê sản phẩm
+// 7. Product statistics
 export const getProductStats = asyncHandler(async (req, res) => {
-  // Tổng số sản phẩm
+  // Total products
   const totalProducts = await Product.countDocuments()
 
-  // Sản phẩm active vs inactive
+  // Active vs inactive products
   const activeProducts = await Product.countDocuments({ isActive: true })
   const inactiveProducts = await Product.countDocuments({ isActive: false })
 
-  // Lấy tất cả sản phẩm để tính thống kê chi tiết
+  // Get all products for detailed statistics
   const products = await Product.find()
 
   let totalStock = 0
@@ -184,13 +184,13 @@ export const getProductStats = asyncHandler(async (req, res) => {
             totalStock += stock
             productTotalStock += stock
 
-            // Đếm biến thể sắp hết (0 < stock < 5)
+            // Count variants running low (0 < stock < 5)
             if (stock > 0 && stock < 5) {
               lowStockVariants++
               hasLowStockVariant = true
             }
 
-            // Đếm biến thể hết hàng (stock = 0)
+            // Count out of stock variants (stock = 0)
             if (stock === 0) {
               outOfStockVariants++
             }
@@ -198,25 +198,25 @@ export const getProductStats = asyncHandler(async (req, res) => {
         }
       })
 
-      // Sản phẩm hết hàng: tổng stock = 0
+      // Out of stock products: total stock = 0
       if (productTotalStock === 0) {
         outOfStockProducts++
       }
-      // Sản phẩm sắp hết hàng: tổng stock > 0 và có ít nhất 1 biến thể < 5
+      // Products running low: total stock > 0 and at least 1 variant < 5
       else if (hasLowStockVariant) {
         lowStockProducts++
       }
     }
   })
 
-  // Giá trị trung bình
+  // Average value
   const avgPrice =
     products.length > 0
       ? products.reduce((sum, p) => sum + (p.finalPrice || p.price), 0) /
-        products.length
+      products.length
       : 0
 
-  // Sản phẩm có giảm giá
+  // Discounted products
   const discountedProducts = await Product.countDocuments({
     discount: { $gt: 0 }
   })

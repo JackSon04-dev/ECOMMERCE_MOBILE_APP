@@ -9,7 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/product_provider.dart';
 import '../../../utils/scroll_pagination_mixin.dart';
 
-/// 🔍 Search Page - Trang tìm kiếm
+/// 🔍 Search Page
 class SearchPage extends ConsumerStatefulWidget {
   const SearchPage({super.key});
 
@@ -20,23 +20,28 @@ class SearchPage extends ConsumerStatefulWidget {
 class _SearchPageState extends ConsumerState<SearchPage> with ScrollPaginationMixin<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-  List<String> _popularSearches = ['Áo thun', 'Giày', 'Quần jean', 'Áo sơ mi'];
+  final List<String> _popularSearches = ['Áo thun', 'Giày', 'Quần jean', 'Áo sơ mi'];
   Timer? _debounce;
-  String _debouncedQuery = '';
+  
+  String _debouncedQuery = ''; // Used for Autocomplete (while typing)
+  String _submittedQuery = ''; // Used for Fetch 20 items (on Enter/Click suggestion)
 
   @override
   void initState() {
     super.initState();
+    _focusNode.addListener(() {
+      setState(() {}); // Update UI on focus change
+    });
     _focusNode.requestFocus();
   }
 
   @override
   void onScrollThresholdReached() {
-    if (_debouncedQuery.length >= 2) {
+    if (_submittedQuery.isNotEmpty) {
       ref.read(paginatedProductsProvider((
         tag: null,
         sortBy: null,
-        search: _debouncedQuery,
+        search: _submittedQuery,
       )).notifier).loadMore();
     }
   }
@@ -44,26 +49,33 @@ class _SearchPageState extends ConsumerState<SearchPage> with ScrollPaginationMi
   void _onSearch(String query) {
     if (query.trim().isEmpty) return;
     _debounce?.cancel();
-    ref.read(searchHistoryProvider.notifier).addSearch(query);
+    ref.read(searchHistoryProvider.notifier).addSearch(query.trim());
     setState(() {
+      _searchController.text = query.trim();
       _debouncedQuery = query.trim();
+      _submittedQuery = query.trim();
     });
+    _focusNode.unfocus(); // Close keyboard on submit
   }
 
-
   void _goToProductDetail(Product product) {
-    // Chỉ truyền productId để force ProductDetailPage gọi API
     Navigator.pushNamed(context, '/product-detail', arguments: product.id);
   }
 
   @override
   Widget build(BuildContext context) {
-    final query = _debouncedQuery;
     final history = ref.watch(searchHistoryProvider);
     
-    // Chỉ gọi provider khi có từ khóa >= 2 ký tự
-    final searchAsync = query.length >= 2 
-        ? ref.watch(paginatedProductsProvider((tag: null, sortBy: null, search: query)))
+    // Upon submit -> Show paginated results
+    final isShowingResults = _submittedQuery.isNotEmpty;
+    
+    // Get data by current state
+    final searchResultsAsync = isShowingResults
+        ? ref.watch(paginatedProductsProvider((tag: null, sortBy: null, search: _submittedQuery)))
+        : null;
+        
+    final autocompleteAsync = (!isShowingResults && _debouncedQuery.length >= 2)
+        ? ref.watch(autocompleteProvider(_debouncedQuery))
         : null;
 
     return Scaffold(
@@ -86,9 +98,10 @@ class _SearchPageState extends ConsumerState<SearchPage> with ScrollPaginationMi
             focusNode: _focusNode,
             onChanged: (value) {
               if (_debounce?.isActive ?? false) _debounce!.cancel();
-              _debounce = Timer(const Duration(milliseconds: 1000), () {
+              _debounce = Timer(const Duration(milliseconds: 300), () {
                 setState(() {
                   _debouncedQuery = value.trim();
+                  _submittedQuery = ''; // Reset submit to return to Autocomplete mode
                 });
               });
             },
@@ -106,7 +119,9 @@ class _SearchPageState extends ConsumerState<SearchPage> with ScrollPaginationMi
                         _debounce?.cancel();
                         setState(() {
                           _debouncedQuery = '';
+                          _submittedQuery = '';
                         });
+                        _focusNode.requestFocus();
                       },
                     )
                   : null,
@@ -115,33 +130,143 @@ class _SearchPageState extends ConsumerState<SearchPage> with ScrollPaginationMi
             ),
           ),
         ),
+        actions: [
+          if (_focusNode.hasFocus)
+            IconButton(
+              icon: const Icon(Icons.search, color: Colors.orange, size: 28),
+              onPressed: () {
+                if (_searchController.text.trim().isNotEmpty) {
+                  _onSearch(_searchController.text);
+                }
+              },
+            ),
+          const SizedBox(width: 8),
+        ],
       ),
-      body: query.isEmpty && _searchController.text.isEmpty
-          ? _buildSearchSuggestions(history)
-          : searchAsync == null
-              ? _buildSearchSuggestions(history)
-              : searchAsync.when(
-                  loading: () => const LoadingWidget(),
-                  error: (err, stack) => ErrorDisplayWidget(
-                    message: 'Lỗi tải kết quả',
-                    onRetry: () => setState(() {}),
-                  ),
-                  data: (products) {
-                    if (products.isEmpty) {
-                      return const EmptyStateWidget(
-                        icon: Icons.search_off,
-                        title: 'Không tìm thấy sản phẩm',
-                        subtitle: 'Thử tìm kiếm với từ khóa khác',
-                      );
-                    }
-                    final isFetchingMore = searchAsync.isLoading && searchAsync.value != null;
-                    return _buildSearchResults(products, isFetchingMore);
-                  },
-                ),
+      body: isShowingResults
+          ? _buildPaginatedResults(searchResultsAsync)
+          : _debouncedQuery.isEmpty
+              ? _buildHistoryAndPopular(history)
+              : _buildAutocompleteList(autocompleteAsync),
     );
   }
 
-  Widget _buildSearchSuggestions(List<String> history) {
+  Widget _buildAutocompleteList(AsyncValue<List<Map<String, dynamic>>>? autocompleteAsync) {
+    if (autocompleteAsync == null) return const SizedBox.shrink();
+
+    return autocompleteAsync.when(
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: CircularProgressIndicator(color: Color(0xFFFF6B35)),
+        ),
+      ),
+      error: (err, stack) => Center(child: Text('Lỗi: $err')),
+      data: (suggestions) {
+        if (suggestions.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Text('Không có gợi ý nào.', style: TextStyle(color: Colors.grey)),
+          );
+        }
+
+        return ListView.separated(
+          padding: EdgeInsets.zero,
+          itemCount: suggestions.length,
+          separatorBuilder: (context, index) => const Divider(height: 1),
+          itemBuilder: (context, index) {
+            final suggestion = suggestions[index];
+            return ListTile(
+              leading: const Icon(Icons.search, color: Colors.grey),
+              title: Text(suggestion['name'] ?? ''),
+              onTap: () {
+                // When clicking a suggestion -> Submit that keyword immediately
+                _onSearch(suggestion['name']);
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildPaginatedResults(AsyncValue<List<Product>>? searchResultsAsync) {
+    if (searchResultsAsync == null) return const SizedBox.shrink();
+
+    return searchResultsAsync.when(
+      loading: () => const LoadingWidget(),
+      error: (err, stack) => ErrorDisplayWidget(
+        message: 'Lỗi tải kết quả',
+        onRetry: () => setState(() {}),
+      ),
+      data: (products) {
+        if (products.isEmpty) {
+          return const EmptyStateWidget(
+            icon: Icons.search_off,
+            title: 'Không tìm thấy sản phẩm',
+            subtitle: 'Thử tìm kiếm với từ khóa khác',
+          );
+        }
+        final isFetchingMore = searchResultsAsync.isLoading && searchResultsAsync.value != null;
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Tìm thấy ${products.length} sản phẩm',
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              ),
+            ),
+            Expanded(
+              child: CustomScrollView(
+                controller: scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    sliver: SliverGrid(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.55,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final product = products[index];
+                          return ProductCard(
+                            product: product,
+                            onTap: () => _goToProductDetail(product),
+                            onAddToCart: () => AddToCartBottomSheet.show(context, product),
+                          );
+                        },
+                        childCount: products.length,
+                      ),
+                    ),
+                  ),
+                  if (isFetchingMore)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF6B35)),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildHistoryAndPopular(List<String> history) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -158,7 +283,7 @@ class _SearchPageState extends ConsumerState<SearchPage> with ScrollPaginationMi
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
-                ),
+            ),
                 TextButton(
                   onPressed: () {
                     ref.read(searchHistoryProvider.notifier).clearHistory();
@@ -177,7 +302,6 @@ class _SearchPageState extends ConsumerState<SearchPage> with ScrollPaginationMi
               children: history.map((search) {
                 return GestureDetector(
                   onTap: () {
-                    _searchController.text = search;
                     _onSearch(search);
                   },
                   child: Container(
@@ -223,10 +347,9 @@ class _SearchPageState extends ConsumerState<SearchPage> with ScrollPaginationMi
             runSpacing: 8,
             children: _popularSearches.map((search) {
               return GestureDetector(
-              onTap: () {
-                _searchController.text = search;
-                _onSearch(search);
-              },
+                onTap: () {
+                  _onSearch(search);
+                },
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
@@ -256,68 +379,6 @@ class _SearchPageState extends ConsumerState<SearchPage> with ScrollPaginationMi
     );
   }
 
-  Widget _buildSearchResults(List<Product> products, bool isFetchingMore) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text(
-            'Tìm thấy ${products.length} sản phẩm',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 14,
-            ),
-          ),
-        ),
-        Expanded(
-          child: CustomScrollView(
-            controller: scrollController,
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.55,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final product = products[index];
-                      return ProductCard(
-                        product: product,
-                        onTap: () => _goToProductDetail(product),
-                        onAddToCart: () {
-                          AddToCartBottomSheet.show(context, product);
-                        },
-                      );
-                    },
-                    childCount: products.length,
-                  ),
-                ),
-              ),
-              if (isFetchingMore)
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF6B35)),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-
   @override
   void dispose() {
     _searchController.dispose();
@@ -326,4 +387,3 @@ class _SearchPageState extends ConsumerState<SearchPage> with ScrollPaginationMi
     super.dispose();
   }
 }
-

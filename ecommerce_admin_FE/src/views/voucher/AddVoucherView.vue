@@ -11,7 +11,7 @@
     </div>
 
     <div class="space-y-6">
-      <!-- Tên Voucher -->
+      <!-- Voucher Name -->
       <div>
         <label class="block text-sm font-bold mb-2">Tên Voucher *</label>
         <input
@@ -22,7 +22,7 @@
         />
       </div>
 
-      <!-- Mã Voucher -->
+      <!-- Voucher Code -->
       <div>
         <label class="block text-sm font-bold mb-2"
           >Mã Voucher (6 ký tự) *</label
@@ -40,7 +40,7 @@
       </div>
 
       <div class="grid grid-cols-2 gap-4">
-        <!-- Đơn hàng tối thiểu -->
+        <!-- Minimum Order -->
         <div>
           <label class="block text-sm font-bold mb-2"
             >Đơn tối thiểu (đ) *</label
@@ -54,7 +54,7 @@
           />
         </div>
 
-        <!-- Số tiền giảm -->
+        <!-- Discount Amount -->
         <div>
           <label class="block text-sm font-bold mb-2">Số tiền giảm (đ) *</label>
           <input
@@ -67,7 +67,7 @@
         </div>
       </div>
 
-      <!-- Số lượt dùng tối đa -->
+      <!-- Maximum Uses -->
       <div>
         <label class="block text-sm font-bold mb-2"
           >Số lượt dùng tối đa *</label
@@ -138,37 +138,37 @@ const usageLimit = ref(1)
 const submitForm = async () => {
   // 1. VALIDATION
 
-  // 1.1. Kiểm tra tên voucher
+  // 1.1. Check voucher name
   if (!voucherName.value || voucherName.value.trim() === '') {
     return alert('Tên voucher không được để trống!')
   }
 
-  // 1.2. Kiểm tra mã voucher (phải có đúng 6 ký tự)
+  // 1.2. Check voucher code (must be exactly 6 characters)
   if (!voucherCode.value || voucherCode.value.trim().length !== 6) {
     return alert('Mã voucher phải có đúng 6 ký tự!')
   }
 
-  // 1.3. Kiểm tra đơn tối thiểu
+  // 1.3. Check minimum order
   if (minOrderAmount.value === null || minOrderAmount.value < 0) {
     return alert('Số tiền đơn hàng tối thiểu không hợp lệ!')
   }
 
-  // 1.4. Kiểm tra số tiền giảm
+  // 1.4. Check discount amount
   if (discountAmount.value === null || discountAmount.value <= 0) {
     return alert('Số tiền giảm phải lớn hơn 0!')
   }
 
-  // 1.5. Kiểm tra giảm giá không quá 50% đơn tối thiểu
+  // 1.5. Check discount not exceeding 50% of minimum order
   if (discountAmount.value > minOrderAmount.value * 0.5) {
     return alert('Số tiền giảm không được vượt quá 50% đơn tối thiểu!')
   }
 
-  // 1.6. Kiểm tra số lượt dùng
+  // 1.6. Check number of uses
   if (usageLimit.value === null || usageLimit.value < 1) {
     return alert('Số lượt dùng tối đa phải ít nhất là 1!')
   }
 
-  // 2. GỬI API
+  // 2. SEND API
   try {
     const res = await axios.post('/api/admin/vouchers', {
       voucherName: voucherName.value.trim(),

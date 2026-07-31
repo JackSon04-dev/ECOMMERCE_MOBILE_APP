@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-/// 📜 Mixin dùng chung giúp tối giản hóa việc khởi tạo, giải phóng ScrollController
-/// và tự động phát hiện khi cuộn trang đạt tới ngưỡng 90% để kích hoạt phân trang (load more).
+/// 📜 Shared Mixin helping to simplify initialization, freeing ScrollController
+/// and auto detect when scroll reaches 90% threshold to trigger pagination (load more).
 mixin ScrollPaginationMixin<T extends StatefulWidget> on State<T> {
   late final ScrollController scrollController;
 
-  /// Phương thức callback này sẽ được kích hoạt khi người dùng cuộn đạt ngưỡng 90%
+  /// This callback method is triggered when user scrolls to 90% threshold
   void onScrollThresholdReached();
 
   @override

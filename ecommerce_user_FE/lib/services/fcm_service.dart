@@ -49,7 +49,7 @@ class FcmService {
     final referenceId = data['referenceId'];
     final notificationId = data['notificationId'];
 
-    // Load lại toàn bộ notification khi bấm vào thông báo
+    // Reload all notifications when clicking a notification
     try {
       legacy_provider.Provider.of<NotificationProvider>(context, listen: false).fetchNotifications();
     } catch (e) {
@@ -99,7 +99,7 @@ class FcmService {
         arguments: referenceId.toString(),
       );
     } else if (type == 'PROMOTION' || type == 'SYSTEM') {
-      // Điều hướng mở màn hình Thông Báo và truyền type để mở sẵn thanh cuộn
+      // Navigate to Notifications screen and pass type to open scroll view
       RouteGenerator.navigatorKey.currentState?.pushNamed(
         AppRoutes.notifications,
         arguments: type,
@@ -261,7 +261,7 @@ class FcmService {
     // ---> LOG: INFO
     debugPrint('🔔 [FCM] Foreground: ${message.notification?.title}');
 
-    // Load lại toàn bộ notification khi đang mở app mà có thông báo
+    // Reload all notifications when app is open and a notification arrives
     final context = RouteGenerator.navigatorKey.currentContext;
     if (context != null) {
       try {
@@ -274,7 +274,7 @@ class FcmService {
     final notification = message.notification;
     if (notification == null) return;
 
-    // Chỉ lấy URL ảnh chuẩn từ lõi OS gửi xuống (hỗ trợ cả Android và iOS)
+    // Only get standard image URL sent by OS core (supports Android and iOS)
     final String? imageUrl = notification.android?.imageUrl ?? notification.apple?.imageUrl;
     Uint8List? largeIconBytes;
 

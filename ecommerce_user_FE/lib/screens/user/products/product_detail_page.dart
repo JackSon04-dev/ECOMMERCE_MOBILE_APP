@@ -15,7 +15,7 @@ import '../../../widgets/add_to_cart_bottom_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../utils/scroll_pagination_mixin.dart';
 
-/// 📦 Product Detail Page - Trang chi tiết sản phẩm
+/// 📦 Product Detail Page
 class ProductDetailPage extends ConsumerStatefulWidget {
   final String? productId;
 
@@ -72,11 +72,13 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
       // Load products for the bottom list based on the same tag
       String? filterTag;
       if (product != null && product.tags.isNotEmpty) {
-        filterTag = product.tags.first; // Lấy tag đầu tiên làm danh mục (ví dụ: 'Áo thun', 'Quần')
+        filterTag = product.tags.first; // Get first tag as category (e.g., 'T-shirt', 'Pants')
       }
       final allProducts = await ProductService.getAllProducts(tag: filterTag, limit: 20);
       
-      // Loại bỏ chính sản phẩm hiện tại ra khỏi danh sách gợi ý
+      final bool hasMore = allProducts.length >= 20;
+
+      // Exclude current product itself from suggestions
       if (product != null) {
         allProducts.removeWhere((p) => p.id == product!.id);
       }
@@ -86,7 +88,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
 
         setState(() {
           _product = product;
-          _reviews = reviews; // Không dùng demo, dùng reviews từ API
+          _reviews = reviews; // Don't use demo, use API reviews
           _selectedColor = product!.colorVariants.isNotEmpty
               ? product.colorVariants.first.color
               : null;
@@ -95,7 +97,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
               ? product.colorVariants.first.sizes.first.size
               : null;
           _allProducts = allProducts;
-          _hasMoreProducts = allProducts.length >= 20;
+          _hasMoreProducts = hasMore;
           if (allProducts.isNotEmpty) {
             _lastProductId = allProducts.last.id;
           }
@@ -104,14 +106,14 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
       } else {
         setState(() {
           _product = _getDemoProduct();
-          _reviews = []; // Không dùng demo reviews
+          _reviews = []; // Don't use demo reviews
           _isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
         _product = _getDemoProduct();
-        _reviews = []; // Không dùng demo reviews
+        _reviews = []; // Don't use demo reviews
         _isLoading = false;
       });
     }
@@ -133,14 +135,16 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
         limit: 20,
       );
 
-      // Loại bỏ chính sản phẩm hiện tại ra khỏi danh sách gợi ý
+      final bool hasMore = newProducts.length >= 20;
+
+      // Exclude current product itself from suggestions
       if (_product != null) {
         newProducts.removeWhere((p) => p.id == _product!.id);
       }
 
       setState(() {
         _allProducts.addAll(newProducts);
-        _hasMoreProducts = newProducts.length >= 20;
+        _hasMoreProducts = hasMore;
         if (newProducts.isNotEmpty) {
           _lastProductId = newProducts.last.id;
         }
@@ -196,31 +200,31 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
   }
 
 
-  // Map để lưu thông tin màu của từng ảnh
+  // Map to store color info of each image
   final Map<String, String> _imageColorMap = {};
 
   List<String> get _currentImages {
     if (_product == null) return [];
 
-    // Clear map trước
+    // Clear map first
     _imageColorMap.clear();
 
-    // Tạo danh sách ảnh: ảnh chính + tất cả ảnh biến thể
+    // Create image list: main image + all variant images
     final List<String> allImages = [];
 
-    // Thêm ảnh chính (thumbnail)
+    // Add main image (thumbnail)
     if (_product!.thumbnail.isNotEmpty) {
       allImages.add(_product!.thumbnail);
-      _imageColorMap[_product!.thumbnail] = ''; // Ảnh chính không thuộc màu cụ thể
+      _imageColorMap[_product!.thumbnail] = ''; // Main image does not belong to specific color
     }
 
-    // Thêm tất cả ảnh từ các biến thể màu
+    // Add all images from color variants
     for (var colorVariant in _product!.colorVariants) {
       for (var image in colorVariant.images) {
-        // Tránh trùng lặp
+        // Avoid duplication
         if (!allImages.contains(image)) {
           allImages.add(image);
-          _imageColorMap[image] = colorVariant.color; // Lưu màu của ảnh này
+          _imageColorMap[image] = colorVariant.color; // Save color of this image
         }
       }
     }
@@ -228,7 +232,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
     return allImages.isNotEmpty ? allImages : [_product!.thumbnail];
   }
 
-  // Lấy index của ảnh đầu tiên của màu được chọn
+  // Get index of first image of selected color
   int _getFirstImageIndexOfColor(String color) {
     final images = _currentImages;
     for (int i = 0; i < images.length; i++) {
@@ -236,7 +240,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
         return i;
       }
     }
-    return 0; // Nếu không tìm thấy, trả về ảnh đầu tiên
+    return 0; // If not found, return first image
   }
 
   List<String> get _availableSizes {
@@ -251,7 +255,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
     return _product!.getStockByVariant(_selectedColor!, _selectedSize!);
   }
 
-  /// Trả về danh sách tên màu (khác màu đang chọn) còn hàng có [size]
+  /// Return list of color names (other than selected) in stock with [size]
   List<String> _getColorsWithSize(String size) {
     if (_product == null) return [];
     return _product!.colorVariants
@@ -282,7 +286,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
       return;
     }
 
-    // Sử dụng animation dialog đẹp
+    // Use nice dialog animation
     AddToCartAnimation.showDialog(
       context,
       productName: _product!.name,
@@ -294,7 +298,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
   Future<void> _buyNow() async {
     if (_product == null) return;
 
-    // Kiểm tra đăng nhập trước khi mua
+    // Check login before purchase
     final isAuth = await AuthGuard.requireAuth(context, ref);
     if (!isAuth || !mounted) return;
 
@@ -319,7 +323,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
       return;
     }
 
-    // Truyền trực tiếp sản phẩm sang checkout, không thêm vào cart
+    // Pass product directly to checkout, do not add to cart
     Navigator.pushNamed(context, '/checkout', arguments: {
       'mode': 'buyNow',
       'items': [
@@ -761,8 +765,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
               return GestureDetector(
                 onTap: () {
                   final prevSize = _selectedSize;
-                  // Giữ nguyên size cũ nếu màu mới có size đó (dù hết hàng)
-                  // → nếu hết hàng, suggestion card sẽ tự hiện vì _currentStock == 0
+                  // Keep old size if new color has that size (even if out of stock)
+                  // -> if out of stock, suggestion card will auto show because _currentStock == 0
                   final hasPrevSize = prevSize != null &&
                       variant.sizes.any((s) => s.size == prevSize);
                   final newSize = hasPrevSize
@@ -783,7 +787,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
                     }
                   });
 
-                  // Tự động scroll đến ảnh của màu được chọn
+                  // Auto scroll to image of selected color
                   final targetIndex = _getFirstImageIndexOfColor(variant.color);
                   _pageController?.animateToPage(
                     targetIndex,
@@ -830,14 +834,14 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
   Widget _buildSizeSelector() {
     if (_availableSizes.isEmpty) return const SizedBox();
 
-    // Lấy toàn bộ sizes của màu đang chọn (bao gồm cả hết hàng)
+    // Get all sizes of selected color (including out of stock)
     final colorVariant = _selectedColor != null
         ? _product!.colorVariants
             .where((v) => v.color == _selectedColor)
             .firstOrNull
         : null;
 
-    // Dùng tất cả sizes từ variant (kể cả stock = 0)
+    // Use all sizes from variant (including stock = 0)
     final allSizesOfColor = colorVariant?.sizes ?? [];
 
     return Container(
@@ -882,8 +886,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
               final isOutOfStock = sizeVariant.stock <= 0;
 
               return GestureDetector(
-                // Cả chip hết hàng lẫn còn hàng đều dùng _selectedSize
-                // Khi _selectedSize != null && _currentStock == 0 → suggestion card tự hiện
+                // Both out of stock and in stock chips use _selectedSize
+                // When _selectedSize != null && _currentStock == 0 -> suggestion card auto shows
                 onTap: () {
                   final newStock = _product!.getStockByVariant(
                       _selectedColor!, sizeVariant.size);
@@ -942,7 +946,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
                         ],
                       ),
                     ),
-                    // Dấu gạch chéo khi hết hàng
+                    // Slash line when out of stock
                     if (isOutOfStock)
                       Positioned.fill(
                         child: CustomPaint(
@@ -955,7 +959,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
             }).toList(),
           ),
 
-          // ── Gợi ý màu khác khi size đang chọn hết hàng ────────────────
+          // ── Suggest other colors when selected size is out of stock ────────────────
           AnimatedSize(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOutCubic,
@@ -964,7 +968,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
                 : const SizedBox.shrink(),
           ),
 
-          // Stock badge cho biến thể đang chọn
+          // Stock badge for selected variant
           if (_selectedColor != null && _selectedSize != null) ...[            const SizedBox(height: 10),
             Row(
               children: [
@@ -1068,7 +1072,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
           ),
           const SizedBox(height: 12),
 
-          // Nếu không có review, hiển thị message
+          // If no review, show message
           if (_reviews.isEmpty)
             Container(
               padding: const EdgeInsets.all(24),
@@ -1085,13 +1089,13 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
               ),
             )
           else ...[
-            // Hiển thị reviews (2 hoặc tất cả tùy theo _showAllReviews)
+            // Show reviews (2 or all depending on _showAllReviews)
             ...(_showAllReviews ? _reviews : _reviews.take(2))
                 .map((review) => _buildReviewItem(review)),
 
             const SizedBox(height: 8),
 
-            // Nút "Xem tất cả" hoặc "Thu gọn"
+            // "See all" or "Collapse" button
             if (_reviews.length > 2)
               Center(
                 child: TextButton.icon(
@@ -1199,7 +1203,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
   }
 
   Widget _buildReviewImages(List<String> images) {
-    // Hiển thị tối đa 4 ảnh
+    // Show up to 4 images
     final displayImages = images.take(4).toList();
     final remainingCount = images.length - 4;
 
@@ -1401,11 +1405,11 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
       ),
     );
   }
-  /// Card gợi ý màu khác khi size [size] hết hàng ở màu hiện tại
+  /// Suggestion card for other colors when [size] is out of stock in current color
   Widget _buildSizeSuggestionCard(String size) {
     final availableColors = _getColorsWithSize(size);
 
-    // ── Không màu nào có size này → thông báo hết toàn bộ ──────────
+    // ── No color has this size -> notify completely out of stock ──────────
     if (availableColors.isEmpty) {
       return Container(
         margin: const EdgeInsets.only(top: 12),
@@ -1435,7 +1439,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
       );
     }
 
-    // ── Có màu khác còn hàng → gợi ý chuyển màu ───────────────────
+    // ── Other colors in stock -> suggest changing color ───────────────────
     return Container(
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(14),
@@ -1449,7 +1453,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Tiêu đề
+          // Title
           Row(
             children: [
               const Icon(Icons.info_outline_rounded,
@@ -1475,7 +1479,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
                   ),
                 ),
               ),
-              // Nút đóng — bỏ chọn size
+              // Close button — deselect size
               GestureDetector(
                 onTap: () => setState(() => _selectedSize = null),
                 child: const Icon(Icons.close_rounded,
@@ -1484,7 +1488,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
             ],
           ),
           const SizedBox(height: 10),
-          // Chips màu gợi ý
+          // Suggested color chips
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -1497,7 +1501,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
                     _selectedSize = size;
                     if (_quantity > stock && stock > 0) _quantity = stock;
                     if (_quantity < 1) _quantity = 1;
-                    // Scroll ảnh sang màu mới
+                    // Scroll image to new color
                     final targetIdx =
                         _getFirstImageIndexOfColor(color);
                     _currentImageIndex = targetIdx;
@@ -1557,7 +1561,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> with Scro
   }
 }
 
-/// CustomPainter vẽ đường gạch chéo cho size hết hàng
+/// CustomPainter draws slash line for out of stock size
 class _StrikethroughPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {

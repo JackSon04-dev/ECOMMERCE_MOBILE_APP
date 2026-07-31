@@ -6,13 +6,13 @@ import { getNotificationsSchema, deleteNotificationSchema } from '../../validati
 
 const router = express.Router()
 
-// Route: GET /api/notifications - Lấy thông báo (chung + riêng)
+// Route: GET /api/notifications - Get notifications (general + private)
 router.get('/', verifyToken, validate(getNotificationsSchema), getNotifications)
 
-// Route: GET /api/notifications/unread-count - Đếm thông báo chưa đọc
+// Route: GET /api/notifications/unread-count - Count unread notifications
 router.get('/unread-count', verifyToken, getUnreadCount)
 
-// Route: DELETE /api/notifications/:id - Xóa thông báo khi user đã đọc
+// Route: DELETE /api/notifications/:id - Delete notification when user read it
 router.delete('/:id', verifyToken, validate(deleteNotificationSchema), deleteNotification)
 
 export default router

@@ -7,10 +7,10 @@ import '../../../services/review_service.dart';
 import '../../../utils/date_helper.dart';
 import '../../../widgets/common_widgets.dart';
 
-/// ⭐ Create Review Page - Trang đánh giá sản phẩm
+/// ⭐ Create Review Page
 class CreateReviewPage extends StatefulWidget {
   final Order order;
-  /// Reviews đã có: productId → ReviewModel (truyền từ ngoài vào hoặc load trong trang)
+  /// Existing reviews: productId -> ReviewModel (passed from outside or loaded in page)
   final Map<String, ReviewModel>? existingReviews;
 
   const CreateReviewPage({
@@ -37,17 +37,17 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
   bool _isSubmitting = false;
   bool _isLoadingReviews = false;
 
-  /// Chế độ trang (Thêm đánh giá mới hay Xem lại)
+  /// Page mode (Add new review or View)
   bool get _isViewMode => widget.order.isRated;
 
   OrderItem get _currentItem => widget.order.orderItems[_currentProductIndex];
   int get _totalProducts => widget.order.orderItems.length;
   bool get _isLastProduct => _currentProductIndex >= _totalProducts - 1;
   
-  /// reviews đã có của user: productId → ReviewModel
+  /// User's existing reviews: productId -> ReviewModel
   late Map<String, ReviewModel> _existingReviews;
 
-  /// Dữ liệu nhập cho các sản phẩm chưa review: productId → { rating, comment, images }
+  /// Input data for unreviewed products: productId -> { rating, comment, images }
   final Map<String, Map<String, dynamic>> _reviewData = {};
 
   int get _currentRating =>
@@ -60,9 +60,9 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
     _loadExistingReviews();
   }
 
-  /// Nếu có item đã isRated=true nhưng chưa được truyền reviews → load từ API
+  /// If item has isRated=true but reviews not passed -> load from API
   Future<void> _loadExistingReviews() async {
-    // Chỉ load nếu order đã được rated
+    // Only load if order is rated
     if (!_isViewMode) {
       _loadDataForCurrentProduct();
       return;
@@ -74,10 +74,10 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
 
     setState(() => _isLoadingReviews = true);
     
-    // Load reviews cho TẤT CẢ item của đơn hàng này bằng hàm tối ưu mới
+    // Load reviews for ALL items of this order using new optimized function
     final reviewList = await ReviewService.getReviewsByOrder(widget.order.id);
     
-    // Chuyển List thành Map để dễ truy xuất theo productId
+    // Convert List to Map for easy access by productId
     final reviewsMap = {for (var r in reviewList) r.productId: r};
 
     setState(() {
@@ -88,7 +88,7 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
   }
 
   void _loadDataForCurrentProduct() {
-    if (_isViewMode) return; // View-only, không cần load form
+    if (_isViewMode) return; // View-only, no need to load form
     final data = _reviewData[_currentItem.productId];
     _commentController.text = (data?['comment'] as String?) ?? '';
     _selectedImages.clear();
@@ -152,7 +152,7 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
     }
     _saveDataForCurrentProduct();
 
-    // Lọc những sp chưa được review (Khi đã vào trang đánh giá thì mặc định review tất cả)
+    // Filter unreviewed products (When entering review page, review all by default)
     final toSubmit = widget.order.orderItems;
 
     setState(() => _isSubmitting = true);
@@ -349,7 +349,7 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
             if (_totalProducts > 1) _buildProgressBar(),
             _buildProductInfo(),
             const SizedBox(height: 12),
-            // ── Phân nhánh: đã review → view-only, chưa → form ──
+            // ── Branching: already reviewed -> view-only, not yet -> form ──
             if (_isViewMode)
               _existingReviews.containsKey(_currentItem.productId)
                   ? _buildExistingReviewCard(_existingReviews[_currentItem.productId]!)
@@ -421,7 +421,7 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
     );
   }
 
-  // ─── THÔNG TIN SẢN PHẨM ────────────────────────────────────────────────
+  // ─── PRODUCT INFO ────────────────────────────────────────────────
   Widget _buildProductInfo() {
     final item = _currentItem;
     return Container(
@@ -470,7 +470,7 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
     );
   }
 
-  // ─── VIEW-ONLY CARD (đã review) ─────────────────────────────────────────
+  // ─── VIEW-ONLY CARD (already reviewed) ─────────────────────────────────────────
   Widget _buildExistingReviewCard(ReviewModel review) {
     final ratingLabels = ['', 'Rất tệ', 'Không hài lòng', 'Bình thường', 'Hài lòng', 'Tuyệt vời'];
     final date = review.createdAt != null
@@ -558,7 +558,7 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
                   ),
                 ),
 
-                // ── Ảnh (nếu có) ──
+                // ── Image (if any) ──
                 if (review.images.isNotEmpty) ...[
                   const SizedBox(height: 14),
                   SizedBox(
@@ -612,7 +612,7 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
     );
   }
 
-  // ─── CHỌN SAO ───────────────────────────────────────────────────────────
+  // ─── SELECT STARS ───────────────────────────────────────────────────────────
   Widget _buildRatingSection() {
     const ratingLabels = ['', 'Rất tệ', 'Không hài lòng', 'Bình thường', 'Hài lòng', 'Tuyệt vời'];
     final rating = _currentRating;
@@ -690,7 +690,7 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
     }
   }
 
-  // ─── NHẬN XÉT ───────────────────────────────────────────────────────────
+  // ─── COMMENT ───────────────────────────────────────────────────────────
   Widget _buildCommentSection() {
     return Container(
       color: Colors.white,
@@ -735,7 +735,7 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
     );
   }
 
-  // ─── CHỌN ẢNH ───────────────────────────────────────────────────────────
+  // ─── SELECT IMAGE ───────────────────────────────────────────────────────────
   Widget _buildImageSection() {
     return Container(
       color: Colors.white,
@@ -828,11 +828,11 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
 
   // ─── BOTTOM BAR ─────────────────────────────────────────────────────────
   Widget _buildBottomBar() {
-    // Nếu tất cả đã review → chỉ hiện nút Đóng khi ở sản phẩm cuối
+    // If all reviewed -> only show Close button at the last product
     final allReviewed = _isViewMode;
     final bool needsNext = !_isLastProduct;
 
-    // Có sản phẩm chưa review không?
+    // Any unreviewed products?
     final hasUnreviewed = !_isViewMode;
 
     return Container(
@@ -851,7 +851,7 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
       ),
       child: Row(
         children: [
-          // Nút Quay lại
+          // Back button
           if (_currentProductIndex > 0) ...[
             Expanded(
               child: OutlinedButton(
@@ -877,10 +877,10 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
             const SizedBox(width: 12),
           ],
 
-          // Nút chính
+          // Main button
           Expanded(
             child: (allReviewed && _isLastProduct)
-                // Đang ở sản phẩm cuối, tất cả đã review → Đóng
+                // At last product, all reviewed -> Close
                 ? ElevatedButton(
                     onPressed: () => Navigator.pop(context),
                     style: ElevatedButton.styleFrom(

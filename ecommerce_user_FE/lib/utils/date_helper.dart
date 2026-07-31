@@ -1,14 +1,14 @@
 import 'package:intl/intl.dart';
 
-/// 🕐 Date Helper - Chuyển đổi múi giờ UTC từ MongoDB sang local timezone của device
+/// 🕐 Date Helper - Convert UTC timezone from MongoDB to device local timezone
 ///
-/// MongoDB lưu thời gian UTC. Khi hiển thị cho user, cần convert sang
-/// múi giờ local của thiết bị để hiển thị đúng.
+/// MongoDB stores UTC time. When displaying to user, need to convert to
+/// device local timezone to display correctly.
 ///
-/// Ví dụ: Server trả "2026-03-04T10:30:00.000Z" (UTC)
-///  Device ở Việt Nam (UTC+7) → hiển thị "04/03/2026 17:30"
+/// Example: Server returns "2026-03-04T10:30:00.000Z" (UTC)
+///  Device in Vietnam (UTC+7) -> displays "04/03/2026 17:30"
 class DateHelper {
-  /// Format DateTime (UTC từ server) → chuỗi ngày giờ local của device
+  /// Format DateTime (UTC from server) -> device local datetime string
   /// Format: dd/MM/yyyy HH:mm
   static String formatDateTime(DateTime? date) {
     if (date == null) return '';
@@ -16,7 +16,7 @@ class DateHelper {
     return DateFormat('dd/MM/yyyy HH:mm').format(localDate);
   }
 
-  /// Format DateTime (UTC từ server) → chỉ ngày, local timezone
+  /// Format DateTime (UTC from server) -> date only, local timezone
   /// Format: dd/MM/yyyy
   static String formatDate(DateTime? date) {
     if (date == null) return '';
@@ -24,7 +24,7 @@ class DateHelper {
     return DateFormat('dd/MM/yyyy').format(localDate);
   }
 
-  /// Format DateTime (UTC từ server) → dạng "vừa xong", "5 phút trước", ...
+  /// Format DateTime (UTC from server) -> "just now", "5 minutes ago", etc.
   static String formatTimeAgo(DateTime? date) {
     if (date == null) return '';
     final localDate = date.toLocal();
@@ -39,14 +39,14 @@ class DateHelper {
     return DateFormat('dd/MM/yyyy').format(localDate);
   }
 
-  /// Parse DateTime từ JSON string, đảm bảo luôn là UTC
-  /// Nếu string không có 'Z' hoặc offset → mặc định coi là UTC
+  /// Parse DateTime from JSON string, ensuring it is always UTC
+  /// If string has no 'Z' or offset -> default to UTC
   static DateTime? parseUtc(String? dateString) {
     if (dateString == null || dateString.isEmpty) return null;
     final parsed = DateTime.tryParse(dateString);
     if (parsed == null) return null;
-    // Nếu đã là UTC thì giữ nguyên, nếu không thì convert sang UTC
-    // (MongoDB luôn trả UTC nên đảm bảo parse đúng)
+    // If already UTC, keep it, otherwise convert to UTC
+    // (MongoDB always returns UTC so ensure correct parsing)
     return parsed.isUtc ? parsed : parsed.toUtc();
   }
 }

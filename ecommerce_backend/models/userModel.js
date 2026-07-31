@@ -44,7 +44,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'admin'], // Chỉ cho phép 2 giá trị
+    enum: ['user', 'admin'], // Only allow 2 values
     default: 'user'
   },
   refreshTokens: [
@@ -57,7 +57,7 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  // FCM Tokens - Lưu token của từng thiết bị để gửi Push Notification
+  // FCM Tokens - Save token of each device to send Push Notification
   fcmTokens: [
     {
       token: { type: String, required: true },

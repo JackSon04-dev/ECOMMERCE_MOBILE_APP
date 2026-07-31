@@ -1,7 +1,7 @@
 import Voucher from '../../models/voucherModel.js'
 import { asyncHandler, ApiError } from '../../middleware/errorMiddleware.js'
 
-// Lấy danh sách tất cả voucher (Admin)
+// Get list of all vouchers (Admin)
 export const getAllVouchers = asyncHandler(async (req, res) => {
   const vouchers = await Voucher.find().sort({ createdAt: -1 })
 
@@ -11,7 +11,7 @@ export const getAllVouchers = asyncHandler(async (req, res) => {
   })
 });
 
-// Tạo voucher mới (Admin)
+// Create new voucher (Admin)
 export const createVoucher = asyncHandler(async (req, res) => {
   const { voucherName, voucherCode, minOrderAmount, discountAmount, usageLimit } = req.body
 
@@ -49,7 +49,7 @@ export const createVoucher = asyncHandler(async (req, res) => {
   })
 });
 
-// Cập nhật voucher (Admin)
+// Update voucher (Admin)
 export const updateVoucher = asyncHandler(async (req, res) => {
   const { id } = req.params
   const { voucherName, voucherCode, minOrderAmount, discountAmount, usageLimit, isActive } = req.body
@@ -61,7 +61,7 @@ export const updateVoucher = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Không tìm thấy voucher')
   }
 
-  // Nếu cập nhật voucherCode, check độ dài và trùng lặp
+  // If updating voucherCode, check length and duplicates
   if (voucherCode) {
     if (voucherCode.length !== 6) {
       throw new ApiError(400, 'Mã voucher phải có đúng 6 ký tự')
@@ -79,7 +79,7 @@ export const updateVoucher = asyncHandler(async (req, res) => {
     voucher.voucherCode = voucherCode.toUpperCase()
   }
 
-  // Cập nhật các field khác nếu có
+  // Update other fields if any
   if (voucherName) voucher.voucherName = voucherName
   if (minOrderAmount != null) voucher.minOrderAmount = minOrderAmount
   if (discountAmount != null) voucher.discountAmount = discountAmount

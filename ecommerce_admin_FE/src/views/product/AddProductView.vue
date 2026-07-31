@@ -233,7 +233,7 @@ import axios from 'axios'
 
 const router = useRouter()
 
-// 1. FORM TRƯỜNG DỮ LIỆU
+// 1. DATA FORM FIELDS
 const name = ref('')
 const shortDescription = ref('')
 const description = ref('')
@@ -242,7 +242,7 @@ const discount = ref(0)
 const tags = ref([])
 const thumbnailFile = ref(null)
 const mainImagePreview = ref(null)
-// 1.1. Cấu trúc biến thể màu sắc, size và tồn kho
+// 1.1. Color variant structure, size and inventory
 const colorVariants = ref([
   {
     color: '',
@@ -253,8 +253,8 @@ const colorVariants = ref([
   }
 ])
 
-// 2. Các hàm hỗ trợ thêm biến thể
-// 2.1. Thêm nhóm màu mới
+// 2. Helper functions to add variants
+// 2.1. Add new color group
 const addColorGroup = () => {
   colorVariants.value.push({
     color: '',
@@ -264,12 +264,12 @@ const addColorGroup = () => {
     imagePreview: null
   })
 }
-// 2.2. Thêm size vào nhóm màu
+// 2.2. Add size to color group
 const addSizeToColor = (cIndex) => {
   colorVariants.value[cIndex].sizes.push({ size: '', stock: 0 })
 }
 
-// 3. XỬ LÝ ẢNH ĐẠI DIỆN, LƯU TẠM VÀO PREVIEW ĐỂ HIỂN THỊ
+// 3. PROCESS AVATAR IMAGE, SAVE TEMPORARILY TO PREVIEW FOR DISPLAY
 const handleMainFileChange = (e) => {
   const file = e.target.files[0]
   if (file) {
@@ -278,38 +278,38 @@ const handleMainFileChange = (e) => {
   }
 }
 
-// 4. LƯU TẠM ẢNH CHO TỪNG NHÓM MÀU TRÊN RAM
+// 4. TEMPORARILY SAVE IMAGE FOR EACH COLOR GROUP ON RAM
 const handleVariantImageUpload = (event, index) => {
-  //4.1. Lấy file từ input
+  // 4.1. Get file from input
   const file = event.target.files[0]
   if (!file) return
   
-  //4.2. Lưu tệp nhị phân vào biến thể để chuẩn bị gửi 1 lần duy nhất
+  // 4.2. Save binary file to variant to prepare sending it once
   colorVariants.value[index].imageFile = file
-  //4.3. Tạo URL ảo để hiển thị preview ngay lập tức
+  // 4.3. Create mock URL to display preview immediately
   colorVariants.value[index].imagePreview = URL.createObjectURL(file)
 }
 
 // 5. SUBMIT FORM
 const submitForm = async () => {
-  // 1. VALIDATION CÁC TRƯỜNG CƠ BẢN
+  // 1. BASIC FIELD VALIDATION
 
-  // 1.1. Kiểm tra Tên sản phẩm
+  // 1.1. Check Product name
   if (!name.value || name.value.trim() === '') {
     return alert('Tên sản phẩm không được để trống!')
   }
 
-  // 1.2. Kiểm tra Mô tả ngắn (Bắt buộc để hiển thị đẹp trên App Flutter)
+  // 1.2. Check Short description (Required for nice display on Flutter App)
   if (!shortDescription.value || shortDescription.value.trim() === '') {
     return alert('Vui lòng nhập mô tả ngắn cho sản phẩm!')
   }
 
-  // 1.3. Kiểm tra Giá gốc: Không trống và > 0
+  // 1.3. Check Original price: Not empty and > 0
   if (price.value === null || price.value === undefined || price.value <= 0) {
     return alert('Giá gốc không được để trống và phải lớn hơn 0!')
   }
 
-  // 1.4. Kiểm tra Giảm giá: Tối đa 50%, mặc định 0 nếu trống
+  // 1.4. Check Discount: Maximum 50%, default 0 if empty
   let finalDiscount = discount.value
   if (
     finalDiscount === null ||
@@ -321,13 +321,13 @@ const submitForm = async () => {
     return alert('Giảm giá không được nhỏ hơn 0 và không được vượt quá 50%!')
   }
 
-  // 1.5. Kiểm tra Ảnh đại diện (Thumbnail)
+  // 1.5. Check Avatar image (Thumbnail)
   if (!thumbnailFile.value) {
     return alert('Vui lòng chọn ảnh đại diện (Thumbnail) cho sản phẩm!')
   }
 
-  // 2. VALIDATION BIẾN THỂ VÀ TỒN KHO GỒM MÀU SẮC VÀ SIZE, TỒN KHO
-  // 2.1. Tao ra biến kiểm tra
+  // 2. VARIANT AND INVENTORY VALIDATION INCLUDING COLOR, SIZE, INVENTORY
+  // 2.1. Create check variable
   const isVariantsValid = colorVariants.value.every((c) => {
     const isColorOk = c.color && c.color.trim() !== ''
     const isSizesOk = c.sizes.every((s) => {
@@ -338,44 +338,44 @@ const submitForm = async () => {
     })
     return isColorOk && isSizesOk
   })
-  // 2.2. Kiểm tra kết quả
+  // 2.2. Check result
   if (!isVariantsValid) {
     return alert(
       'Vui lòng nhập đủ Màu sắc, Size và Tồn kho (không được âm) cho tất cả biến thể!'
     )
   }
 
-  // 3. TẠO FORM DATA VÀ GỬI LÊN SERVER
+  // 3. CREATE FORM DATA AND SEND TO SERVER
   const formData = new FormData()
-  // 3.1. Thêm các trường thông tin cơ bản
+  // 3.1. Add basic info fields
   formData.append('name', name.value)
   formData.append('shortDescription', shortDescription.value)
   formData.append('description', description.value)
   formData.append('price', price.value)
   formData.append('discount', discount.value)
   
-  // 3.2. Xử lý ảnh biến thể và tạo payload
+  // 3.2. Process variant image and create payload
   let imageUploadIndex = 0;
   const variantsPayload = colorVariants.value.map((variant) => {
     const v = { ...variant }
-    // Nếu có file ảnh mới, đính kèm vào formData chung
+    // If there is new image file, attach it to common formData
     if (v.imageFile) {
       formData.append('images', v.imageFile)
       v.imageUploadIndex = imageUploadIndex++
     }
-    // Dọn dẹp dữ liệu thừa trước khi gửi stringify
+    // Clean up redundant data before stringify
     delete v.imageFile
     delete v.imagePreview
     return v
   })
 
-  // 3.3. Thêm mảng tags và biến thể (chuyển thành chuỗi JSON)
+  // 3.3. Add tags and variants array (convert to JSON string)
   formData.append('tags', JSON.stringify(tags.value))
   formData.append('colorVariants', JSON.stringify(variantsPayload))
-  // 3.4. Thêm ảnh đại diện dạng file
+  // 3.4. Add avatar image as file
   formData.append('thumbnail', thumbnailFile.value)
 
-  // 4. GỬI LÊN SERVER BẰNG AXIOS và XỬ LÝ KẾT QUẢ
+  // 4. SEND TO SERVER USING AXIOS AND HANDLE RESULT
   try {
     const res = await axios.post('/api/admin/products/add', formData)
     if (res.data.success) {
@@ -387,9 +387,9 @@ const submitForm = async () => {
   }
 }
 
-// 6. HÀM DỌN DẸP FORM SAU KHI THÊM THÀNH CÔNG
+// 6. CLEAN UP FORM AFTER SUCCESSFUL ADDITION
 const resetForm = () => {
-  // 1. Đưa các biến cơ bản về giá trị mặc định
+  // 1. Reset basic variables to default values
   name.value = ''
   shortDescription.value = ''
   description.value = ''
@@ -397,11 +397,11 @@ const resetForm = () => {
   discount.value = 0
   tags.value = []
 
-  // 2. Xóa dữ liệu ảnh và preview
+  // 2. Delete image data and preview
   thumbnailFile.value = null
   mainImagePreview.value = null
 
-  // 3. Khởi tạo lại cấu trúc biến thể (1 màu, 1 size trống)
+  // 3. Reinitialize variant structure (1 color, 1 empty size)
   colorVariants.value = [
     {
       color: '',
@@ -412,7 +412,7 @@ const resetForm = () => {
     }
   ]
 
-  // (Tùy chọn) Xóa vết tích file trên input HTML để có thể chọn lại cùng 1 file ảnh
+  // (Optional) Clear file trace on HTML input to allow re-selecting the same image file
   const fileInputs = document.querySelectorAll('input[type="file"]')
   fileInputs.forEach((input) => (input.value = ''))
 

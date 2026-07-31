@@ -11,14 +11,14 @@ import Notification from './models/notification.js';
 dotenv.config();
 
 const initWorkers = async () => {
-  // 1. Kết nối Database & Redis
+  // 1. Connect Database & Redis
   await connectDB();
   await connectRedis();
 
-  // 2. Kết nối RabbitMQ
+  // 2. Connect RabbitMQ
   await connectRabbitMQ();
 
-  // 3. Đợi cho đến khi RabbitMQ Channel sẵn sàng
+  // 3. Wait until RabbitMQ Channel is ready
   console.log('⏳ [Worker] Đang đợi RabbitMQ Channel sẵn sàng...');
   let channel = getChannel();
   while (!channel) {
@@ -28,7 +28,7 @@ const initWorkers = async () => {
   console.log('✔ [Worker] RabbitMQ Channel đã sẵn sàng. Đăng ký consumers...');
 
   // 4. Consumer: order_creation_queue
-  channel.prefetch(10); // Khống chế tối đa 10 đơn hàng được xử lý đồng thời
+  channel.prefetch(10); // Limit to maximum 10 concurrent processing orders
   channel.consume('order_creation_queue', async (msg) => {
     if (!msg) return;
 
@@ -38,7 +38,7 @@ const initWorkers = async () => {
       console.log(`📥 [Worker] Nhận yêu cầu tạo đơn hàng: ID=${orderId}, User=${userId}`);
 
       try {
-        // Gọi Service tạo đơn hàng (đã cập nhật nhận preAllocatedId và tự lo Caching)
+        // Call Order Creation Service (updated to receive preAllocatedId and handle its own Caching)
         const result = await orderService.processCreateOrder(userId, orderData, orderId);
 
         console.log(`✅ [Worker] Xử lý đơn hàng THÀNH CÔNG: ID=${orderId}`);
@@ -46,21 +46,21 @@ const initWorkers = async () => {
       } catch (error) {
         console.error(`❌ [Worker] Xử lý đơn hàng THẤT BẠI: ID=${orderId}, Lỗi:`, error.message);
 
-        // Phân biệt lỗi nghiệp vụ (ApiError) và lỗi hệ thống (Mất kết nối MongoDB/mạng)
+        // Differentiate between business logic error (ApiError) and system error (MongoDB/network connection lost)
         const isApiError = error.statusCode !== undefined;
 
         if (isApiError) {
-          // Lỗi nghiệp vụ (đã được Service cache failed): Xóa khỏi queue vì có thử lại vẫn lỗi
+          // Business error (already cached as failed by Service): Remove from queue because retrying will still fail
           channel.ack(msg);
         } else {
-          // Lỗi hệ thống (mất kết nối MongoDB...): Nack để RabbitMQ giữ lại tin nhắn và gửi lại sau khi DB phục hồi
+          // System error (MongoDB connection lost...): Nack so RabbitMQ keeps the message and retries after DB recovers
           console.warn(`🔄 [Worker] Lỗi kết nối hệ thống/Database. Nack và Requeue tin nhắn đơn hàng: ${orderId}`);
           channel.nack(msg, false, true); // requeue: true
         }
       }
     } catch (parseError) {
       console.error('❌ [Worker] Lỗi giải mã dữ liệu order_creation_queue:', parseError.message);
-      channel.ack(msg); // Xóa tin nhắn bị hỏng
+      channel.ack(msg); // Remove corrupted message
     }
   });
 
@@ -86,16 +86,16 @@ const initWorkers = async () => {
 
         const isApiError = error.statusCode !== undefined;
         if (isApiError) {
-          // Lỗi nghiệp vụ (tiền không khớp, không thấy đơn): Xóa khỏi queue vì requeue vẫn sẽ lỗi
+          // Business error (price mismatch, order not found): Remove from queue because requeue will still fail
           channel.ack(msg);
         } else {
-          // Lỗi kết nối hệ thống/database: Nack và requeue để thử lại sau
+          // System/database connection error: Nack and requeue to retry later
           channel.nack(msg, false, true);
         }
       }
     } catch (parseError) {
       console.error('❌ [Worker] Lỗi giải mã dữ liệu payos_payment_queue:', parseError.message);
-      channel.ack(msg); // Xóa tin nhắn bị hỏng
+      channel.ack(msg); // Remove corrupted message
     }
   });
 
@@ -111,19 +111,19 @@ const initWorkers = async () => {
       try {
         await fcmService.sendPushNotification(tokens, title, message, data || {});
         console.log(`✅ [Worker] Hoàn tất Broadcast FCM cho chunk này.`);
-        channel.ack(msg); // fcmService đã tự dọn dẹp DB nên chỉ việc ack
+        channel.ack(msg); // fcmService cleaned up DB by itself, so just ack
       } catch (error) {
         console.error('❌ [Worker] Lỗi khi gọi Firebase FCM:', error.message);
-        // Lỗi mạng hoặc Firebase bị down -> requeue để thử lại sau
+        // Network error or Firebase down -> requeue to retry later
         channel.nack(msg, false, true);
       }
     } catch (parseError) {
       console.error('❌ [Worker] Lỗi giải mã dữ liệu fcm_broadcast_queue:', parseError.message);
-      channel.ack(msg); // Xóa tin nhắn bị hỏng
+      channel.ack(msg); // Remove corrupted message
     }
   });
 
-  // 7. Consumer: cancel_order_queue (Hủy đơn hàng tự động)
+  // 7. Consumer: cancel_order_queue (Auto-cancel order)
   channel.consume('cancel_order_queue', async (msg) => {
     if (!msg) return;
 
@@ -133,11 +133,11 @@ const initWorkers = async () => {
       console.log(`📥 [Worker] Nhận lệnh Hủy Đơn Hàng tự động: ID=${orderId}`);
 
       try {
-        // Hủy đơn hàng với quyền SYSTEM
+        // Cancel order with SYSTEM privilege
         const order = await orderService.processCancelOrder(orderId, 'SYSTEM');
         console.log(`✅ [Worker] Hủy đơn hàng THÀNH CÔNG: ID=${orderId}`);
 
-        // Gửi FCM Push Notification và lưu Notification vào Database cho User
+        // Send FCM Push Notification and save Notification to Database for User
         if (order && order.user) {
           const user = await User.findById(order.user);
           if (user && user.fcmTokens && user.fcmTokens.length > 0) {
@@ -145,13 +145,13 @@ const initWorkers = async () => {
             const title = 'Đơn hàng đã bị hủy ❌';
             const body = `Đơn hàng #${orderCode} của bạn đã bị hủy tự động do quá hạn thanh toán 30 phút.`;
 
-            // Lấy ảnh của sản phẩm đầu tiên để hiển thị trên thông báo (nếu có)
+            // Get the image of the first product to display on notification (if any)
             let imageUrl = null;
             if (order.orderItems && order.orderItems.length > 0) {
               imageUrl = order.orderItems[0].variant?.colorImage || order.orderItems[0].productImage;
             }
 
-            // Tạo Notification mới trong DB (để User xem lại trong App)
+            // Create new Notification in DB (for User to review in App)
             const notification = await Notification.create({
               userId: order.user,
               title,
@@ -176,9 +176,9 @@ const initWorkers = async () => {
         console.error(`❌ [Worker] Lỗi hủy đơn hàng ID=${orderId}:`, error.message);
         const isApiError = error.statusCode !== undefined;
         if (isApiError) {
-          channel.ack(msg); // Lỗi nghiệp vụ, xóa để không lặp lại
+          channel.ack(msg); // Business error, delete to prevent loop
         } else {
-          channel.nack(msg, false, true); // Lỗi hệ thống, requeue
+          channel.nack(msg, false, true); // System error, requeue
         }
       }
     } catch (parseError) {

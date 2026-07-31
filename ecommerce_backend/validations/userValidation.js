@@ -3,10 +3,10 @@ import Joi from 'joi';
 // Custom validator cho MongoDB ObjectId
 const objectId = Joi.string().regex(/^[0-9a-fA-F]{24}$/).message('ID không đúng định dạng Hex 24 ký tự.');
 
-// Các trạng thái đơn hàng hợp lệ
+// Valid order statuses
 const orderStatusArray = ['Chờ xác nhận', 'Đã xác nhận', 'Đang giao', 'Đã giao', 'Thành công', 'Đã hủy'];
 
-// Custom validator cho query status (hỗ trợ phân tách bằng dấu phẩy)
+// Custom validator for query status (supports comma separation)
 const validateStatusQuery = (value, helpers) => {
   const parts = value.split(',');
   for (const part of parts) {
@@ -17,7 +17,7 @@ const validateStatusQuery = (value, helpers) => {
   return value;
 };
 
-// Custom validator cho mảng ID (phân tách bằng dấu phẩy)
+// Custom validator for ID array (supports comma separation)
 const validateObjectIdString = (value, helpers) => {
   const parts = value.split(',');
   for (const part of parts) {
@@ -29,7 +29,7 @@ const validateObjectIdString = (value, helpers) => {
 };
 
 // ==========================================
-// 🛒 GIỎ HÀNG (CART) SCHEMAS
+// 🛒 CART SCHEMAS
 // ==========================================
 export const updateCartSchema = Joi.object({
   body: Joi.object({
@@ -45,12 +45,12 @@ export const updateCartSchema = Joi.object({
         quantity: Joi.number().integer().min(0).required()
       })
     )
-  }).xor('productId', 'items') // Bắt buộc có một trong hai (hoặc productId lẻ hoặc mảng items)
-    .with('productId', ['color', 'size', 'quantity']) // Nếu truyền productId thì phải truyền kèm color, size, quantity
+  }).xor('productId', 'items') // Requires either one (single productId or items array)
+    .with('productId', ['color', 'size', 'quantity']) // If passing productId, must include color, size, quantity
 });
 
 // ==========================================
-// 🔔 THÔNG BÁO (NOTIFICATION) SCHEMAS
+// 🔔 NOTIFICATION SCHEMAS
 // ==========================================
 export const getNotificationsSchema = Joi.object({
   query: Joi.object({
@@ -81,7 +81,7 @@ export const applyVoucherSchema = Joi.object({
 });
 
 // ==========================================
-// 🛍️ SẢN PHẨM (PRODUCT) SCHEMAS
+// 🛍️ PRODUCT SCHEMAS
 // ==========================================
 export const getAllProductsSchema = Joi.object({
   query: Joi.object({
@@ -100,7 +100,7 @@ export const getProductByIdSchema = Joi.object({
 });
 
 // ==========================================
-// 🌟 ĐÁNH GIÁ (REVIEW) SCHEMAS
+// 🌟 REVIEW SCHEMAS
 // ==========================================
 export const getReviewsByProductSchema = Joi.object({
   params: Joi.object({
@@ -136,7 +136,7 @@ export const createReviewSchema = Joi.object({
 });
 
 // ==========================================
-// 📦 ĐƠN HÀNG (ORDER) SCHEMAS
+// 📦 ORDER SCHEMAS
 // ==========================================
 export const getMyOrdersSchema = Joi.object({
   query: Joi.object({
@@ -197,7 +197,7 @@ export const orderActionSchema = Joi.object({
 });
 
 // ==========================================
-// 💳 THANH TOÁN (PAYMENT) SCHEMAS
+// 💳 PAYMENT SCHEMAS
 // ==========================================
 export const paymentStatusSchema = Joi.object({
   params: Joi.object({

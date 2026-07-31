@@ -58,7 +58,7 @@ class OrderActionButtons extends ConsumerWidget {
                     ? const Color(0xFF2196F3)
                     : order.paymentMethod == 'ZaloPay'
                         ? const Color(0xFF007DFE)
-                        : const Color(0xFF00C853), // PayOS - xanh lá
+                        : const Color(0xFF00C853), // PayOS - green
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12)
               ),
@@ -111,7 +111,7 @@ class OrderActionButtons extends ConsumerWidget {
                   arguments: order,
                 ).then((result) async {
                   if (result == true) {
-                    // Cập nhật lại cache sau khi đánh giá
+                    // Update cache again after review
                     final updatedOrder = await OrderService.getOrderById(order.id);
                     final tabs = ['Tất cả', 'Chờ xác nhận', 'Đã xác nhận', 'Đang giao', 'Đã giao', 'Đã hủy'];
                     for (var tab in tabs) {

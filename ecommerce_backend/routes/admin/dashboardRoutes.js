@@ -6,22 +6,22 @@ const router = express.Router()
 
 router.use(verifyToken, restrictToRoles(['ADMIN']))
 
-// Tổng quan tài chính
+// Financial overview
 router.get('/financial-overview', dashboardController.getFinancialOverview)
 
-// Đơn hàng chờ xác nhận
+// Orders pending confirmation
 router.get('/pending-orders', dashboardController.getPendingOrders)
 
-// Top 7 sản phẩm bán chạy
+// Top 7 best selling products
 router.get('/top-products', dashboardController.getTopProducts)
 
-// Top khách hàng chi tiêu nhiều nhất
+// Top customers by highest spend
 router.get('/top-customers', dashboardController.getTopCustomers)
 
-// Voucher được dùng nhiều nhất
+// Most used voucher
 router.get('/top-vouchers', dashboardController.getTopVouchers)
 
-// Biểu đồ doanh thu theo tháng
+// Monthly revenue chart
 router.get('/revenue-chart', dashboardController.getRevenueChart)
 
 export default router

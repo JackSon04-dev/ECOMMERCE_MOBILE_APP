@@ -32,7 +32,7 @@ class ReviewModel {
 
   factory ReviewModel.fromJson(Map<String, dynamic> json) {
     try {
-      // Parse userId và user info
+      // Parse userId and user info
       String userId = '';
       String? userName;
       String? userAvatar;
@@ -42,7 +42,7 @@ class ReviewModel {
         if (userMap.containsKey('username')) {
           userId = (userMap['id'] ?? '').toString();
           userName = userMap['username']?.toString();
-          // Server không có avatar field, để null
+          // Server has no avatar field, keep null
           userAvatar = null;
         } else {
           userId = (userMap['id'] ?? '').toString();

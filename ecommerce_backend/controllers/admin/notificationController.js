@@ -3,13 +3,13 @@ import User from '../../models/userModel.js'
 import { getChannel } from '../../config/rabbitmq.js'
 import { asyncHandler, ApiError } from '../../middleware/errorMiddleware.js'
 
-// @desc    Tạo thông báo chung (GENERAL/PROMOTION) cho tất cả user
+// @desc    Create general notification (GENERAL/PROMOTION) for all users
 // @route   POST /api/admin/notifications
 // @access  Admin
 export const createNotification = asyncHandler(async (req, res) => {
   const { title, message, type } = req.body
 
-  // Admin chỉ tạo thông báo chung (không gắn userId)
+  // Admin only creates general notifications (no userId attached)
   const validTypes = ['PROMOTION', 'SYSTEM']
   const notificationType = validTypes.includes(type?.toUpperCase())
     ? type.toUpperCase()
@@ -19,18 +19,18 @@ export const createNotification = asyncHandler(async (req, res) => {
     title,
     message,
     type: notificationType,
-    userId: null // Thông báo chung cho tất cả user
+    userId: null // General notification for all users
   })
   await newNotification.save()
 
-  // --- THÊM LOGIC PUSH FCM QUA RABBITMQ ---
+  // --- ADD FCM PUSH LOGIC VIA RABBITMQ ---
   const channel = getChannel()
   if (!channel) {
-    // FAIL-FAST: Báo lỗi để Admin biết hệ thống đang lỗi, mặc dù tin nhắn đã lưu DB
+    // FAIL-FAST: Report error so Admin knows the system is down, even though message saved to DB
     throw new ApiError(500, 'Lưu thông báo thành công nhưng tính năng Push FCM tạm thời gián đoạn do lỗi hệ thống (RabbitMQ is down).')
   }
 
-  // Lấy toàn bộ token của người dùng
+  // Get all user tokens
   const users = await User.find({}, 'fcmTokens.token').lean()
 
   // Flatten array of tokens
@@ -43,11 +43,11 @@ export const createNotification = asyncHandler(async (req, res) => {
     }
   })
 
-  // Loại bỏ token trùng lặp (nếu có)
+  // Remove duplicate tokens (if any)
   allTokens = [...new Set(allTokens)]
 
   if (allTokens.length > 0) {
-    // Cắt mảng thành các cục (chunks), mỗi cục tối đa 400 tokens
+    // Cut the array into chunks, max 400 tokens per chunk
     const chunkSize = 400
     for (let i = 0; i < allTokens.length; i += chunkSize) {
       const chunk = allTokens.slice(i, i + chunkSize)
@@ -78,7 +78,7 @@ export const createNotification = asyncHandler(async (req, res) => {
   })
 })
 
-// @desc    Lấy tất cả thông báo (Admin xem toàn bộ)
+// @desc    Get all notifications (Admin views all)
 // @route   GET /api/admin/notifications
 // @access  Admin
 export const getAllNotifications = asyncHandler(async (req, res) => {
@@ -90,7 +90,7 @@ export const getAllNotifications = asyncHandler(async (req, res) => {
   })
 })
 
-// @desc    Xóa thông báo
+// @desc    Delete notification
 // @route   DELETE /api/admin/notifications/:id
 // @access  Admin
 export const deleteNotification = asyncHandler(async (req, res) => {

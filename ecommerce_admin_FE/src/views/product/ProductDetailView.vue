@@ -266,24 +266,24 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 
-// 0. KHAI BÁO PROPS VÀ ROUTER
+// 0. DECLARE PROPS AND ROUTER
 
 const router = useRouter()
 const route = useRoute()
 
-// 0.1 Lấy productId từ route params
+// 0.1 Get productId from route params
 const props = defineProps(['id'])
 const productId = computed(() => props.id || route.params.id)
 
-// 1. FORM TRƯỜNG DỮ LIỆU (Lấy từ Product hiện có)
+// 1. DATA FORM FIELD (Extracted from existing Product)
 const product = ref(null)
-const newMainImageFile = ref(null) // Lưu file ảnh đại diện mới nếu có thay đổi
-const mainImagePreview = ref(null) // Lưu link ảnh tạm để xem trước khi sửa
+const newMainImageFile = ref(null) // Save new avatar image file if modified
+const mainImagePreview = ref(null) // Save temporary image link for preview before edit
 
-// 2. LẤY DỮ LIỆU CHI TIẾT TỪ SERVER KHI VÀO TRANG
+// 2. GET DETAILED DATA FROM SERVER ON PAGE LOAD
 const fetchProductDetail = async () => {
   try {
-    // ✅ Chỉ lấy 1 sản phẩm cụ thể
+    // ✅ Fetch 1 specific product only
     const res = await axios.get(`/api/admin/products/${productId.value}`)
     product.value = res.data.data
   } catch (err) {
@@ -291,8 +291,8 @@ const fetchProductDetail = async () => {
   }
 }
 
-// 3. CÁC HÀM HỖ TRỢ QUẢN LÝ BIẾN THỂ (Thêm màu, Thêm size)
-// 3.1. Thêm nhóm màu mới vào sản phẩm hiện tại
+// 3. HELPER FUNCTIONS TO MANAGE VARIANTS (Add color, Add size)
+// 3.1. Add new color group to current product
 const addColorGroup = () => {
   product.value.colorVariants.push({
     color: '',
@@ -303,22 +303,22 @@ const addColorGroup = () => {
   })
 }
 
-// 3.2. Thêm size mới vào một nhóm màu cụ thể
+// 3.2. Add new size to a specific color group
 const addSizeToColor = (cIndex) => {
   product.value.colorVariants[cIndex].sizes.push({ size: '', stock: 0 })
 }
 
-// 4. XỬ LÝ HÌNH ẢNH
-// 4.1. Chuẩn bị ảnh đại diện mới (Thumbnail)
+// 4. PROCESS IMAGES
+// 4.1. Prepare new avatar image (Thumbnail)
 const prepareMainImage = (e) => {
   const file = e.target.files[0]
   if (file) {
     newMainImageFile.value = file
-    mainImagePreview.value = URL.createObjectURL(file) // Tạo preview tạm thời
+    mainImagePreview.value = URL.createObjectURL(file) // Create temporary preview
   }
 }
 
-// 4.2. Lưu tạm ảnh biến thể (chỉ gửi lên Cloudinary khi bấm Lưu thay đổi)
+// 4.2. Temporarily save variant image (only send to Cloudinary when Save changes is clicked)
 const handleVariantImageUpload = (event, index) => {
   const file = event.target.files[0]
   if (!file) return
@@ -327,18 +327,18 @@ const handleVariantImageUpload = (event, index) => {
   product.value.colorVariants[index].imagePreview = URL.createObjectURL(file)
 }
 
-// 5. LƯU THAY ĐỔI (UPDATE PRODUCT)
+// 5. SAVE CHANGES (UPDATE PRODUCT)
 const handleUpdate = async () => {
   if (!product.value) return
 
-  // --- 5.1. VALIDATION CÁC TRƯỜNG DỮ LIỆU ---
+  // --- 5.1. DATA FIELD VALIDATION ---
 
-  // Kiểm tra Tên
+  // Check Name
   if (!product.value.name || product.value.name.trim() === '') {
     return alert('Tên sản phẩm không được để trống!')
   }
 
-  // Kiểm tra Giá gốc (> 0)
+  // Check Original price (> 0)
   if (
     product.value.price === null ||
     product.value.price === undefined ||
@@ -347,18 +347,18 @@ const handleUpdate = async () => {
     return alert('Giá gốc không được để trống và phải lớn hơn 0!')
   }
 
-  // Kiểm tra Giảm giá (0% - 50%)
+  // Check Discount (0% - 50%)
   if (
     product.value.discount === null ||
     product.value.discount === undefined ||
     product.value.discount === ''
   ) {
-    product.value.discount = 0 // Mặc định về 0 nếu người dùng xóa trống
+    product.value.discount = 0 // Default to 0 if user clears it empty
   } else if (product.value.discount < 0 || product.value.discount > 50) {
     return alert('Giảm giá không được nhỏ hơn 0 và không được vượt quá 50%!')
   }
 
-  // --- 5.2. VALIDATION BIẾN THỂ (MÀU, SIZE, TỒN KHO) ---
+  // --- 5.2. VARIANT VALIDATION (COLOR, SIZE, INVENTORY) ---
   const isVariantsValid = product.value.colorVariants.every((c) => {
     const isColorOk = c.color && c.color.trim() !== ''
     const isSizesOk = c.sizes.every((s) => {
@@ -376,7 +376,7 @@ const handleUpdate = async () => {
     )
   }
 
-  // --- 5.3. ĐÓNG GÓI FORMDATA VÀ GỬI LÊN SERVER ---
+  // --- 5.3. PACKAGE FORMDATA AND SEND TO SERVER ---
   try {
     const formData = new FormData()
     formData.append('name', product.value.name)
@@ -386,7 +386,7 @@ const handleUpdate = async () => {
     formData.append('shortDescription', product.value.shortDescription || '')
     formData.append('description', product.value.description || '')
 
-    // Xử lý ảnh biến thể
+    // Process variant images
     let imageUploadIndex = 0;
     const variantsPayload = product.value.colorVariants.map((variant) => {
       const v = { ...variant }
@@ -399,11 +399,11 @@ const handleUpdate = async () => {
       return v
     })
 
-    // Chuyển mảng và object sang chuỗi JSON để gửi qua FormData
+    // Convert array and object to JSON string to send via FormData
     formData.append('colorVariants', JSON.stringify(variantsPayload))
     formData.append('tags', JSON.stringify(product.value.tags || []))
 
-    // Nếu có chọn ảnh đại diện mới thì mới gửi lên
+    // Only send if a new avatar image was selected
     if (newMainImageFile.value) {
       formData.append('thumbnail', newMainImageFile.value)
     }
@@ -415,14 +415,14 @@ const handleUpdate = async () => {
 
     if (res.data.success) {
       alert('Cập nhật sản phẩm thành công!')
-      newMainImageFile.value = null // Xóa file tạm sau khi lưu
-      fetchProductDetail() // Tải lại dữ liệu mới nhất từ server
+      newMainImageFile.value = null // Delete temporary file after save
+      fetchProductDetail() // Reload latest data from server
     }
   } catch (err) {
     alert('Lỗi: ' + (err.response?.data?.message || err.message))
   }
 }
 
-// 6. KHỞI CHẠY KHI COMPONENT ĐƯỢC GẮN VÀO GIAO DIỆN
+// 6. RUN WHEN COMPONENT IS MOUNTED TO UI
 onMounted(fetchProductDetail)
 </script>

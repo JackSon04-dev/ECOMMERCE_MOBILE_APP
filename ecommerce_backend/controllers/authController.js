@@ -10,22 +10,22 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 export const register = asyncHandler(async (req, res) => {
   const { username, email, password, address, phoneNumber, role } = req.body
 
-  // Kiểm tra các trường bắt buộc
+  // Check required fields
   if (!username || !email || !password) {
     throw new ApiError(400, 'Thiếu các trường bắt buộc')
   }
 
-  // Kiểm tra email đã tồn tại (Phòng thủ sớm)
+  // Check if email already exists (Early defense)
   const existingEmail = await User.findOne({ email })
   if (existingEmail) {
     throw new ApiError(400, 'Email đã tồn tại')
   }
 
-  // Mã hóa mật khẩu
+  // Encrypt password
   const salt = await bcrypt.genSalt(10)
   const hashedPassword = await bcrypt.hash(password, salt)
 
-  // Tạo người dùng mới
+  // Create new user
   const user = new User({
     username,
     email,
@@ -35,10 +35,10 @@ export const register = asyncHandler(async (req, res) => {
     role: role || 'user'
   })
 
-  // Lưu người dùng vào database
+  // Save user to database
   await user.save()
 
-  // Trả về phản hồi thành công
+  // Return success response
   res.status(201).json({ msg: 'Đăng ký thành công' })
 })
 
@@ -46,47 +46,47 @@ export const register = asyncHandler(async (req, res) => {
 export const login = asyncHandler(async (req, res) => {
   const { email, password, deviceName } = req.body
 
-  // Kiểm tra người dùng tồn tại
+  // Check if user exists
   const user = await User.findOne({ email })
   if (!user) {
     throw new ApiError(400, 'Sai email')
   }
 
-  // Kiểm tra mật khẩu
+  // Check password
   const isMatch = await bcrypt.compare(password, user.password)
   if (!isMatch) {
     throw new ApiError(400, 'Sai mật khẩu')
   }
 
-  // Kiểm tra xem tài khoản có bị khóa không
+  // Check if account is locked
   if (!user.isActive) {
     throw new ApiError(403, 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên!')
   }
 
-  // Tạo Access Token (Ngắn hạn - 3 phút để test)
+  // Create Access Token (Short-lived - 3 mins for test)
   const accessToken = jwt.sign(
     { id: user.id, email: user.email, role: user.role },
     process.env.JWT_SECRET,
     { expiresIn: '3m' }
   )
 
-  // Tạo Refresh Token (Dài hạn - 7 ngày)
+  // Create Refresh Token (Long-lived - 7 days)
   const refreshToken = jwt.sign(
     { id: user.id },
     process.env.JWT_REFRESH_SECRET,
     { expiresIn: '7d' }
   )
 
-  // Đẩy Token mới và tên thiết bị vào mảng refreshTokens
+  // Push new Token and device name to refreshTokens array
   user.refreshTokens.push({
     token: refreshToken,
     device: deviceName || 'Unknown Device'
   })
 
-  // Lưu lại vào MongoDB
+  // Save back to MongoDB
   await user.save()
 
-  // Loại bỏ password và refreshTokens khỏi thông tin user trả về
+  // Remove password and refreshTokens from returned user info
   const userInfo = {
     id: user._id,
     username: user.username,
@@ -112,7 +112,7 @@ export const logout = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Không tìm thấy Token để đăng xuất')
   }
 
-  // Tìm user có chứa token này và dùng $pull để xóa nó khỏi mảng
+  // Find user containing this token and use $pull to remove it from array
   const user = await User.findOneAndUpdate(
     { 'refreshTokens.token': token },
     { $pull: { refreshTokens: { token: token } } },
@@ -141,11 +141,11 @@ export const refreshToken = asyncHandler(async (req, res) => {
     throw new ApiError(403, 'Refresh Token không hợp lệ')
   }
 
-  // Xác thực chữ ký của Refresh Token
+  // Verify Refresh Token signature
   try {
     jwt.verify(token, process.env.JWT_REFRESH_SECRET)
     
-    // Tạo Access Token mới
+    // Create new Access Token
     const newAccessToken = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
@@ -246,7 +246,7 @@ export const googleLogin = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Thiếu Google ID Token')
   }
 
-  // Xác thực ID Token với Google
+  // Verify ID Token with Google
   let payload
   try {
     const ticket = await googleClient.verifyIdToken({

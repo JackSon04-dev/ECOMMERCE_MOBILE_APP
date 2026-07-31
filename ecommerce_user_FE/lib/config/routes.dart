@@ -1,4 +1,4 @@
-/// 🛣️ Routes - Định nghĩa tất cả các route trong ứng dụng
+/// 🛣️ Routes - Define all routes in the application
 class AppRoutes {
   // Auth routes
   static const String login = '/login';

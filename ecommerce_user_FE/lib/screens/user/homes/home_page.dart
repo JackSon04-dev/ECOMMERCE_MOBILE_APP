@@ -12,7 +12,7 @@ import '../../../widgets/add_to_cart_bottom_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/product_provider.dart';
 
-/// 🏠 Home Page - Trang chủ
+/// 🏠 Home Page
 class HomePage extends ConsumerStatefulWidget {
   final void Function({String? tag})? onNavigateToProducts;
 
@@ -26,8 +26,8 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   // Flash Sale countdown timer
   Timer? _flashSaleTimer;
-  // 20 phút = 1200 giây (từ 2:45:30 về 2:25:30)
-  static const int _flashSaleDuration = 20 * 60; // 1200 giây
+  // 20 minutes = 1200 seconds (from 2:45:30 to 2:25:30)
+  static const int _flashSaleDuration = 20 * 60; // 1200 seconds
   int _flashSaleRemainingSeconds = _flashSaleDuration;
 
   // Demo banners
@@ -65,7 +65,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Future<void> _onRefresh() async {
-    // Refresh cả 2 provider
+    // Refresh both providers
     ref.invalidate(productsProvider);
     ref.invalidate(featuredProductsProvider);
   }
@@ -167,7 +167,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   void _goToProductDetail(Product product) {
-    // Chỉ truyền productId để force ProductDetailPage gọi API
+    // Only pass productId to force ProductDetailPage to call API
     Navigator.pushNamed(context, AppRoutes.productDetail, arguments: product.id);
   }
 
@@ -179,7 +179,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
   }
 
-  /// Chuyển sang tab Products (giữ bottom nav bar)
+  /// Switch to Products tab (keep bottom nav bar)
   void _goToProducts() {
     if (widget.onNavigateToProducts != null) {
       widget.onNavigateToProducts!();

@@ -25,7 +25,7 @@ class ZalopayPaymentPage extends StatefulWidget {
 
 class _ZalopayPaymentPageState extends State<ZalopayPaymentPage> with WidgetsBindingObserver {
   bool _isChecking = false;
-  bool? _paymentResult; // null = chưa kiểm tra, true = thành công, false = thất bại
+  bool? _paymentResult; // null = unchecked, true = success, false = failed
   Timer? _timer;
   bool _hasOpenedBrowser = false;
 
@@ -33,7 +33,7 @@ class _ZalopayPaymentPageState extends State<ZalopayPaymentPage> with WidgetsBin
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Tự động mở App Zalo/ZaloPay (thông qua orderUrl) khi vừa bật trang
+    // Auto open Zalo/ZaloPay App (via orderUrl) just upon opening page
     //_openPaymentUrl();
     _startPollingPaymentStatus();
   }
@@ -45,7 +45,7 @@ class _ZalopayPaymentPageState extends State<ZalopayPaymentPage> with WidgetsBin
     super.dispose();
   }
 
-  /// Khi user quay lại app từ trình duyệt / app Zalo → tự kiểm tra
+  /// When user returns to app from browser / Zalo app -> auto check
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && _hasOpenedBrowser && _paymentResult == null) {
@@ -54,7 +54,7 @@ class _ZalopayPaymentPageState extends State<ZalopayPaymentPage> with WidgetsBin
   }
 
   void _startPollingPaymentStatus() {
-    // Chạy định kỳ sau mỗi 5 giây
+    // Run periodically every 5 seconds
     _timer = Timer.periodic(const Duration(seconds: 5), (timer) async {
       await _checkPaymentStatus(isAuto: true);
     });
@@ -78,7 +78,7 @@ class _ZalopayPaymentPageState extends State<ZalopayPaymentPage> with WidgetsBin
     }
   }
 
-  /// Kiểm tra trạng thái thanh toán từ backend
+  /// Check payment status from backend
   Future<void> _checkPaymentStatus({bool isAuto = false}) async {
     if (_isChecking || _paymentResult == true) return;
     
@@ -194,7 +194,7 @@ class _ZalopayPaymentPageState extends State<ZalopayPaymentPage> with WidgetsBin
             ),
             const SizedBox(height: 24),
             
-            // Vẽ QR Code cho link ZaloPay
+            // Draw QR Code for ZaloPay link
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(

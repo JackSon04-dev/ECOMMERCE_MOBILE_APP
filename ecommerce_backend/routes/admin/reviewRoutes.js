@@ -6,18 +6,18 @@ const router = express.Router()
 
 router.use(verifyToken, restrictToRoles(['ADMIN']))
 
-// Quản lý reviews:
+// Manage reviews:
 
-// Lấy tất cả reviews
+// Get all reviews
 router.get('/', reviewController.getAllReviews)
 
-// Lấy review theo ID
+// Get review by ID
 router.get('/:id', reviewController.getReviewById)
 
-// Cập nhật trạng thái review (active/inactive)
+// Update review status (active/inactive)
 router.put('/status/:id', reviewController.updateReviewStatus)
 
-// Lấy thống kê reviews
+// Get review statistics
 router.get('/stats/overview', reviewController.getReviewStats)
 
 export default router

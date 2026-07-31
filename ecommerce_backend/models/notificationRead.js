@@ -15,7 +15,7 @@ const notificationReadSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
-  // Exact-Date TTL: Bằng với thời gian hết hạn của thông báo gốc
+  // Exact-Date TTL: Equal to the expiration time of the original notification
   expireAt: {
     type: Date,
     required: true
@@ -27,7 +27,7 @@ const notificationReadSchema = new mongoose.Schema({
 // Compound index to ensure uniqueness and fast lookup
 notificationReadSchema.index({ userId: 1, notificationId: 1 }, { unique: true })
 
-// Cài đặt TTL Index (Xóa cùng lúc với thông báo gốc)
+// Set TTL Index (Delete at the same time as the original notification)
 notificationReadSchema.index({ expireAt: 1 }, { expireAfterSeconds: 0 })
 
 const NotificationRead = mongoose.model('NotificationRead', notificationReadSchema)

@@ -1,4 +1,4 @@
-/// 📦 Product Model - Mô hình dữ liệu sản phẩm theo cấu trúc database
+/// 📦 Product Model - Product data model according to database structure
 import '../utils/date_helper.dart';
 
 class SizeVariant {
@@ -14,7 +14,7 @@ class SizeVariant {
 
   factory SizeVariant.fromJson(Map<String, dynamic> json) {
     return SizeVariant(
-      id: json['id'] ?? '',
+      id: json['id'] ?? json['_id'] ?? '',
       size: json['size'] ?? '',
       stock: json['stock'] ?? 0,
     );
@@ -44,7 +44,7 @@ class ColorVariant {
 
   factory ColorVariant.fromJson(Map<String, dynamic> json) {
     return ColorVariant(
-      id: json['id'] ?? '',
+      id: json['id'] ?? json['_id'] ?? '',
       color: json['color'] ?? '',
       images: List<String>.from(json['images'] ?? []),
       sizes: (json['sizes'] as List?)
@@ -114,7 +114,7 @@ class Product {
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
-      id: json['id'] ?? '',
+      id: json['id'] ?? json['_id'] ?? '',
       name: json['name'] ?? '',
       shortDescription: json['shortDescription'] ?? '',
       description: json['description'] ?? '',
@@ -153,7 +153,7 @@ class Product {
     };
   }
 
-  /// Lấy tổng tồn kho
+  /// Get total inventory
   int get totalStock {
     int total = 0;
     for (var variant in colorVariants) {
@@ -162,12 +162,12 @@ class Product {
     return total;
   }
 
-  /// Lấy danh sách màu
+  /// Get color list
   List<String> get availableColors {
     return colorVariants.map((e) => e.color).toList();
   }
 
-  /// Lấy danh sách size theo màu
+  /// Get size list by color
   List<String> getAvailableSizes(String color) {
     final variant = colorVariants.firstWhere(
       (e) => e.color == color,
@@ -176,7 +176,7 @@ class Product {
     return variant.sizes.map((e) => e.size).toList();
   }
 
-  /// Lấy tồn kho theo màu và size
+  /// Get inventory by color and size
   int getStockByVariant(String color, String size) {
     final colorVar = colorVariants.firstWhere(
       (e) => e.color == color,
@@ -189,7 +189,7 @@ class Product {
     return sizeVar.stock;
   }
 
-  /// Lấy hình ảnh theo màu
+  /// Get image by color
   List<String> getImagesByColor(String color) {
     final variant = colorVariants.firstWhere(
       (e) => e.color == color,
@@ -198,15 +198,15 @@ class Product {
     return variant.images;
   }
 
-  /// Getter cho % giảm giá (dùng trong ProductCard)
+  /// Getter for discount % (used in ProductCard)
   int get discountPercent => discount;
 
-  /// Getter cho giá gốc (dùng trong ProductCard)
+  /// Getter for original price (used in ProductCard)
   double get originalPrice => price;
 
-  /// Getter cho rating (dùng trong ProductCard)
+  /// Getter for rating (used in ProductCard)
   double get rating => averageRating;
 
-  /// Getter cho số lượng reviews (dùng trong ProductCard)
+  /// Getter for reviews count (used in ProductCard)
   int get reviews => reviewCount;
 }

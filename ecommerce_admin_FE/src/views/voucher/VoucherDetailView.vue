@@ -24,7 +24,7 @@
     </div>
 
     <div class="space-y-6">
-      <!-- Tên Voucher -->
+      <!-- Voucher Name -->
       <div>
         <label class="block text-sm font-bold mb-2">Tên Voucher *</label>
         <input
@@ -34,7 +34,7 @@
         />
       </div>
 
-      <!-- Mã Voucher -->
+      <!-- Voucher Code -->
       <div>
         <label class="block text-sm font-bold mb-2"
           >Mã Voucher (6 ký tự) *</label
@@ -51,7 +51,7 @@
       </div>
 
       <div class="grid grid-cols-2 gap-4">
-        <!-- Đơn hàng tối thiểu -->
+        <!-- Minimum Order -->
         <div>
           <label class="block text-sm font-bold mb-2"
             >Đơn tối thiểu (đ) *</label
@@ -64,7 +64,7 @@
           />
         </div>
 
-        <!-- Số tiền giảm -->
+        <!-- Discount Amount -->
         <div>
           <label class="block text-sm font-bold mb-2">Số tiền giảm (đ) *</label>
           <input
@@ -76,7 +76,7 @@
         </div>
       </div>
 
-      <!-- Số lượt dùng tối đa -->
+      <!-- Maximum Uses -->
       <div>
         <label class="block text-sm font-bold mb-2"
           >Số lượt dùng tối đa *</label
@@ -89,7 +89,7 @@
         />
       </div>
 
-      <!-- Trạng thái -->
+      <!-- Status -->
       <div class="bg-gray-50 p-4 rounded-xl border">
         <h4 class="font-bold text-gray-700 mb-3">Trạng thái Voucher</h4>
         <div
@@ -165,7 +165,7 @@ import axios from 'axios'
 const router = useRouter()
 const route = useRoute()
 
-// Lấy voucherId từ route params
+// Get voucherId from route params
 const props = defineProps(['id'])
 const voucherId = computed(() => props.id || route.params.id)
 
@@ -185,10 +185,10 @@ const formatDate = (dateString) => {
   })
 }
 
-// Lấy chi tiết voucher từ API
+// Get voucher details from API
 const fetchVoucherDetail = async () => {
   try {
-    // Lấy tất cả vouchers và tìm theo ID (vì API không có endpoint get by ID)
+    // Get all vouchers and find by ID (because API has no get by ID endpoint)
     const res = await axios.get('/api/admin/vouchers')
     const found = res.data.data.find((v) => v._id === voucherId.value)
     if (found) {
@@ -203,18 +203,18 @@ const fetchVoucherDetail = async () => {
   }
 }
 
-// Cập nhật voucher
+// Update voucher
 const handleUpdate = async () => {
   if (!voucher.value) return
 
   // 1. VALIDATION
 
-  // 1.1. Kiểm tra tên voucher
+  // 1.1. Check voucher name
   if (!voucher.value.voucherName || voucher.value.voucherName.trim() === '') {
     return alert('Tên voucher không được để trống!')
   }
 
-  // 1.2. Kiểm tra mã voucher (phải có đúng 6 ký tự)
+  // 1.2. Check voucher code (must be exactly 6 characters)
   if (
     !voucher.value.voucherCode ||
     voucher.value.voucherCode.trim().length !== 6
@@ -222,7 +222,7 @@ const handleUpdate = async () => {
     return alert('Mã voucher phải có đúng 6 ký tự!')
   }
 
-  // 1.3. Kiểm tra đơn tối thiểu
+  // 1.3. Check minimum order
   if (
     voucher.value.minOrderAmount === null ||
     voucher.value.minOrderAmount < 0
@@ -230,7 +230,7 @@ const handleUpdate = async () => {
     return alert('Số tiền đơn hàng tối thiểu không hợp lệ!')
   }
 
-  // 1.4. Kiểm tra số tiền giảm
+  // 1.4. Check discount amount
   if (
     voucher.value.discountAmount === null ||
     voucher.value.discountAmount <= 0
@@ -238,17 +238,17 @@ const handleUpdate = async () => {
     return alert('Số tiền giảm phải lớn hơn 0!')
   }
 
-  // 1.5. Kiểm tra giảm giá không quá 50% đơn tối thiểu
+  // 1.5. Check discount not exceeding 50% of minimum order
   if (voucher.value.discountAmount > voucher.value.minOrderAmount * 0.5) {
     return alert('Số tiền giảm không được vượt quá 50% đơn tối thiểu!')
   }
 
-  // 1.6. Kiểm tra số lượt dùng
+  // 1.6. Check number of uses
   if (voucher.value.usageLimit === null || voucher.value.usageLimit < 1) {
     return alert('Số lượt dùng tối đa phải ít nhất là 1!')
   }
 
-  // 2. GỬI API
+  // 2. SEND API
   try {
     const res = await axios.put(`/api/admin/vouchers/${voucher.value.id}`, {
       voucherName: voucher.value.voucherName.trim(),
@@ -261,7 +261,7 @@ const handleUpdate = async () => {
 
     if (res.data.success) {
       alert('Cập nhật voucher thành công!')
-      fetchVoucherDetail() // Tải lại dữ liệu mới nhất
+      fetchVoucherDetail() // Reload latest data
     }
   } catch (error) {
     console.error('Lỗi cập nhật voucher:', error)

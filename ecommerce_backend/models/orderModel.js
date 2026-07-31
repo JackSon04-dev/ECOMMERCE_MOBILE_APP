@@ -2,8 +2,8 @@ import mongoose from 'mongoose'
 
 const orderSchema = new mongoose.Schema(
   {
-    // 1. THÔNG TIN NGƯỜI MUA (User Info - Snapshot)
-    // Lưu trực tiếp thông tin user để giữ nguyên dữ liệu lúc đặt hàng
+    // 1. BUYER INFO (User Info - Snapshot)
+    // Save user info directly to preserve data at the time of ordering
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -15,8 +15,8 @@ const orderSchema = new mongoose.Schema(
       phoneNumber: { type: String, required: true }
     },
 
-    // 2. DANH SÁCH SẢN PHẨM ĐÃ MUA (Order Items)
-    // Lưu chi tiết từng biến thể của từng sản phẩm
+    // 2. PURCHASED PRODUCTS LIST (Order Items)
+    // Save details of each variant for every product
     orderItems: [
       {
         product: {
@@ -24,35 +24,35 @@ const orderSchema = new mongoose.Schema(
           ref: 'Product',
           required: true
         },
-        // Snapshot thông tin sản phẩm lúc mua
+        // Snapshot product info at the time of purchase
         productName: { type: String, required: true },
-        finalPrice: { type: Number, required: true }, // Giá sau giảm
+        finalPrice: { type: Number, required: true }, // Price after discount
 
-        // Chi tiết biến thể được chọn
+        // Selected variant details
         variant: {
           color: { type: String, required: true },
-          colorImage: { type: String }, // Ảnh của màu đã chọn
+          colorImage: { type: String }, // Image of the selected color
           size: { type: String, required: true },
           quantity: { type: Number, required: true, min: 1 }
         },
 
-        // Tổng tiền của item này = finalPrice * quantity
+        // Total price of this item = finalPrice * quantity
         itemTotal: { type: Number, required: true }
       }
     ],
 
-    // 3. PHƯƠNG THỨC THANH TOÁN
+    // 3. PAYMENT METHOD
     paymentMethod: {
       type: String,
       required: true,
       enum: ['COD', 'VNPay', 'ZaloPay', 'PayOS']
     },
 
-    // 4. CHI PHÍ & TỔNG TIỀN
-    itemsPrice: { type: Number, required: true }, // Tổng tiền sản phẩm (trước voucher & ship)
-    shippingPrice: { type: Number, required: true, default: 20000 }, // Phí vận chuyển
+    // 4. COSTS & TOTAL AMOUNT
+    itemsPrice: { type: Number, required: true }, // Total product price (before voucher & shipping)
+    shippingPrice: { type: Number, required: true, default: 20000 }, // Shipping fee
 
-    // 5. VOUCHER (nếu có)
+    // 5. VOUCHER (if any)
     voucher: {
       voucherId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -60,14 +60,14 @@ const orderSchema = new mongoose.Schema(
       },
       voucherCode: { type: String },
       voucherName: { type: String },
-      discountAmount: { type: Number, default: 0 } // Số tiền được giảm từ voucher
+      discountAmount: { type: Number, default: 0 } // Amount discounted by voucher
     },
 
-    // 6. TỔNG TIỀN THANH TOÁN
+    // 6. TOTAL PAYMENT AMOUNT
     // totalPrice = itemsPrice + shippingPrice - voucher.discountAmount
     totalPrice: { type: Number, required: true },
 
-    // 7. TRẠNG THÁI ĐƠN HÀNG
+    // 7. ORDER STATUS
     status: {
       type: String,
       enum: [
@@ -81,7 +81,7 @@ const orderSchema = new mongoose.Schema(
       default: 'Chờ xác nhận'
     },
 
-    // 8. TRẠNG THÁI THANH TOÁN
+    // 8. PAYMENT STATUS
     isPaid: { type: Boolean, default: false },
 
     // 9. VNPAY / ZALOPAY / PAYOS INFO
@@ -90,42 +90,42 @@ const orderSchema = new mongoose.Schema(
     zalopayTransId: { type: String },
     paidAt: { type: Date },
 
-    // 10. TRẠNG THÁI ĐÁNH GIÁ ĐƠN HÀNG
-    // true khi toàn bộ sản phẩm trong đơn đã được đánh giá
+    // 10. ORDER REVIEW STATUS
+    // true when all products in the order have been reviewed
     isRated: { type: Boolean, default: false },
 
-    // 11. LỊCH SỬ TRẠNG THÁI ĐƠN HÀNG (Event Timeline)
-    // Ghi lại từng mốc thời gian thay đổi status để hiển thị Timeline trên App
+    // 11. ORDER STATUS HISTORY (Event Timeline)
+    // Record each status change timestamp to display Timeline on App
     statusHistory: [
       {
         status: { type: String, required: true },
         updatedAt: { type: Date, default: Date.now },
-        note: { type: String, default: '' } // Ghi chú tùy chọn (VD: "Đã giao cho shipper")
+        note: { type: String, default: '' } // Optional note (E.g.: "Handed over to shipper")
       }
     ]
   },
   { timestamps: true }
 )
 
-// Middleware tính toán tổng tiền trước khi lưu
+// Middleware to calculate total amount before saving
 orderSchema.pre('save', function (next) {
-  // Tính itemsPrice từ orderItems
+  // Calculate itemsPrice from orderItems
   this.itemsPrice = this.orderItems.reduce(
     (sum, item) => sum + item.itemTotal,
     0
   )
 
-  // Tính totalPrice
+  // Calculate totalPrice
   const voucherDiscount = this.voucher?.discountAmount || 0
   this.totalPrice = this.itemsPrice + this.shippingPrice - voucherDiscount
 
-  // Đảm bảo totalPrice không âm
+  // Ensure totalPrice is not negative
   if (this.totalPrice < 0) this.totalPrice = 0
 
   next()
 })
 
-// Thiết lập chỉ mục (Indexes) để tối ưu hiệu năng truy vấn
+// Setup indexes to optimize query performance
 orderSchema.index({ user: 1 })
 orderSchema.index({ payosOrderCode: 1 })
 

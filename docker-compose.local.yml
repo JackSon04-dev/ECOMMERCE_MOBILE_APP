@@ -72,16 +72,8 @@ services:
     networks:
       - ecommerce_local_net
 
-  # 5. Chatbot AI FastAPI
-  chatbot:
-    build:
-      context: ./chatbotAI
-      dockerfile: Dockerfile
-    container_name: local_chatbot
-    networks:
-      - ecommerce_local_net
 
-  # 6. Static Admin Web Panel Vue 3 (Chạy cổng 80, ghi đè cấu hình local Nginx)
+  # 5. Static Admin Web Panel Vue 3 (Chạy cổng 80, ghi đè cấu hình local Nginx)
   admin_web:
     build:
       context: ./ecommerce_admin_FE

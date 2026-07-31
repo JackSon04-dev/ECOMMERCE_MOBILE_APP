@@ -7,7 +7,7 @@ import { ApiError } from '../middleware/errorMiddleware.js';
 import redisClient from '../config/redis.js';
 import { publishToQueue } from './rabbitmqService.js';
 
-// Helper lưu cache trạng thái thanh toán siêu tốc cho Polling API
+// Helper to cache super fast payment status for Polling API
 const _cachePaymentSuccess = async (order) => {
   try {
     const paymentCache = {
@@ -22,7 +22,7 @@ const _cachePaymentSuccess = async (order) => {
   }
 };
 
-// Helper đọc dữ liệu đơn hàng từ Redis (hoặc DB nếu Cache Miss)
+// Helper to read order data from Redis (or DB on Cache Miss)
 const _getOrderForPaymentCreation = async (orderId, providerName) => {
   let order = null;
 
@@ -46,14 +46,14 @@ const _getOrderForPaymentCreation = async (orderId, providerName) => {
   return order;
 };
 
-// Khởi tạo PayOS
+// Initialize PayOS
 export const payos = new PayOS({
   clientId: process.env.PAYOS_CLIENT_ID || 'dummy_client_id',
   apiKey: process.env.PAYOS_API_KEY || 'dummy_api_key',
   checksumKey: process.env.PAYOS_CHECKSUM_KEY || 'dummy_checksum_key'
 });
 
-// Khởi tạo VNPay instance với config từ .env
+// Initialize VNPay instance with config from .env
 const vnpay = new VNPay({
   tmnCode: process.env.VNP_TMN_CODE || '0RJMK76I',
   secureSecret: process.env.VNP_HASH_SECRET || 'NX3KIUY74VU8GBKIIHTG08XEZJWX1DBP',
@@ -64,7 +64,7 @@ const vnpay = new VNPay({
   loggerFn: ignoreLogger
 });
 
-// Cấu hình ZaloPay Sandbox
+// Configure ZaloPay Sandbox
 const configZaloPay = {
   app_id: process.env.ZALOPAY_APP_ID || "2553",
   key1: process.env.ZALOPAY_KEY1 || "PcY4iZIKFCIdgZvA6ueMcMHHUbRLYjPL",
@@ -74,34 +74,34 @@ const configZaloPay = {
 };
 
 /**
- * 💳 Tạo URL thanh toán VNPay
- * @param {string} orderId - ID của đơn hàng cần thanh toán
- * @param {string} userId - ID của người dùng thực hiện (để kiểm tra quyền)
- * @param {string|null} reqBaseUrl - Base URL của request (để ghép link return dự phòng)
- * @returns {Promise<object>} Đối tượng chứa { paymentUrl, txnRef }
+ * 💳 Create VNPay payment URL
+ * @param {string} orderId - ID of order to pay
+ * @param {string} userId - ID of user executing (to check permission)
+ * @param {string|null} reqBaseUrl - Base URL of request (to construct fallback return link)
+ * @returns {Promise<object>} Object containing { paymentUrl, txnRef }
  */
 export const createPaymentUrl = async (orderId, userId, reqBaseUrl) => {
   console.log(`💳 [VNPay] Creating payment URL for order: ${orderId}`);
 
-  // 1. Tìm đơn hàng (Thử đọc từ Redis trước)
+  // 1. Find order (Try reading from Redis first)
   const order = await _getOrderForPaymentCreation(orderId, 'VNPay');
 
-  // 2. Kiểm tra quyền
+  // 2. Check permission
   if (order.user.toString() !== userId) {
     throw new ApiError(403, 'Bạn không có quyền thanh toán đơn hàng này');
   }
 
-  // 3. Kiểm tra đã thanh toán chưa
+  // 3. Check if already paid
   if (order.isPaid) {
     throw new ApiError(400, 'Đơn hàng đã được thanh toán');
   }
 
-  // 4. Kiểm tra phương thức thanh toán
+  // 4. Check payment method
   if (order.paymentMethod !== 'VNPay') {
     throw new ApiError(400, 'Đơn hàng không sử dụng phương thức thanh toán VNPay');
   }
 
-  // 5. Tạo VNPay payment URL
+  // 5. Create VNPay payment URL
   let baseUrl;
   if (process.env.VNP_RETURN_URL) {
     baseUrl = null;
@@ -113,7 +113,7 @@ export const createPaymentUrl = async (orderId, userId, reqBaseUrl) => {
 
   const returnUrl = process.env.VNP_RETURN_URL || `${baseUrl}/api/payment/vnpay_return`;
 
-  // Tạo mã giao dịch unique từ orderId (lấy 8 ký tự cuối + timestamp)
+  // Create unique transaction code from orderId (take last 8 chars + timestamp)
   const txnRef = `${orderId.slice(-8)}_${Date.now()}`;
 
   const paymentUrl = vnpay.buildPaymentUrl({
@@ -126,7 +126,7 @@ export const createPaymentUrl = async (orderId, userId, reqBaseUrl) => {
     vnp_Locale: VnpLocale.VN
   });
 
-  // Lưu txnRef vào order để mapping sau này
+  // Save txnRef to order for future mapping
   await Order.updateOne({ _id: orderId }, { $set: { vnpayTxnRef: txnRef } });
 
   console.log(`✅ [VNPay] Payment URL created successfully: ${txnRef}`);
@@ -139,9 +139,9 @@ export const createPaymentUrl = async (orderId, userId, reqBaseUrl) => {
 
 
 /**
- * 🔄 VNPay Return URL - Xử lý verify kết quả từ VNPay redirect
- * @param {object} query - Đối tượng query params do VNPay redirect về
- * @returns {Promise<object>} Kết quả kiểm tra { success, order }
+ * 🔄 VNPay Return URL - Process verify result from VNPay redirect
+ * @param {object} query - Query params object redirected from VNPay
+ * @returns {Promise<object>} Check result { success, order }
  */
 export const processVnpayReturn = async (query) => {
   console.log('🌏 [VNPay Return] Verifying redirect query params...');
@@ -172,13 +172,13 @@ export const processVnpayReturn = async (query) => {
 };
 
 /**
- * 🔍 Kiểm tra trạng thái thanh toán của đơn hàng (có polling ZaloPay / PayOS)
- * @param {string} orderId - ID của đơn hàng cần check trạng thái
- * @param {string} userId - ID của người dùng gửi yêu cầu
- * @returns {Promise<object>} Đối tượng chứa trạng thái thanh toán { isPaid, paymentMethod, paidAt }
+ * 🔍 Check order payment status (with ZaloPay / PayOS polling)
+ * @param {string} orderId - ID of order to check status
+ * @param {string} userId - ID of user sending request
+ * @returns {Promise<object>} Object containing payment status { isPaid, paymentMethod, paidAt }
  */
 export const checkPaymentStatus = async (orderId, userId) => {
-  // 0. Ưu tiên kiểm tra cache từ Redis do worker webhook đẩy lên
+  // 0. Prioritize checking cache from Redis pushed by webhook worker
   try {
     const cachedPayment = await redisClient.get(`payment_status:${orderId}`);
     if (cachedPayment) {
@@ -206,7 +206,7 @@ export const checkPaymentStatus = async (orderId, userId) => {
     throw new ApiError(403, 'Bạn không có quyền xem đơn hàng này');
   }
 
-  // ─── Nếu là VNPay và chưa thanh toán → chủ động hỏi VNPay ───
+  // ─── If VNPay and unpaid → actively query VNPay ───
   if (!order.isPaid && order.paymentMethod === 'VNPay' && order.vnpayTxnRef) {
     try {
       console.log(`🔍 [VNPay] Querying order status for txnRef: ${order.vnpayTxnRef}`);
@@ -246,7 +246,7 @@ export const checkPaymentStatus = async (orderId, userId) => {
     }
   }
 
-  // ─── Nếu là ZaloPay và chưa thanh toán → chủ động hỏi ZaloPay ───
+  // ─── If ZaloPay and unpaid → actively query ZaloPay ───
   if (!order.isPaid && order.paymentMethod === 'ZaloPay' && order.zalopayTransId) {
     try {
       console.log(`🔍 [ZaloPay] Querying order status for app_trans_id: ${order.zalopayTransId}`);
@@ -295,7 +295,7 @@ export const checkPaymentStatus = async (orderId, userId) => {
     }
   }
 
-  // ─── Nếu là PayOS và chưa thanh toán → chủ động hỏi PayOS ───
+  // ─── If PayOS and unpaid → actively query PayOS ───
   if (!order.isPaid && order.paymentMethod === 'PayOS' && order.payosOrderCode) {
     try {
       console.log(`🔍 [PayOS] Querying order status for orderCode: ${order.payosOrderCode}`);
@@ -330,15 +330,15 @@ export const checkPaymentStatus = async (orderId, userId) => {
 };
 
 /**
- * 💳 Tạo URL thanh toán ZaloPay
- * @param {string} orderId - ID của đơn hàng cần thanh toán
- * @param {string} userId - ID của người dùng thực hiện
- * @returns {Promise<object>} Đối tượng kết quả chứa { orderUrl, zpTransToken }
+ * 💳 Create ZaloPay payment URL
+ * @param {string} orderId - ID of order to pay
+ * @param {string} userId - ID of user executing
+ * @returns {Promise<object>} Result object containing { orderUrl, zpTransToken }
  */
 export const createZalopayPaymentUrl = async (orderId, userId) => {
   console.log(`💳 [ZaloPay] Creating payment URL for order: ${orderId}`);
 
-  // Tìm đơn hàng (Thử đọc từ Redis trước)
+  // Find order (Try reading from Redis first)
   const order = await _getOrderForPaymentCreation(orderId, 'ZaloPay');
 
   if (order.user.toString() !== userId) {
@@ -404,15 +404,15 @@ export const createZalopayPaymentUrl = async (orderId, userId) => {
 
 
 /**
- * 💳 Tạo URL/Mã QR thanh toán PayOS (VietQR)
- * @param {string} orderId - ID của đơn hàng cần thanh toán
- * @param {string} userId - ID của người dùng thực hiện
- * @returns {Promise<object>} Đối tượng kết quả chứa link checkoutUrl và thông tin chuyển khoản VietQR
+ * 💳 Create PayOS payment URL/QR Code (VietQR)
+ * @param {string} orderId - ID of order to pay
+ * @param {string} userId - ID of user executing
+ * @returns {Promise<object>} Result object containing checkoutUrl link and VietQR transfer info
  */
 export const createPayosPaymentUrl = async (orderId, userId) => {
   console.log(`💳 [PayOS] Creating payment link for order: ${orderId}`);
 
-  // Tìm đơn hàng (Thử đọc từ Redis trước)
+  // Find order (Try reading from Redis first)
   const order = await _getOrderForPaymentCreation(orderId, 'PayOS');
 
   if (order.user.toString() !== userId) {
@@ -427,7 +427,7 @@ export const createPayosPaymentUrl = async (orderId, userId) => {
     throw new ApiError(400, 'Đơn hàng không sử dụng phương thức PayOS');
   }
 
-  // PayOS orderCode là số nguyên dương <= 9007199254740991
+  // PayOS orderCode is a positive integer <= 9007199254740991
   const orderCode = Number(String(Date.now()).slice(-6) + Math.floor(Math.random() * 1000).toString().padStart(3, '0'));
 
   await Order.updateOne({ _id: orderId }, { $set: { payosOrderCode: orderCode.toString() } });
@@ -437,8 +437,8 @@ export const createPayosPaymentUrl = async (orderId, userId) => {
 
   const body = {
     orderCode: orderCode,
-    //amount: order.totalPrice, total price thật của order lấy từ database hoặc redis
-    amount: 2000, // Ép cứng 2000 VND để test cổng thanh toán PayOS
+    //amount: order.totalPrice, true total price of order from database or redis
+    amount: 2000, // Hardcode 2000 VND to test PayOS payment gateway
     description: `Thanh toan DH ${orderCode}`,
     returnUrl: returnUrl,
     cancelUrl: cancelUrl
@@ -454,8 +454,8 @@ export const createPayosPaymentUrl = async (orderId, userId) => {
     bin: paymentLinkData.bin,
     accountNumber: paymentLinkData.accountNumber,
     accountName: paymentLinkData.accountName,
-    //amount: paymentLinkData.amount, // Trả về số tiền thực tế từ cổng thanh toán PayOS
-    amount: order.totalPrice, // Trả về số tiền THẬT của đơn hàng để giao diện hiển thị đúng
+    //amount: paymentLinkData.amount, // Return actual amount from PayOS payment gateway
+    amount: order.totalPrice, // Return TRUE amount of order so UI displays correctly
     description: paymentLinkData.description,
     orderCode: paymentLinkData.orderCode
   };
@@ -463,17 +463,17 @@ export const createPayosPaymentUrl = async (orderId, userId) => {
 
 /**
  * 🔄 PayOS Return URL
- * CHÚ Ý: URL Return của PayOS không có chữ ký bảo mật (signature).
- * KHÔNG ĐƯỢC cập nhật Database ở đây vì user có thể dễ dàng fake tham số trên URL.
- * Chỉ dùng để render giao diện báo thành công/thất bại cho Web Browser.
- * Database sẽ được cập nhật an toàn qua Webhook (processPayosWebhookSuccess).
- * @param {object} query - Các tham số query string nhận từ redirect của PayOS
- * @returns {Promise<object>} Đối tượng chứa trạng thái { success } để Controller render HTML
+ * NOTE: PayOS Return URL has no security signature.
+ * MUST NOT update Database here because user can easily fake params on URL.
+ * Only use to render success/failure UI for Web Browser.
+ * Database will be safely updated via Webhook (processPayosWebhookSuccess).
+ * @param {object} query - Query string params received from PayOS redirect
+ * @returns {Promise<object>} Object containing status { success } for Controller to render HTML
  */
 export const processPayosReturn = async (query) => {
   const { status, cancel } = query;
 
-  // Chỉ check string để Controller biết đường render UI HTML
+  // Only check string so Controller knows to render HTML UI
   if (status === 'PAID' && cancel === 'false') {
     return { success: true };
   }
@@ -482,9 +482,9 @@ export const processPayosReturn = async (query) => {
 };
 
 /**
- * 📡 Xử lý cập nhật đơn hàng khi nhận được webhook PayOS thành công
- * @param {object} webhookData - Dữ liệu webhook đã verify từ PayOS
- * @param {string} note - Ghi chú lịch sử trạng thái
+ * 📡 Handle order update on successful PayOS webhook
+ * @param {object} webhookData - Verified webhook data from PayOS
+ * @param {string} note - Status history note
  */
 export const processPayosWebhookSuccess = async (webhookData, note) => {
   const orderCode = webhookData.orderCode.toString();
@@ -494,7 +494,7 @@ export const processPayosWebhookSuccess = async (webhookData, note) => {
     throw new ApiError(404, `Không tìm thấy đơn hàng với payosOrderCode: ${orderCode}`);
   }
 
-  // Kiểm tra số tiền thực nhận từ PayOS (Đang cố định 2000đ để test tiền thật)
+  // Check actual amount received from PayOS (Fixed 2000 VND to test real money)
   if (webhookData.amount !== 2000) {
     throw new ApiError(400, `Số tiền thanh toán không khớp: Nhận=${webhookData.amount}, Yêu cầu=2000`);
   }
@@ -521,20 +521,20 @@ export const processPayosWebhookSuccess = async (webhookData, note) => {
 };
 
 /**
- * 📡 Xử lý PayOS Webhook (Verify và đẩy vào RabbitMQ)
- * @param {object} webhookBody - Payload gửi sang từ server PayOS
+ * 📡 Handle PayOS Webhook (Verify and push to RabbitMQ)
+ * @param {object} webhookBody - Payload sent from PayOS server
  */
 export const handlePayosWebhookRequest = async (webhookBody) => {
-  // 1. Xác thực chữ ký số bằng thư viện của PayOS
+  // 1. Verify digital signature using PayOS library
   const webhookData = await payos.webhooks.verify(webhookBody);
 
   if (webhookData.code === "00" || webhookData.success === true || webhookData.amount > 0) {
     try {
-      // 2. Đẩy dữ liệu đã xác thực vào RabbitMQ
+      // 2. Push verified data to RabbitMQ
       await publishToQueue('payos_payment_queue', webhookData);
     } catch (queueError) {
       console.warn('⚠️ [PayOS Webhook] Không thể đẩy vào RabbitMQ, chuyển sang xử lý đồng bộ fallback:', queueError.message);
-      // Fallback: Xử lý đồng bộ ngay lập tức để không bỏ lỡ giao dịch
+      // Fallback: Process synchronously immediately to avoid missing transaction
       await processPayosWebhookSuccess(
         webhookData,
         `Thanh toán PayOS thành công (xác nhận qua Webhook đồng bộ fallback)`

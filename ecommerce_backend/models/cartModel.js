@@ -19,7 +19,7 @@ const cartItemSchema = new mongoose.Schema({
     required: true,
     min: 1
   }
-}, { _id: false }); // Không cần _id riêng cho từng item nhỏ để tối ưu
+}, { _id: false }); // No need for a separate _id for each small item to optimize
 
 const cartSchema = new mongoose.Schema({
   user: {
@@ -34,7 +34,7 @@ const cartSchema = new mongoose.Schema({
   }
 });
 
-// Thiết lập chỉ mục (Indexes) để tối ưu hiệu năng truy vấn
+// Setup indexes to optimize query performance
 cartSchema.index({ user: 1 }, { unique: true })
 
 const Cart = mongoose.model('Cart', cartSchema);

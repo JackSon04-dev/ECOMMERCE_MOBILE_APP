@@ -10,7 +10,10 @@ class ProductService {
     String? sortBy,
     String? search,
     String? lastId,
+    int? lastSoldCount,
+    double? lastFinalPrice,
     int? limit,
+    int? page,
   }) async {
     try {
       String endpoint = '/products';
@@ -28,8 +31,17 @@ class ProductService {
       if (lastId != null && lastId.isNotEmpty) {
         queryParams.add('lastId=$lastId');
       }
+      if (lastSoldCount != null) {
+        queryParams.add('lastSoldCount=$lastSoldCount');
+      }
+      if (lastFinalPrice != null) {
+        queryParams.add('lastFinalPrice=$lastFinalPrice');
+      }
       if (limit != null) {
         queryParams.add('limit=$limit');
+      }
+      if (page != null) {
+        queryParams.add('page=$page');
       }
 
       if (queryParams.isNotEmpty) {
@@ -87,6 +99,23 @@ class ProductService {
     } catch (e) {
       // ---> LOG: FAILURE
       print('❌ [Product] Error: $e');
+      return [];
+    }
+  }
+
+  /// Get autocomplete suggestions
+  static Future<List<Map<String, dynamic>>> getAutocompleteSuggestions(String keyword) async {
+    try {
+      final response = await ApiService.get('/products/autocomplete?q=$keyword', withAuth: false);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> suggestionsJson = data['suggestions'] ?? [];
+        return suggestionsJson.map((json) => json as Map<String, dynamic>).toList();
+      }
+      return [];
+    } catch (e) {
+      print('❌ [Product] Error autocomplete: $e');
       return [];
     }
   }

@@ -1,9 +1,9 @@
 import * as notificationService from '../../services/notificationService.js';
 import { asyncHandler } from '../../middleware/errorMiddleware.js';
 
-// @desc    Lấy thông báo của user (thông báo chung + thông báo riêng)
+// @desc    Get user's notifications (general + private)
 // @route   GET /api/notifications
-// @access  User (cần đăng nhập)
+// @access  User (requires login)
 export const getNotifications = asyncHandler(async (req, res) => {
   const userId = req.user?.id || null;
   const { type } = req.query;
@@ -17,9 +17,9 @@ export const getNotifications = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Xóa (ORDER) hoặc Đánh dấu đã đọc (PROMOTION/SYSTEM) thông báo
+// @desc    Delete (ORDER) or Mark as read (PROMOTION/SYSTEM) notification
 // @route   DELETE /api/notifications/:id
-// @access  User (cần đăng nhập)
+// @access  User (requires login)
 export const deleteNotification = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const userId = req.user?.id;
@@ -28,9 +28,9 @@ export const deleteNotification = asyncHandler(async (req, res) => {
   res.status(200).json(result);
 });
 
-// @desc    Đếm số thông báo chưa đọc (thông báo riêng + thông báo chung chưa đọc)
+// @desc    Count unread notifications (private + unread general)
 // @route   GET /api/notifications/unread-count
-// @access  User (cần đăng nhập)
+// @access  User (requires login)
 export const getUnreadCount = asyncHandler(async (req, res) => {
   const userId = req.user?.id;
   const unreadCount = await notificationService.getUnreadCount(userId);

@@ -2,9 +2,9 @@ import Review from '../../models/reviewModel.js'
 import { asyncHandler, ApiError } from '../../middleware/errorMiddleware.js'
 import mongoose from 'mongoose'
 
-// 1. Lấy tất cả reviews
+// 1. Get all reviews
 export const getAllReviews = asyncHandler(async (req, res) => {
-  // Lấy reviews và populate thông tin user, product
+  // Get reviews and populate user, product info
   const reviews = await Review.find()
     .populate('user', 'username email')
     .populate('product', 'name thumbnail')
@@ -17,7 +17,7 @@ export const getAllReviews = asyncHandler(async (req, res) => {
   })
 });
 
-// 2. Lấy review theo ID
+// 2. Get review by ID
 export const getReviewById = asyncHandler(async (req, res) => {
   const { id } = req.params
   const review = await Review.findById(id)
@@ -31,7 +31,7 @@ export const getReviewById = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: review })
 });
 
-// 3. Cập nhật trạng thái review (active/inactive)
+// 3. Update review status (active/inactive)
 export const updateReviewStatus = asyncHandler(async (req, res) => {
   const { id } = req.params
   const { isActive } = req.body
@@ -59,13 +59,13 @@ export const updateReviewStatus = asyncHandler(async (req, res) => {
   })
 });
 
-// 5. Lấy thống kê reviews
+// 5. Get reviews statistics
 export const getReviewStats = asyncHandler(async (req, res) => {
   const { productId } = req.query
 
   const filter = productId ? { product: new mongoose.Types.ObjectId(productId) } : {}
 
-  // Tổng số reviews
+  // Total reviews
   const totalReviews = await Review.countDocuments(filter)
 
   // Reviews theo rating
@@ -82,7 +82,7 @@ export const getReviewStats = asyncHandler(async (req, res) => {
     { $sort: { _id: -1 } }
   ])
 
-  // Trung bình rating
+  // Average rating
   const avgRating = await Review.aggregate([
     ...(productId
       ? [{ $match: { product: new mongoose.Types.ObjectId(productId) } }]

@@ -1,8 +1,8 @@
 import mongoose from 'mongoose'
 
 const notificationSchema = new mongoose.Schema({
-  // Nếu userId = null -> Thông báo chung (GENERAL/PROMO) cho tất cả user
-  // Nếu userId có giá trị -> Thông báo riêng cho user đó (ORDER)
+  // If userId = null -> General notification (GENERAL/PROMO) for all users
+  // If userId has value -> Private notification for that user (ORDER)
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -21,7 +21,7 @@ const notificationSchema = new mongoose.Schema({
     enum: ['ORDER', 'PROMOTION', 'SYSTEM'],
     default: 'SYSTEM',
   },
-  // Lưu ID đối tượng liên quan (ví dụ: orderId cho thông báo đơn hàng)
+  // Save related object ID (e.g., orderId for order notifications)
   referenceId: {
     type: mongoose.Schema.Types.ObjectId,
     default: null
@@ -30,7 +30,7 @@ const notificationSchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  // Exact-Date TTL: Thời điểm tự động xóa (Mặc định 30 ngày)
+  // Exact-Date TTL: Auto-delete time (Default 30 days)
   expireAt: {
     type: Date,
     default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -39,10 +39,10 @@ const notificationSchema = new mongoose.Schema({
   timestamps: true,
 })
 
-// Index để query nhanh: lấy thông báo chung (userId=null) + thông báo riêng của user
+// Index for fast querying: get general notifications (userId=null) + user's private notifications
 notificationSchema.index({ userId: 1, createdAt: -1 })
 
-// Cài đặt TTL Index (Xóa chính xác tại mốc thời gian expireAt)
+// Set TTL Index (Delete exactly at expireAt timestamp)
 notificationSchema.index({ expireAt: 1 }, { expireAfterSeconds: 0 })
 
 const Notification = mongoose.model('Notification', notificationSchema)

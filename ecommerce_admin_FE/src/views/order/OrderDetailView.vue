@@ -520,7 +520,7 @@ const loading = ref(true)
 const updatingStatus = ref(false)
 const updatingPayment = ref(false)
 
-// Order statuses (excluding 'Đã hủy' - handled separately)
+// Order statuses (excluding 'Cancelled' - handled separately)
 const orderStatuses = [
   'Chờ xác nhận',
   'Đã xác nhận',

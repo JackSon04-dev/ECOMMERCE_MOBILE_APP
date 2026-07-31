@@ -42,10 +42,10 @@ const reviewSchema = new mongoose.Schema(
   { timestamps: true }
 )
 
-// Index để tăng hiệu suất truy vấn
+// Index to increase query performance
 reviewSchema.index({ product: 1, createdAt: -1 })
 
-// Đảm bảo một user chỉ review một product một lần trên mỗi đơn hàng
+// Ensure a user only reviews a product once per order
 reviewSchema.index({ user: 1, product: 1, order: 1 }, { unique: true })
 
 const Review = mongoose.model('Review', reviewSchema)

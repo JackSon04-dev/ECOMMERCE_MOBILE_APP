@@ -7,7 +7,7 @@ import '../../../utils/auth_guard.dart';
 import '../../../widgets/product_card_widget.dart';
 import '../../../widgets/common_widgets.dart';
 
-/// 🛒 Cart Page - Trang giỏ hàng
+/// 🛒 Cart Page
 class CartPage extends ConsumerStatefulWidget {
   const CartPage({super.key});
 
@@ -17,13 +17,13 @@ class CartPage extends ConsumerStatefulWidget {
 
 class _CartPageState extends ConsumerState<CartPage> {
   Future<void> _goToCheckout() async {
-    // Kiểm tra đăng nhập trước khi thanh toán
+    // Check login before checkout
     final isAuth = await AuthGuard.requireAuth(context, ref);
     if (!isAuth || !mounted) return;
 
     final cartState = ref.read(cartProvider);
 
-    // Kiểm tra có item hết hàng trong selected items
+    // Check if any out of stock items in selected items
     final selectedOutOfStock = cartState.selectedItems.any((item) => item.isOutOfStock || item.stock == 0);
     
     if (selectedOutOfStock) {
@@ -46,15 +46,15 @@ class _CartPageState extends ConsumerState<CartPage> {
       return;
     }
 
-    // 1. Tạm dừng đồng bộ ngầm
+    // 1. Pause background sync
     ref.read(cartProvider.notifier).pauseSyncForCheckout();
 
-    // 2. Chuyển trang và đợi kết quả quay về
+    // 2. Navigate and wait for returning result
     await Navigator.pushNamed(context, '/checkout', arguments: {
       'mode': 'cart', 
     });
 
-    // 3. Tiếp tục đồng bộ khi quay lại (hoặc sau khi mua xong)
+    // 3. Resume sync when returned (or after purchase finished)
     if (mounted) {
       ref.read(cartProvider.notifier).resumeSyncAfterCheckout();
     }
@@ -120,7 +120,7 @@ class _CartPageState extends ConsumerState<CartPage> {
             )
           : Column(
               children: [
-                // ── Danh sách sản phẩm với checkbox ──────────────────────────────
+                // ── Product list with checkbox ──────────────────────────────
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
@@ -176,7 +176,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                           ),
                           child: Stack(
                             children: [
-                              // Card sản phẩm
+                              // Product card
                               Opacity(
                                 opacity: isOutOfStock ? 0.65 : 1.0,
                                 child: ProductCardHorizontal(
@@ -211,7 +211,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                                 ),
                               ),
 
-                              // Badge "Hết hàng" đè lên
+                              // "Out of stock" Badge overlay
                               if (isOutOfStock)
                                 Positioned(
                                   top: 0, left: 0, right: 0, bottom: 0,

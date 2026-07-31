@@ -3,22 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../config/routes.dart';
 
-/// 🔐 Auth Guard - Kiểm tra đăng nhập trước khi thực hiện hành động
-/// Trả về true nếu đã đăng nhập, false nếu chưa (đã hiển thị dialog/navigate)
+/// 🔐 Auth Guard - Check login before taking action
+/// Return true if logged in, false if not (showed dialog/navigate)
 class AuthGuard {
-  /// Kiểm tra đăng nhập. Nếu chưa → mở LoginScreen dạng modal
-  /// Trả về true nếu đã đăng nhập (hoặc vừa đăng nhập xong)
+  /// Check login. If not -> open LoginScreen in modal mode
+  /// Return true if logged in (or just logged in)
   static Future<bool> requireAuth(BuildContext context, WidgetRef ref) async {
     final auth = ref.read(authProvider);
 
     if (auth.isLoggedIn) return true;
 
-    // Chưa đăng nhập → mở LoginScreen, chờ kết quả
+    // Not logged in -> open LoginScreen, wait for result
     final result = await Navigator.pushNamed(context, AppRoutes.login);
 
-    // Sau khi quay lại, check lại trạng thái
+    // After returning, check status again
     if (result == true) {
-      // Login thành công (LoginScreen pop(true))
+      // Login successful (LoginScreen pop(true))
       return true;
     }
 
@@ -27,7 +27,7 @@ class AuthGuard {
   }
 
 
-  /// Hiển thị SnackBar yêu cầu đăng nhập
+  /// Show SnackBar requesting login
   static void showLoginRequired(BuildContext context, {String? message}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// 🔍 Custom App Bar với thanh tìm kiếm
+/// 🔍 Custom App Bar with search bar
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
   final bool showSearch;

@@ -37,7 +37,7 @@ class NotificationProvider extends ChangeNotifier {
     final index = _notifications.indexWhere((n) => n.id == id);
     if (index >= 0) {
       final notification = _notifications[index];
-      // Chỉ gọi API nếu chưa đọc (hoặc là ORDER - ORDER luôn gọi xóa)
+      // Only call API if unread (or is ORDER - ORDER always calls delete)
       if (!notification.isRead || notification.type == 'ORDER') {
         final success = await NotificationService.markAsRead(id);
         if (success) {
@@ -50,7 +50,7 @@ class NotificationProvider extends ChangeNotifier {
         }
       }
     } else {
-      // Gọi API khi click từ FCM push notification nằm ngoài danh sách cục bộ
+      // Call API when clicked from FCM push notification outside local list
       await NotificationService.markAsRead(id);
     }
   }
@@ -59,17 +59,17 @@ class NotificationProvider extends ChangeNotifier {
     final unreadNotifications = _notifications.where((n) => !n.isRead).toList();
     if (unreadNotifications.isEmpty) return;
 
-    // Nối tất cả ID chưa đọc bằng dấu phẩy
+    // Join all unread IDs with commas
     final idsString = unreadNotifications.map((n) => n.id).join(',');
 
-    // Gọi 1 API duy nhất cho hàng loạt ID
+    // Call a single API for batch IDs
     final success = await NotificationService.markAsRead(idsString);
 
     if (success) {
       _notifications = _notifications.map<NotificationModel?>((n) {
         if (n.isRead) return n;
-        if (n.type == 'ORDER') return null; // ORDER bị xóa
-        return n.copyWith(isRead: true); // SYSTEM/PROMOTION được đánh dấu đã đọc
+        if (n.type == 'ORDER') return null; // ORDER deleted
+        return n.copyWith(isRead: true); // SYSTEM/PROMOTION marked as read
       }).whereType<NotificationModel>().toList();
 
       notifyListeners();

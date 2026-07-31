@@ -8,11 +8,11 @@ import redisClient from '../config/redis.js';
 import { publishToQueue } from './rabbitmqService.js';
 
 /**
- * 🔄 Retry helper dành riêng cho MongoDB Transient Transaction Errors.
- * WriteConflict (code 112) xảy ra khi 2 transaction tranh chấp cùng document.
- * MongoDB khuyến nghị retry toàn bộ transaction thay vì throw ngững.
- * @param {Function} txnFn - Hàm async chứa logic transaction, nhận vào session
- * @param {number} maxRetries - Số lần retry tối đa (mặc định 3)
+ * 🔄 Retry helper exclusively for MongoDB Transient Transaction Errors.
+ * WriteConflict (code 112) occurs when 2 transactions contend for same document.
+ * MongoDB recommends retrying entire transaction instead of throwing error.
+ * @param {Function} txnFn - Async function containing transaction logic, receives session
+ * @param {number} maxRetries - Max retry attempts (default 3)
  */
 const withRetry = async (txnFn, maxRetries = 3) => {
   let attempt = 0;
@@ -43,13 +43,13 @@ const withRetry = async (txnFn, maxRetries = 3) => {
 };
 
 /**
- * 📋 Lấy đơn hàng của user với tính năng phân trang
- * @param {string} userId - ID của người dùng sở hữu các đơn hàng
- * @param {object} queryParams - Tham số phân trang và bộ lọc { status, page, limit }
- * @param {string} queryParams.status - Trạng thái đơn hàng cần lọc (hỗ trợ phân tách bằng dấu phẩy)
- * @param {number} queryParams.page - Số trang hiện tại
- * @param {number} queryParams.limit - Số lượng đơn hàng mỗi trang
- * @returns {Promise<object>} Đối tượng chứa danh sách đơn hàng và thông tin phân trang
+ * 📋 Get user's orders with pagination
+ * @param {string} userId - ID of the user who owns the orders
+ * @param {object} queryParams - Pagination and filter params { status, page, limit }
+ * @param {string} queryParams.status - Order status to filter (supports comma separation)
+ * @param {number} queryParams.page - Current page
+ * @param {number} queryParams.limit - Orders per page
+ * @returns {Promise<object>} Object containing order list and pagination info
  */
 export const getMyOrders = async (userId, { status, page = 1, limit = 10 }) => {
   // Build query
@@ -62,7 +62,7 @@ export const getMyOrders = async (userId, { status, page = 1, limit = 10 }) => {
     }
   }
 
-  // Phân trang
+  // Pagination
   const skip = (parseInt(page) - 1) * parseInt(limit)
   const limitNum = parseInt(limit)
 
@@ -71,7 +71,7 @@ export const getMyOrders = async (userId, { status, page = 1, limit = 10 }) => {
     .skip(skip)
     .limit(limitNum)
 
-  // Tổng số đơn hàng để frontend biết giới hạn
+  // Total orders so frontend knows the limit
   const total = await Order.countDocuments(query)
 
   return {
@@ -84,10 +84,10 @@ export const getMyOrders = async (userId, { status, page = 1, limit = 10 }) => {
 }
 
 /**
- * 📦 Lấy chi tiết đơn hàng theo ID
- * @param {string} orderId - ID của đơn hàng cần lấy chi tiết
- * @param {string} userId - ID của người dùng gửi yêu cầu (để kiểm tra quyền xem)
- * @returns {Promise<object>} Đối tượng đơn hàng
+ * 📦 Get order details by ID
+ * @param {string} orderId - ID of order to get details
+ * @param {string} userId - ID of user sending request (to check view permission)
+ * @returns {Promise<object>} Order object
  */
 export const getOrderById = async (orderId, userId) => {
   const order = await Order.findById(orderId)
@@ -104,17 +104,17 @@ export const getOrderById = async (orderId, userId) => {
 };
 
 /**
- * ✨ Khởi chạy tiến trình tạo đơn hàng & Caching vào Redis (dành cho Worker và Sync Fallback)
+ * ✨ Launch order creation process & Caching to Redis (for Worker and Sync Fallback)
  */
 export const processCreateOrder = async (userId, orderData, orderId) => {
   try {
     const result = await _executeCreateOrder(userId, orderData, orderId);
 
-    // Lưu trạng thái thành công và thông tin cache thanh toán vào Redis
+    // Save success status and payment cache info to Redis
     try {
       await redisClient.setEx(`order_status:${orderId}`, 600, JSON.stringify({ status: 'success' }));
 
-      // Caching dữ liệu đơn hàng nếu là thanh toán online để API tạo QR/Link không phải truy vấn DB
+      // Cache order data if online payment so QR/Link generation API doesn't have to query DB
       const onlinePaymentMethods = ['VNPay', 'ZaloPay', 'PayOS'];
       if (onlinePaymentMethods.includes(result.order.paymentMethod)) {
         const cacheData = {
@@ -135,7 +135,7 @@ export const processCreateOrder = async (userId, orderData, orderId) => {
   } catch (error) {
     const isApiError = error.statusCode !== undefined;
     if (isApiError) {
-      // Lỗi nghiệp vụ (hết kho, sai voucher): Ghi status thất bại để Client biết
+      // Business error (out of stock, invalid voucher): Log fail status so Client knows
       try {
         await redisClient.setEx(
           `order_status:${orderId}`,
@@ -146,19 +146,19 @@ export const processCreateOrder = async (userId, orderData, orderId) => {
         console.error('⚠️ [OrderService] Lỗi ghi nhận thất bại vào Redis:', redisError.message);
       }
     }
-    // Quăng lỗi ra để nơi gọi (Worker) biết cách xử lý ack/nack
+    // Throw error so caller (Worker) knows how to handle ack/nack
     throw error;
   }
 };
 
 /**
- * ✨ Khởi tạo đơn hàng (Đẩy vào Queue hoặc xử lý đồng bộ nếu lỗi)
+ * ✨ Initialize order (Push to Queue or process synchronously if error)
  */
 export const enqueueOrderCreation = async (userId, orderData) => {
-  // Sinh trước orderId
+  // Pre-generate orderId
   const orderId = new mongoose.Types.ObjectId();
 
-  // Lưu trạng thái processing vào Redis (hạn 10 phút)
+  // Save processing status to Redis (10 minutes TTL)
   try {
     await redisClient.setEx(`order_status:${orderId}`, 600, JSON.stringify({ status: 'processing', error: null }));
   } catch (redisError) {
@@ -166,7 +166,7 @@ export const enqueueOrderCreation = async (userId, orderData) => {
   }
 
   try {
-    // Đẩy vào RabbitMQ
+    // Push to RabbitMQ
     await publishToQueue('order_creation_queue', { userId, orderData, orderId });
     return {
       success: true,
@@ -175,7 +175,7 @@ export const enqueueOrderCreation = async (userId, orderData) => {
       message: 'Đơn hàng của bạn đang được xử lý...'
     };
   } catch (queueError) {
-    // Fallback: Xử lý đồng bộ trực tiếp nếu RabbitMQ sập
+    // Fallback: Process synchronously directly if RabbitMQ is down
     console.warn('⚠️ [enqueueOrderCreation] RabbitMQ lỗi, tự động chuyển sang xử lý đồng bộ:', queueError.message);
     const result = await processCreateOrder(userId, orderData, orderId);
     
@@ -189,14 +189,14 @@ export const enqueueOrderCreation = async (userId, orderData) => {
 };
 
 /**
- * ✨ Tạo đơn hàng mới (Áp dụng Transaction & Atomic Updates + Retry)
- * @param {string} userId - ID của người dùng mua hàng
- * @param {object} orderData - Dữ liệu đơn hàng gửi lên { orderItems, paymentMethod, userInfo, voucherCode }
- * @param {array} orderData.orderItems - Danh sách sản phẩm mua
- * @param {string} orderData.paymentMethod - Phương thức thanh toán (COD, VNPay...)
- * @param {object} orderData.userInfo - Thông tin người nhận
- * @param {string} orderData.voucherCode - Mã giảm giá áp dụng
- * @returns {Promise<object>} Kết quả tạo đơn hàng gồm thông tin chi tiết và chi phí
+ * ✨ Create new order (Applies Transaction & Atomic Updates + Retry)
+ * @param {string} userId - ID of the buyer
+ * @param {object} orderData - Order data sent { orderItems, paymentMethod, userInfo, voucherCode }
+ * @param {array} orderData.orderItems - Purchased items list
+ * @param {string} orderData.paymentMethod - Payment method (COD, VNPay...)
+ * @param {object} orderData.userInfo - Receiver information
+ * @param {string} orderData.voucherCode - Applied voucher code
+ * @returns {Promise<object>} Order creation result containing details and costs
  */
 const _executeCreateOrder = async (userId, { orderItems, paymentMethod, userInfo, voucherCode }, preAllocatedId) => {
   console.log('\n📦 ========== BẮT ĐẦU TẠO ĐƠN HÀNG (SERVICE) ==========')
@@ -219,14 +219,14 @@ const _executeCreateOrder = async (userId, { orderItems, paymentMethod, userInfo
     throw new ApiError(404, 'Không tìm thấy người dùng')
   }
 
-  // KHỞI CHẠY TRANSACTION VỚI RETRY
+  // LAUNCH TRANSACTION WITH RETRY
   return withRetry(async (session) => {
     const processedOrderItems = []
     let itemsPrice = 0
 
-    // 3. Process order items và Atomic Update stock
+    // 3. Process order items and Atomic Update stock
     for (const item of orderItems) {
-      // productId khớp với field Flutter gửi lên và Joi schema validate
+      // productId matches field sent by Flutter and validated by Joi schema
       const { productId, color, size, quantity } = item
 
       if (!productId || !color || !size || !quantity) {
@@ -235,31 +235,31 @@ const _executeCreateOrder = async (userId, { orderItems, paymentMethod, userInfo
 
       console.log(`📦 Đang kiểm tra & trừ kho: [${productId}] ${color} - ${size} (Số lượng: ${quantity})`)
 
-      // ATOMIC UPDATE: Trừ kho ngay lập tức. Điều kiện kho phải >= quantity.
+      // ATOMIC UPDATE: Deduct inventory immediately. Condition inventory must be >= quantity.
       const updatedProduct = await Product.findOneAndUpdate(
         {
           _id: productId,
           isActive: true,
           'colorVariants.color': color,
           'colorVariants.sizes.size': size,
-          'colorVariants.sizes.stock': { $gte: quantity } // Chốt chặn Race Condition
+          'colorVariants.sizes.stock': { $gte: quantity } // Race Condition safeguard
         },
         {
           $inc: { 'colorVariants.$[colorIndex].sizes.$[sizeIndex].stock': -quantity }
         },
         {
           session,
-          new: true, // Trả về product sau khi đã update
+          new: true, // Return product after updated
           arrayFilters: [{ 'colorIndex.color': color }, { 'sizeIndex.size': size }]
         }
       );
 
       if (!updatedProduct) {
-        // Lỗi này xảy ra khi hết kho (không thỏa mãn $gte: quantity) hoặc gử sai thông tin size/color
+        // This error occurs when out of stock (fails $gte: quantity) or sent wrong size/color info
         throw new ApiError(400, `Sản phẩm ${productId} (${color} - ${size}) không tồn tại, ngưng bán hoặc không đủ số lượng kho!`);
       }
 
-      // Tìm lại thông tin variant chính xác từ document mới
+      // Find exact variant info again from new document
       const colorVariant = updatedProduct.colorVariants.find(v => v.color === color);
       const sizeItem = colorVariant.sizes.find(s => s.size === size);
 
@@ -281,7 +281,7 @@ const _executeCreateOrder = async (userId, { orderItems, paymentMethod, userInfo
       itemsPrice += itemTotal
     }
 
-    // 4. Process voucher bằng Atomic Update (nếu có)
+    // 4. Process voucher using Atomic Update (if any)
     let voucherData = { discountAmount: 0 }
 
     if (voucherCode) {
@@ -301,7 +301,7 @@ const _executeCreateOrder = async (userId, { orderItems, paymentMethod, userInfo
         throw new ApiError(400, 'Mã voucher không hợp lệ, đã hết hạn hoặc hết lượt sử dụng');
       }
 
-      // Check min order amount, nếu lỗi thì Throw Error -> Transaction Rollback -> Lượt Voucher tự phục hồi
+      // Check min order amount, if error Throw Error -> Transaction Rollback -> Voucher usage auto recovers
       if (itemsPrice < voucher.minOrderAmount) {
         throw new ApiError(400, `Đơn hàng tối thiểu ${voucher.minOrderAmount.toLocaleString()}đ để áp dụng voucher này`);
       }
@@ -353,10 +353,10 @@ const _executeCreateOrder = async (userId, { orderItems, paymentMethod, userInfo
 
 
 /**
- * ✅ Xác nhận đã nhận hàng
- * @param {string} orderId - ID của đơn hàng cần xác nhận
- * @param {string} userId - ID của người dùng thực hiện (để check quyền)
- * @returns {Promise<object>} Đơn hàng đã được xác nhận thành công
+ * ✅ Confirm order received
+ * @param {string} orderId - ID of order to confirm
+ * @param {string} userId - ID of user executing (to check permission)
+ * @returns {Promise<object>} Order successfully confirmed
  */
 export const processConfirmReceived = async (orderId, userId) => {
   const order = await Order.findById(orderId)
@@ -393,10 +393,10 @@ export const processConfirmReceived = async (orderId, userId) => {
 }
 
 /**
- * ❌ Hủy đơn hàng (Hoàn kho bằng Transaction & Atomic + Retry)
- * @param {string} orderId - ID của đơn hàng cần hủy
- * @param {string} userId - ID của người dùng thực hiện (để check quyền)
- * @returns {Promise<object>} Đơn hàng đã được hủy thành công
+ * ❌ Cancel order (Restock via Transaction & Atomic + Retry)
+ * @param {string} orderId - ID of order to cancel
+ * @param {string} userId - ID of user executing (to check permission)
+ * @returns {Promise<object>} Order successfully cancelled
  */
 export const processCancelOrder = async (orderId, userId) => {
   const order = await Order.findById(orderId)
@@ -405,7 +405,7 @@ export const processCancelOrder = async (orderId, userId) => {
     throw new ApiError(404, 'Không tìm thấy đơn hàng');
   }
 
-  // Nếu userId là 'SYSTEM', đây là lệnh từ Cron Job/Worker, bỏ qua check quyền
+  // If userId is 'SYSTEM', this is a command from Cron Job/Worker, skip permission check
   if (order.user.toString() !== userId && userId !== 'SYSTEM') {
     throw new ApiError(403, 'Bạn không có quyền hủy đơn hàng này')
   }
@@ -416,7 +416,7 @@ export const processCancelOrder = async (orderId, userId) => {
   }
 
   return withRetry(async (session) => {
-    // Phải lấy lại thông tin đơn hàng bên trong session để đảm bảo tính nhất quán dữ liệu
+    // Must retrieve order info inside session to ensure data consistency
     const sessionOrder = await Order.findById(orderId).session(session);
     if (!sessionOrder) {
       throw new ApiError(404, 'Không tìm thấy đơn hàng');
@@ -426,7 +426,7 @@ export const processCancelOrder = async (orderId, userId) => {
       throw new ApiError(400, `Không thể hủy đơn hàng ở trạng thái "${sessionOrder.status}"`);
     }
 
-    // Hoàn trả tồn kho bằng Atomic Updates
+    // Refund inventory via Atomic Updates
     for (const item of sessionOrder.orderItems) {
       await Product.findOneAndUpdate(
         {
@@ -444,7 +444,7 @@ export const processCancelOrder = async (orderId, userId) => {
       );
     }
 
-    // Hoàn trả lượt sử dụng Voucher (Nếu có)
+    // Refund Voucher usage (If any)
     if (sessionOrder.voucher && sessionOrder.voucher.voucherId) {
       await Voucher.findByIdAndUpdate(
         sessionOrder.voucher.voucherId,
@@ -459,20 +459,20 @@ export const processCancelOrder = async (orderId, userId) => {
       note: 'Người dùng yêu cầu hủy đơn hàng',
       updatedAt: new Date()
     });
-    await sessionOrder.save({ session }); // Lưu trạng thái Hủy trong transaction
+    await sessionOrder.save({ session }); // Save Cancel status inside transaction
 
     return sessionOrder;
   });
 }
 
 /**
- * 🔍 Lấy trạng thái xử lý đơn hàng (Đọc từ Redis Cache / Fallback DB)
- * @param {string} orderId - ID đơn hàng
- * @param {string} userId - ID của người dùng gọi API
- * @returns {Promise<object>} Đối tượng chứa trạng thái { status, message, order }
+ * 🔍 Get order processing status (Read from Redis Cache / Fallback DB)
+ * @param {string} orderId - Order ID
+ * @param {string} userId - ID of user calling API
+ * @returns {Promise<object>} Object containing status { status, message, order }
  */
 export const getOrderStatus = async (orderId, userId) => {
-  // 1. Kiểm tra trạng thái trong Redis do worker đẩy lên
+  // 1. Check status in Redis pushed by worker
   try {
     const cachedStatus = await redisClient.get(`order_status:${orderId}`);
     if (cachedStatus) {
@@ -489,13 +489,13 @@ export const getOrderStatus = async (orderId, userId) => {
     console.error('❌ [getOrderStatus] Lỗi đọc Redis:', redisError.message);
   }
 
-  // 2. Fallback: Nếu không tìm thấy key trong Redis, truy vấn trực tiếp MongoDB
+  // 2. Fallback: If key not found in Redis, query MongoDB directly
   try {
-    // Không import getOrderById thì gọi hàm getOrderById trong file này luôn
+    // Don't import getOrderById, call getOrderById function in this file directly
     const order = await getOrderById(orderId, userId);
     return { status: 'success', order };
   } catch (dbError) {
-    // Nếu chưa có trong DB thì chứng tỏ queue chưa xử lý xong, trả về processing
+    // If not in DB yet, queue hasn't finished processing, return processing
     return { status: 'processing' };
   }
 };

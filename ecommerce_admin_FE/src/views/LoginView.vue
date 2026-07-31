@@ -116,7 +116,7 @@ const handleLogin = async () => {
       deviceName: 'Admin Dashboard Web'
     })
 
-    // Call API login từ server
+    // Call login API from server
     const response = await axios.post('/api/auth/login', {
       email: email.value,
       password: password.value,
@@ -128,14 +128,14 @@ const handleLogin = async () => {
     // Extract accessToken, refreshToken and user data from response
     const { accessToken, refreshToken, user } = response.data
 
-    // Kiểm tra dữ liệu trả về
+    // Check returned data
     if (!accessToken || !user) {
       console.error('❌ Thiếu dữ liệu:', { accessToken, refreshToken, user })
       errorMessage.value = 'Lỗi: Server không trả về đầy đủ thông tin đăng nhập'
       return
     }
 
-    // Kiểm tra quyền admin
+    // Check admin permission
     if (user.role !== 'admin') {
       console.error('❌ User không phải admin:', user.role)
       errorMessage.value = 'Tài khoản không có quyền truy cập'
@@ -153,9 +153,9 @@ const handleLogin = async () => {
   } catch (error) {
     console.error('❌ Lỗi đăng nhập:', error)
 
-    // Handle login error với thông tin chi tiết
+    // Handle login error with detailed info
     if (error.response) {
-      // Server đã phản hồi với status code lỗi (4xx, 5xx)
+      // Server responded with error status code (4xx, 5xx)
       const status = error.response.status
       const errorData = error.response.data
 
@@ -164,7 +164,7 @@ const handleLogin = async () => {
         data: errorData
       })
 
-      // Xử lý các loại lỗi cụ thể
+      // Handle specific error types
       switch (status) {
         case 400:
           errorMessage.value = errorData.msg || 'Email hoặc mật khẩu không đúng'
@@ -191,15 +191,15 @@ const handleLogin = async () => {
             `Lỗi ${status}: Đăng nhập thất bại`
       }
     } else if (error.request) {
-      // Request đã được gửi nhưng không nhận được response
+      // Request was sent but no response received
       console.error('📡 Không nhận được response từ server:', error.request)
       errorMessage.value =
-        '⚠️ Không thể kết nối đến server (http://localhost:5000). Vui lòng kiểm tra:\n' +
+        '⚠️ Không thể kết nối đến server (http://localhost:5000). Please check:\n' +
         '1. Server backend có đang chạy không?\n' +
         '2. Port 5000 có bị chặn không?\n' +
         '3. Kết nối mạng có ổn định không?'
     } else {
-      // Lỗi khác (setup request, timeout, etc.)
+      // Other errors (setup request, timeout, etc.)
       console.error('⚠️ Lỗi không xác định:', error.message)
       errorMessage.value = 'Lỗi: ' + error.message
     }

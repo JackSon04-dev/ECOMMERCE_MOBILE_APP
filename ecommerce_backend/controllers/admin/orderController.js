@@ -4,7 +4,7 @@ import Notification from '../../models/notification.js'
 import { sendPushNotification } from '../../services/fcmService.js'
 import { asyncHandler, ApiError } from '../../middleware/errorMiddleware.js'
 
-// Map trạng thái sang nội dung thông báo tiếng Việt
+// Map status to Vietnamese notification content
 const statusMessages = {
   'Đã xác nhận': 'Đơn hàng của bạn đã được xác nhận và đang chuẩn bị',
   'Đang giao': 'Đơn hàng của bạn đang được giao đến bạn',
@@ -13,7 +13,7 @@ const statusMessages = {
   'Đã hủy': 'Đơn hàng của bạn đã bị hủy'
 }
 
-// @desc    Lấy danh sách tất cả đơn hàng
+// @desc    Get list of all orders
 // @route   GET /api/admin/orders
 // @access  Admin
 export const getAllOrders = asyncHandler(async (req, res) => {
@@ -31,7 +31,7 @@ export const getAllOrders = asyncHandler(async (req, res) => {
   })
 });
 
-// @desc    Lấy chi tiết một đơn hàng
+// @desc    Get order details
 // @route   GET /api/admin/orders/:id
 // @access  Admin
 export const getOrderById = asyncHandler(async (req, res) => {
@@ -52,7 +52,7 @@ export const getOrderById = asyncHandler(async (req, res) => {
   })
 });
 
-// @desc    Cập nhật trạng thái đơn hàng
+// @desc    Update order status
 // @route   PUT /api/admin/orders/:id/status
 // @access  Admin
 export const updateOrderStatus = asyncHandler(async (req, res) => {
@@ -79,7 +79,7 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Không tìm thấy đơn hàng')
   }
 
-  // Nếu đơn hàng đã hủy hoặc thành công thì không được thay đổi
+  // If order is cancelled or successful, it cannot be changed
   if (order.status === 'Đã hủy') {
     throw new ApiError(400, 'Đơn hàng đã hủy, không thể thay đổi trạng thái')
   }
@@ -88,10 +88,10 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Đơn hàng đã thành công, không thể thay đổi trạng thái')
   }
 
-  // Luôn cho phép chuyển sang trạng thái "Đã hủy" từ bất kỳ trạng thái nào
+  // Always allow transitioning to "Cancelled" from any status
   if (status === 'Đã hủy') {
     order.status = status
-    // Ghi nhận mốc thời gian vào statusHistory
+    // Record timestamp in statusHistory
     order.statusHistory.push({
       status,
       note: note || 'Đơn hàng đã bị hủy'
@@ -120,21 +120,21 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
   const currentIndex = statusOrder.indexOf(order.status)
   const newIndex = statusOrder.indexOf(status)
 
-  // Chỉ cho phép chuyển sang trạng thái tiếp theo (newIndex = currentIndex + 1)
+  // Only allow transitioning to the next status (newIndex = currentIndex + 1)
   if (newIndex !== currentIndex + 1) {
     throw new ApiError(400, `Không thể chuyển từ "${order.status}" sang "${status}". Chỉ được chuyển sang trạng thái tiếp theo là "${statusOrder[currentIndex + 1]}" hoặc "Đã hủy"`)
   }
 
-  // Cập nhật trạng thái
+  // Update status
   order.status = status
 
-  // Ghi nhận mốc thời gian vào statusHistory
+  // Record timestamp in statusHistory
   order.statusHistory.push({
     status,
     note: note || ''
   })
 
-  // Nếu đơn hàng thành công và là COD -> đánh dấu đã thanh toán
+  // If order is successful and is COD -> mark as paid
   if (status === 'Thành công' && order.paymentMethod === 'COD') {
     order.isPaid = true
   }
@@ -152,8 +152,8 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
 });
 
 /**
- * Hàm nội bộ: Tạo Notification trong DB + Gửi FCM Push Notification
- * Chạy song song, không block response của Admin
+ * Internal function: Create Notification in DB + Send FCM Push Notification
+ * Runs concurrently, does not block Admin response
  */
 const _sendOrderNotification = async (order, status) => {
   try {
@@ -165,22 +165,22 @@ const _sendOrderNotification = async (order, status) => {
     const baseMessage = statusMessages[status] || `Đơn hàng của bạn đã chuyển sang: ${status}`
     const body = `Xin chào ${userName}! ${baseMessage.replace('Đơn hàng của bạn', `Đơn hàng #${orderCode}`)}`
 
-    // Xoá thông báo trạng thái trước đó của order này
-    // (Vì theo thiết kế, user đọc thông báo ORDER xong thì báo đó sẽ bị xoá hẳn khỏi DB. 
-    // Nên nếu còn tồn tại trong DB, tức là user chưa đọc -> Xoá đi để thay bằng trạng thái mới nhất)
+    // Delete previous status notification of this order
+    // (Because by design, after user reads an ORDER notification, it is completely removed from DB. 
+    // So if it still exists in DB, meaning user hasn't read it -> Delete it to replace with latest status)
     await Notification.deleteMany({
       userId: order.user,
       type: 'ORDER',
       referenceId: order._id
     })
 
-    // Lấy ảnh của sản phẩm đầu tiên để hiển thị trên thông báo (nếu có)
+    // Get the image of the first product to display on notification (if any)
     let imageUrl = null;
     if (order.orderItems && order.orderItems.length > 0) {
       imageUrl = order.orderItems[0].variant?.colorImage || order.orderItems[0].productImage;
     }
 
-    // 1. Tạo Notification mới trong DB (để User xem lại trong App)
+    // 1. Create new Notification in DB (for User to review in App)
     const notification = await Notification.create({
       userId: order.user,
       title,
@@ -190,31 +190,31 @@ const _sendOrderNotification = async (order, status) => {
       imageUrl: imageUrl
     })
 
-    // 2. Lấy FCM tokens của User để gửi Push Notification
+    // 2. Get User's FCM tokens to send Push Notification
     const user = await User.findById(order.user).select('fcmTokens').lean()
     if (!user || !user.fcmTokens || user.fcmTokens.length === 0) {
       console.log(`⚠️ User ${order.user} không có FCM token, bỏ qua push notification`)
       return
     }
 
-    // Trích xuất danh sách token string từ mảng fcmTokens
+    // Extract list of token strings from fcmTokens array
     const tokens = user.fcmTokens.map(t => t.token)
 
-    // 3. Gửi Push Notification qua FCM
+    // 3. Send Push Notification via FCM
     const result = await sendPushNotification(tokens, title, body, {
-      type: 'ORDER', // Trùng khớp với type Flutter đang kiểm tra
-      referenceId: orderId, // Trùng khớp với key Flutter lấy ra
+      type: 'ORDER', // Matches the type Flutter is checking
+      referenceId: orderId, // Matches the key Flutter retrieves
       status: status,
       notificationId: notification._id.toString()
     }, imageUrl)
 
   } catch (error) {
-    // Lỗi gửi thông báo không ảnh hưởng đến logic cập nhật đơn hàng
+    // Notification send error does not affect order update logic
     console.error('❌ Lỗi gửi thông báo đơn hàng:', error.message)
   }
 }
 
-// @desc    Cập nhật trạng thái thanh toán
+// @desc    Update payment status
 // @route   PUT /api/admin/orders/:id/payment
 // @access  Admin
 export const updatePaymentStatus = asyncHandler(async (req, res) => {
@@ -240,7 +240,7 @@ export const updatePaymentStatus = asyncHandler(async (req, res) => {
   })
 });
 
-// @desc    Thống kê đơn hàng
+// @desc    Order statistics
 // @route   GET /api/admin/orders/statistics
 // @access  Admin
 export const getOrderStatistics = asyncHandler(async (req, res) => {

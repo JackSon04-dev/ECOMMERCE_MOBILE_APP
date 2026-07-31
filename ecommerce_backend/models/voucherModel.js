@@ -33,7 +33,7 @@ const voucherSchema = new mongoose.Schema({
   }
 }, { timestamps: true })
 
-// Thiết lập chỉ mục (Indexes) để tối ưu hiệu năng truy vấn
+// Setup indexes to optimize query performance
 voucherSchema.index({ voucherCode: 1 }, { unique: true })
 
 const Voucher = mongoose.model('Voucher', voucherSchema)

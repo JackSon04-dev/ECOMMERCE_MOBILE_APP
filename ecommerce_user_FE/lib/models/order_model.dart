@@ -1,4 +1,4 @@
-/// 📦 Order Model - Mô hình dữ liệu đơn hàng theo cấu trúc database
+/// 📦 Order Model - Order data model according to database structure
 import '../utils/date_helper.dart';
 
 class OrderVariant {
@@ -194,10 +194,10 @@ class Order {
     required this.orderItems,
     required this.paymentMethod,
     required this.itemsPrice,
-    this.shippingPrice = 20000, // Default shipping price từ server
+    this.shippingPrice = 20000, // Default shipping price from server
     required this.voucher,
     required this.totalPrice,
-    this.status = statusPending, // Default status từ server
+    this.status = statusPending, // Default status from server
     this.isPaid = false,
     this.createdAt,
     this.updatedAt,
@@ -217,10 +217,10 @@ class Order {
           [],
       paymentMethod: json['paymentMethod'] ?? 'COD',
       itemsPrice: (json['itemsPrice'] ?? 0).toDouble(),
-      shippingPrice: (json['shippingPrice'] ?? 20000).toDouble(), // Default 20000 từ server
+      shippingPrice: (json['shippingPrice'] ?? 20000).toDouble(), // Default 20000 from server
       voucher: OrderVoucher.fromJson(json['voucher'] ?? {}),
       totalPrice: (json['totalPrice'] ?? 0).toDouble(),
-      status: json['status'] ?? statusPending, // Dùng constant
+      status: json['status'] ?? statusPending, // Use constant
       isPaid: json['isPaid'] == true || json['isPaid'] == 1,
       isRated: json['isRated'] == true || json['isRated'] == 1,
       createdAt: DateHelper.parseUtc(json['createdAt']?.toString()),
@@ -254,7 +254,7 @@ class Order {
     };
   }
 
-  // Các trạng thái đơn hàng
+  // Order statuses
   static const String statusPending = 'Chờ xác nhận';
   static const String statusConfirmed = 'Đã xác nhận';
   static const String statusShipping = 'Đang giao';
@@ -271,7 +271,7 @@ class Order {
         statusCancelled,
       ];
 
-  // Các phương thức thanh toán (enum từ server)
+  // Payment methods (enum from server)
   static const String paymentCOD = 'COD';
   static const String paymentBanking = 'Banking';
 
@@ -280,30 +280,30 @@ class Order {
         paymentBanking,
       ];
 
-  // Helper methods để tính toán giống server
-  /// Tính tổng tiền sản phẩm từ orderItems
+  // Helper methods to calculate like server
+  /// Calculate total product price from orderItems
   double calculateItemsPrice() {
     return orderItems.fold(0, (sum, item) => sum + item.itemTotal);
   }
 
-  /// Tính tổng tiền thanh toán
+  /// Calculate total payment amount
   /// totalPrice = itemsPrice + shippingPrice - voucher.discountAmount
   double calculateTotalPrice() {
     final total = itemsPrice + shippingPrice - voucher.discountAmount;
-    return total < 0 ? 0 : total; // Đảm bảo không âm
+    return total < 0 ? 0 : total; // Ensure not negative
   }
 
-  /// Kiểm tra xem order có thể hủy không
+  /// Check if order can be cancelled
   bool get canBeCancelled {
     return status == statusPending;
   }
 
-  /// Kiểm tra xem order đã hoàn thành chưa
+  /// Check if order is completed
   bool get isCompleted {
     return status == statusSuccess;
   }
 
-  /// Kiểm tra xem order đã bị hủy chưa
+  /// Check if order is cancelled
   bool get isCancelled {
     return status == statusCancelled;
   }

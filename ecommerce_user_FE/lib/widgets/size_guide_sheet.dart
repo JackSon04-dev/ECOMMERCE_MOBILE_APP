@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 // ═══════════════════════════════════════════════════════════════════
-// 📐 SizeGuideSheet — Bảng hướng dẫn size (chỉ xem, không chọn)
+// 📐 SizeGuideSheet — Size guide table (view only, non-selectable)
 //
-// Cách dùng:
+// Usage:
 //   SizeGuideSheet.show(context);
 //   SizeGuideSheet.show(context, initialCategory: SizeCategory.shoes);
 // ═══════════════════════════════════════════════════════════════════
@@ -91,7 +91,7 @@ class _SizeGuideSheetState extends State<SizeGuideSheet>
       child: SafeArea(
         top: false,
         child: Column(
-          mainAxisSize: MainAxisSize.min, // Đặt kích thước theo nội dung để không cần scroll
+          mainAxisSize: MainAxisSize.min, // Set size by content to avoid scrolling
           children: [
             _buildDragHandle(),
             _buildHeader(),
@@ -100,7 +100,7 @@ class _SizeGuideSheetState extends State<SizeGuideSheet>
             _buildSizeChips(),
             const SizedBox(height: 20),
             _buildMeasureTable(),
-            const SizedBox(height: 32), // Padding cuối trang
+            const SizedBox(height: 32), // Bottom padding
           ],
         ),
       ),
@@ -242,7 +242,7 @@ class _SizeGuideSheetState extends State<SizeGuideSheet>
                 color: Colors.black54),
           ),
           const SizedBox(height: 12),
-          // AnimatedSwitcher để slide khi đổi tab
+          // AnimatedSwitcher to slide when switching tabs
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 250),
             switchInCurve: Curves.easeOutCubic,
@@ -338,7 +338,7 @@ class _SizeGuideSheetState extends State<SizeGuideSheet>
       );
 }
 
-// ── Chip chỉ để xem ──────────────────────────────────────────────
+// ── Read-only chip ──────────────────────────────────────────────
 class _SizeChip extends StatelessWidget {
   final _SizeInfo info;
   const _SizeChip({required this.info});

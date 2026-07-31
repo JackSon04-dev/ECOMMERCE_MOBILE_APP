@@ -1,8 +1,8 @@
 import 'package:intl/intl.dart';
 
-/// 💵 Currency Helper - Tiện ích định dạng tiền tệ (VND) dùng chung cho toàn App
+/// 💵 Currency Helper - Currency formatting utility (VND) used across App
 class CurrencyHelper {
-  /// Định dạng một giá trị số thành chuỗi VND (ví dụ: 100.000 ₫)
+  /// Format a number value to VND string (e.g.: 100,000 ₫)
   static String format(num? amount, {String symbol = '₫', String locale = 'vi_VN', int decimalDigits = 0}) {
     if (amount == null) return '0$symbol';
     final formatter = NumberFormat.currency(
@@ -14,17 +14,17 @@ class CurrencyHelper {
   }
 }
 
-/// Extension cho phép chuyển đổi trực tiếp từ num (int, double) sang chuỗi VND
+/// Extension allowing direct conversion from num (int, double) to VND string
 extension VNDExtension on num {
-  /// Định dạng số hiện tại thành tiền VND (ví dụ: 100.000 ₫)
+  /// Format current number to VND currency (e.g.: 100,000 ₫)
   String toVND() {
     return CurrencyHelper.format(this);
   }
 }
 
-/// Extension hỗ trợ cho kiểu num nullable
+/// Extension supporting nullable num type
 extension NullableVNDExtension on num? {
-  /// Định dạng số hiện tại thành tiền VND (nếu null sẽ trả về 0₫)
+  /// Format current number to VND currency (returns 0₫ if null)
   String toVND() {
     return CurrencyHelper.format(this);
   }

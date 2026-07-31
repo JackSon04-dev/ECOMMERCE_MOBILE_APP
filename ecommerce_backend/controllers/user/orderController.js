@@ -1,7 +1,7 @@
 import * as orderService from '../../services/orderService.js';
 import { asyncHandler, ApiError } from '../../middleware/errorMiddleware.js';
 
-// 📋 Lấy đơn hàng của user với tính năng phân trang
+// 📋 Get user's orders with pagination
 export const getMyOrders = asyncHandler(async (req, res) => {
   const userId = req.user.id
   const data = await orderService.getMyOrders(userId, req.query)
@@ -12,7 +12,7 @@ export const getMyOrders = asyncHandler(async (req, res) => {
   })
 });
 
-// 📦 Lấy chi tiết đơn hàng theo ID
+// 📦 Get order details by ID
 export const getOrderById = asyncHandler(async (req, res) => {
   const { id } = req.params
   const userId = req.user.id
@@ -24,7 +24,7 @@ export const getOrderById = asyncHandler(async (req, res) => {
   })
 });
 
-// ✨ Tạo đơn hàng mới
+// ✨ Create new order
 export const createOrder = asyncHandler(async (req, res) => {
   const userId = req.user.id
   const orderData = req.body
@@ -39,7 +39,7 @@ export const createOrder = asyncHandler(async (req, res) => {
   });
 });
 
-// 🔍 Lấy trạng thái xử lý đơn hàng (Polling)
+// 🔍 Get order processing status (Polling)
 export const getOrderStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
@@ -52,7 +52,7 @@ export const getOrderStatus = asyncHandler(async (req, res) => {
   });
 });
 
-// ✅ Xác nhận đã nhận hàng → cập nhật status thành "Thành công"
+// ✅ Confirm received -> update status to "Successful"
 export const confirmReceived = asyncHandler(async (req, res) => {
   const { id } = req.params
   const userId = req.user.id
@@ -65,7 +65,7 @@ export const confirmReceived = asyncHandler(async (req, res) => {
   })
 });
 
-// ❌ Hủy đơn hàng
+// ❌ Cancel order
 export const cancelOrder = asyncHandler(async (req, res) => {
   const { id } = req.params
   const userId = req.user.id

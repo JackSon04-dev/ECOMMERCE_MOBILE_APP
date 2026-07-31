@@ -2,15 +2,15 @@ import Cart from '../models/cartModel.js';
 import { ApiError } from '../middleware/errorMiddleware.js';
 
 /**
- * 🛒 Lấy giỏ hàng của User và tự động check Stock (Tồn kho thực tế)
+ * 🛒 Get User's cart and automatically check Stock (Actual inventory)
  * @param {string} userId
  * @returns {Promise<object>}
  */
 export const getCart = async (userId) => {
-  // 1. Tìm giỏ hàng hiện tại + Kéo (Populate) data sản phẩm
+  // 1. Find current cart + Populate product data
   let cart = await Cart.findOne({ user: userId }).populate('items.product');
 
-  // Nếu chưa từng có giỏ hàng -> Trả về mảng rỗng theo đúng định dạng
+  // If no cart exists -> Return empty array in correct format
   if (!cart) {
     return {
       cartId: null,
@@ -20,15 +20,15 @@ export const getCart = async (userId) => {
     };
   }
 
-  let isModified = false; // Cờ kiểm tra xem có cần update xuống DB không
+  let isModified = false; // Flag to check if DB update is needed
   let totalItems = 0;
   const formattedItems = [];
 
-  // 2. Chạy vòng lặp kiểm tra Tồn kho
+  // 2. Run loop to check Inventory
   for (let i = cart.items.length - 1; i >= 0; i--) {
     let item = cart.items[i];
     
-    // 🧹 Nếu sản phẩm đã bị xóa khỏi database -> Tự động loại bỏ khỏi giỏ hàng
+    // 🧹 If product was deleted from database -> Automatically remove from cart
     if (!item.product) {
       cart.items.splice(i, 1);
       isModified = true;
@@ -37,7 +37,7 @@ export const getCart = async (userId) => {
 
     let currentStock = 0;
 
-    // Lấy tồn kho thực tế tương ứng với Color + Size khách chọn
+    // Get actual inventory matching customer's selected Color + Size
     const colorVariant = item.product.colorVariants.find(v => v.color === item.color);
     if (colorVariant) {
       const sizeVariant = colorVariant.sizes.find(s => s.size === item.size);
@@ -49,20 +49,20 @@ export const getCart = async (userId) => {
     let isOutOfStock = false;
     let finalQuantity = item.quantity;
 
-    // 💥 TH1: Hết hàng hoàn toàn
+    // 💥 CASE 1: Completely out of stock
     if (currentStock === 0) {
       isOutOfStock = true;
     } 
-    // ⚠️ TH2: Số lượng trong kho ÍT HƠN số lượng khách yêu cầu
+    // ⚠️ CASE 2: Quantity in stock is LESS THAN requested quantity
     else if (currentStock < item.quantity) {
-      finalQuantity = currentStock; // Tự động giảm xuống số lượng tối đa trong kho
-      item.quantity = currentStock; // Sửa trực tiếp Cart Doc để chuẩn bị save DB
+      finalQuantity = currentStock; // Auto reduce to maximum quantity in stock
+      item.quantity = currentStock; // Modify Cart Doc directly to prepare for DB save
       isModified = true;
     }
 
-    // Xây dựng Object cho từng Item trả về cho React/Flutter
-    formattedItems.unshift({ // Dùng unshift vì ta lặp ngược mảng
-      cartItemId: item._id, // Nếu cần định danh riêng biệt
+    // Build Object for each Item returned to React/Flutter
+    formattedItems.unshift({ // Use unshift because we iterate array in reverse
+      cartItemId: item._id, // If unique identifier is needed
       product: {
         id: item.product._id,
         name: item.product.name,
@@ -77,13 +77,13 @@ export const getCart = async (userId) => {
       isOutOfStock: isOutOfStock
     });
 
-    // Chỉ cộng vào tổng tiền/số lượng khi HÀNG VẪN CÒN
+    // Only add to total amount/quantity when ITEM IS IN STOCK
     if (!isOutOfStock) {
       totalItems += finalQuantity;
     }
   }
 
-  // 3. Nếu DB bị sửa lại do Stock giảm -> Lưu đè lại MongoDB
+  // 3. If DB was modified due to Stock reduction -> Overwrite MongoDB
   if (isModified) {
     await cart.save();
   }
@@ -98,15 +98,15 @@ export const getCart = async (userId) => {
 };
 
 /**
- * 🛒 Cập nhật Giỏ hàng (Hỗ trợ đồng bộ Sync mảng Items từ LocalStorage sau 15s hoặc 1 item lẻ)
- * @param {string} userId - ID của người dùng cần cập nhật giỏ hàng
- * @param {object} payload - Dữ liệu payload gửi lên từ client (chứa mảng items hoặc thông tin sản phẩm đơn lẻ)
- * @returns {Promise<boolean>} Trả về true nếu cập nhật thành công
+ * 🛒 Update Cart (Supports syncing Items array from LocalStorage after 15s or 1 single item)
+ * @param {string} userId - ID of the user whose cart needs updating
+ * @param {object} payload - Payload data sent from client (contains items array or single product info)
+ * @returns {Promise<boolean>} Returns true if update successful
  */
 export const updateCart = async (userId, payload) => {
   let itemsToUpdate = [];
 
-  // Hỗ trợ cả đồng bộ mảng hoặc cập nhật lẻ
+  // Supports both array sync or single update
   if (payload.items && Array.isArray(payload.items)) {
     itemsToUpdate = payload.items;
   } else if (payload.productId) {
@@ -115,13 +115,13 @@ export const updateCart = async (userId, payload) => {
     throw new ApiError(400, 'Dữ liệu không hợp lệ.');
   }
 
-  // 1. Tìm giỏ hàng hiện tại hoặc tạo mới
+  // 1. Find current cart or create new
   let cart = await Cart.findOne({ user: userId });
   if (!cart) {
     cart = new Cart({ user: userId, items: [] });
   }
 
-  // 2. Chạy vòng lặp merge toàn bộ các item mới vào Cart trên Database
+  // 2. Run loop to merge all new items into Cart on Database
   for (let incomingItem of itemsToUpdate) {
     const { productId, color, size, quantity } = incomingItem;
     if (!productId || !color || !size || quantity === undefined) continue;
@@ -131,14 +131,14 @@ export const updateCart = async (userId, payload) => {
     );
 
     if (itemIndex > -1) {
-      // Có sẵn -> Cập nhật hoặc Xóa
+      // Exists -> Update or Delete
       if (quantity <= 0) {
         cart.items.splice(itemIndex, 1);
       } else {
         cart.items[itemIndex].quantity = quantity;
       }
     } else {
-      // Chưa có -> Thêm mới
+      // Doesn't exist -> Add new
       if (quantity > 0) {
         cart.items.push({ product: productId, color, size, quantity });
       }

@@ -23,6 +23,7 @@ import userVoucherRoutes from './routes/user/voucherRoutes.js'
 import userPaymentRoutes from './routes/user/paymentRoutes.js'
 import userNotificationRoutes from './routes/user/notificationRoute.js'
 import userCartRoutes from './routes/user/cartRoutes.js'
+import userChatBotRoutes from './routes/user/chatBotRoutes.js'
 import { globalLimiter } from './middleware/rateLimitMiddleware.js'
 import { errorHandler } from './middleware/errorMiddleware.js'
 
@@ -32,11 +33,11 @@ dotenv.config()
 // Tao app Express
 const app = express()
 
-// Tin tưởng proxy (Nginx) để lấy IP thực của client
+// Trust proxy (Nginx) to get real client IP
 app.set('trust proxy', 1)
 
 // Middleware
-app.use(compression()) // Kích hoạt Gzip nén dữ liệu API
+app.use(compression()) // Enable Gzip for API data compression
 app.use(express.json())
 app.use(cors())
 app.use(globalLimiter)
@@ -68,8 +69,9 @@ app.use('/api/vouchers', userVoucherRoutes)
 app.use('/api/payment', userPaymentRoutes)
 app.use('/api/notifications', userNotificationRoutes)
 app.use('/api/cart', userCartRoutes)
+app.use('/api/chatbot', userChatBotRoutes)
 
-// Bộ xử lý lỗi tập trung toàn hệ thống (Global Error Handler)
+// System-wide Global Error Handler
 app.use(errorHandler)
 
 // Khoi dong server

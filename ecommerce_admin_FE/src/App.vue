@@ -3,6 +3,6 @@
 </template>
 
 <script setup>
-// App.vue bây giờ chỉ cần render router-view
-// Tất cả routing logic được xử lý bởi Vue Router
+// App.vue now only needs to render router-view
+// All routing logic is handled by Vue Router
 </script>

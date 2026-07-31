@@ -7,7 +7,7 @@ import 'common_widgets.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// 🛒 Bottom Sheet chọn màu và size trước khi thêm vào giỏ hàng
+/// 🛒 Bottom Sheet to select color and size before adding to cart
 class AddToCartBottomSheet extends ConsumerStatefulWidget {
   final Product product;
 
@@ -34,7 +34,7 @@ class _AddToCartBottomSheetState extends ConsumerState<AddToCartBottomSheet> {
   @override
   void initState() {
     super.initState();
-    // Chọn màu và size mặc định
+    // Default color and size selection
     if (widget.product.colorVariants.isNotEmpty) {
       _selectedColor = widget.product.colorVariants.first.color;
       if (widget.product.colorVariants.first.sizes.isNotEmpty) {
@@ -263,7 +263,7 @@ class _AddToCartBottomSheetState extends ConsumerState<AddToCartBottomSheet> {
                 onTap: () {
                   setState(() {
                     _selectedColor = variant.color;
-                    // Reset size khi đổi màu
+                    // Reset size when changing color
                     _selectedSize = variant.sizes.isNotEmpty
                         ? variant.sizes.first.size
                         : null;
@@ -418,9 +418,9 @@ class _AddToCartBottomSheetState extends ConsumerState<AddToCartBottomSheet> {
   }
 }
 
-/// 🎨 Animation hiệu ứng thêm vào giỏ hàng
+/// 🎨 Animation effect for adding to cart
 class AddToCartAnimation {
-  /// Hiển thị SnackBar với animation đẹp
+  /// Display SnackBar with nice animation
   static void show(BuildContext context, {
     String message = 'Đã thêm vào giỏ hàng',
     String? productName,
@@ -501,7 +501,7 @@ class AddToCartAnimation {
     );
   }
 
-  /// Hiển thị dialog đẹp hơn với animation
+  /// Display nicer dialog with animation
   static void showDialog(BuildContext context, {
     required String productName,
     required String imageUrl,

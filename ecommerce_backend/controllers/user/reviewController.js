@@ -1,7 +1,7 @@
 import * as reviewService from '../../services/reviewService.js';
 import { asyncHandler, ApiError } from '../../middleware/errorMiddleware.js';
 
-// 📖 Lấy tất cả đánh giá theo sản phẩm (Không cần auth)
+// 📖 Get all reviews by product (No auth required)
 export const getReviewsByProduct = asyncHandler(async (req, res) => {
   const { productId } = req.params;
 
@@ -13,7 +13,7 @@ export const getReviewsByProduct = asyncHandler(async (req, res) => {
   });
 });
 
-// 📦 Lấy tất cả đánh giá của một đơn hàng (Cần auth)
+// 📦 Get all reviews of an order (Auth required)
 export const getReviewsByOrder = asyncHandler(async (req, res) => {
   const { orderId } = req.params;
   const userId = req.user.id;
@@ -26,7 +26,7 @@ export const getReviewsByOrder = asyncHandler(async (req, res) => {
   });
 });
 
-// ✍️ Tạo đánh giá mới (Cần auth)
+// ✍️ Create new review (Auth required)
 export const createReview = asyncHandler(async (req, res) => {
   const { product, rating, comment, images, orderId } = req.body;
   const userId = req.user.id;

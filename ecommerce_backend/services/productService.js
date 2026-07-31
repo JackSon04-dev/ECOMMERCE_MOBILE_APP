@@ -3,19 +3,17 @@ import { getOrSetCache } from './redisService.js';
 import { ApiError } from '../middleware/errorMiddleware.js';
 
 /**
- * 🛍️ Lấy tất cả sản phẩm (có filter, sort, search)
- * @param {object} queryParams - Đối tượng chứa các bộ lọc { tag, sortBy, search }
- * @param {string} queryParams.tag - Thẻ/Nhãn sản phẩm cần lọc
- * @param {string} queryParams.sortBy - Tiêu chí sắp xếp sản phẩm
- * @param {string} queryParams.search - Từ khóa tìm kiếm tên/mô tả sản phẩm
- * @returns {Promise<array>} Mảng chứa danh sách các sản phẩm thỏa mãn điều kiện
+ * 🛍️ Get all products (with filter, sort, search)
+ * @param {object} queryParams - Object containing filters { tag, sortBy, search }
+ * @param {string} queryParams.tag - Product tag/label to filter
+ * @param {string} queryParams.sortBy - Sort criteria
+ * @param {string} queryParams.search - Keyword to search product name/description
+ * @returns {Promise<array>} Array containing filtered product list
  */
-export const getAllProducts = async ({ tag, sortBy, search, lastId, limit = 20 }) => {
-  // Tạo khóa Cache chứa đủ các trường lọc, bao gồm cả lastId và limit để tránh cache collision giữa các trang
-  const cacheKey = `ecom:products:all:tag_${tag || 'all'}:sort_${sortBy || 'newest'}:search_${search || 'none'}:lastId_${lastId || 'none'}:limit_${limit}`;
+export const getAllProducts = async ({ tag, sortBy, search, lastId, lastSoldCount, lastFinalPrice, page = 1 }) => {
+  const limit = 20;
 
-  // Dùng getOrSetCache thay vì gọi trực tiếp DB
-  const products = await getOrSetCache(cacheKey, 600, async () => {
+  const fetchProducts = async () => {
     // Build query
     let query = { isActive: true };
 
@@ -24,55 +22,52 @@ export const getAllProducts = async ({ tag, sortBy, search, lastId, limit = 20 }
       query.tags = tag;
     }
 
-    // Search by name, description, or tags
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { shortDescription: { $regex: search, $options: 'i' } },
-        { tags: { $regex: search, $options: 'i' } }
-      ];
-    }
+    // Cursor-based Keyset pagination based on lastId (Skip if Searching)
+    if (lastId && !search) {
+      let lPrice = lastFinalPrice;
+      let lSoldCount = lastSoldCount;
 
-    // Phân trang Cursor-based (Keyset pagination) dựa trên lastId
-    if (lastId) {
-      const lastProduct = await Product.findById(lastId);
-      if (lastProduct) {
-        const lastCreatedAt = lastProduct.createdAt;
-        const lastPrice = lastProduct.finalPrice || lastProduct.price;
-        const lastSoldCount = lastProduct.soldCount || 0;
+      // Fallback: if older client hasn't sent these fields, have to query DB
+      if (lPrice === undefined || lSoldCount === undefined) {
+        const lastProduct = await Product.findById(lastId);
+        if (lastProduct) {
+          lPrice = lastProduct.finalPrice;
+          lSoldCount = lastProduct.soldCount || 0;
+        }
+      }
 
+      if (true) { // Always runs because lastId exists
         let paginationQuery = null;
 
         if (sortBy === 'price_asc' || sortBy === 'price-asc') {
           paginationQuery = {
             $or: [
-              { finalPrice: { $gt: lastPrice } },
-              { finalPrice: lastPrice, _id: { $gt: lastProduct._id } }
+              { finalPrice: { $gt: lPrice } },
+              { finalPrice: lPrice, _id: { $gt: lastId } }
             ]
           };
         } else if (sortBy === 'price_desc' || sortBy === 'price-desc') {
           paginationQuery = {
             $or: [
-              { finalPrice: { $lt: lastPrice } },
-              { finalPrice: lastPrice, _id: { $lt: lastProduct._id } }
+              { finalPrice: { $lt: lPrice } },
+              { finalPrice: lPrice, _id: { $gt: lastId } }
             ]
           };
         } else if (sortBy === 'best_selling' || sortBy === 'best-selling') {
           paginationQuery = {
             $or: [
-              { soldCount: { $lt: lastSoldCount } },
-              { soldCount: lastSoldCount, createdAt: { $lt: lastCreatedAt } },
-              { soldCount: lastSoldCount, createdAt: lastCreatedAt, _id: { $lt: lastProduct._id } }
+              { soldCount: { $lt: lSoldCount } },
+              { soldCount: lSoldCount, _id: { $gt: lastId } }
             ]
           };
-        } else { // 'newest' hoặc mặc định
-          paginationQuery = {
-            $or: [
-              { createdAt: { $lt: lastCreatedAt } },
-              { createdAt: lastCreatedAt, _id: { $lt: lastProduct._id } }
-            ]
-          };
+        } else { // 'newest' or default
+          if (search) {
+            // When search exists, sort by _id = -1 (newest), so use $lt (less than) for lastId
+            paginationQuery = { _id: { $lt: lastId } };
+          } else {
+            // Other APIs sort by _id = 1 (oldest), so use $gt (greater than)
+            paginationQuery = { _id: { $gt: lastId } };
+          }
         }
 
         if (paginationQuery) {
@@ -84,31 +79,77 @@ export const getAllProducts = async ({ tag, sortBy, search, lastId, limit = 20 }
     // Build sort
     let sort = {};
     if (sortBy === 'newest') {
-      sort.createdAt = -1;
-      sort._id = -1;
+      sort._id = 1; // Fixed as user requested: created first appears first (oldest)
     } else if (sortBy === 'price_asc' || sortBy === 'price-asc') {
       sort.finalPrice = 1;
       sort._id = 1;
     } else if (sortBy === 'price_desc' || sortBy === 'price-desc') {
       sort.finalPrice = -1;
-      sort._id = -1;
+      sort._id = 1;
     } else if (sortBy === 'best_selling' || sortBy === 'best-selling') {
       sort.soldCount = -1;
-      sort.createdAt = -1;
-      sort._id = -1;
+      sort._id = 1;
     } else {
-      sort.createdAt = -1;
-      sort._id = -1;
+      if (!search) {
+        sort._id = 1;  // Keep created first appears first for other APIs
+      }
+      // If search exists without specific sortBy -> sort = {} -> DB autosorts by Relevance
     }
 
-    return await Product.find(query).sort(sort).limit(limit);
-  });
+    if (search) {
+      // Force keywords to appear simultaneously (AND logic) to avoid junk results
+      const andQuery = search.trim().split(/\\s+/).join(' AND ');
 
-  return products;
+      // Use Atlas Search
+      const pipeline = [
+        {
+          $search: {
+            index: 'default',
+            queryString: {
+              defaultPath: 'name',
+              query: andQuery
+            }
+          }
+        },
+        { $match: query },
+        {
+          $addFields: {
+            score: { $meta: 'searchScore' }
+          }
+        }
+      ];
+
+      if (Object.keys(sort).length > 0) {
+        pipeline.push({ $sort: sort });
+      } else {
+        // Tie-breaker: Prioritize highest accuracy score (score: -1). If tied, pick newest (_id: -1)
+        pipeline.push({ $sort: { score: -1, _id: -1 } });
+      }
+
+      const skip = (page - 1) * limit;
+      if (skip > 0) {
+        pipeline.push({ $skip: skip });
+      }
+      pipeline.push({ $limit: Number(limit) });
+
+      return await Product.aggregate(pipeline);
+    } else {
+      return await Product.find(query).sort(sort).limit(limit);
+    }
+  };
+
+  if (search) {
+    // Do not use Cache for Search because keywords vary greatly, low cache hit rate
+    return await fetchProducts();
+  }
+
+  // Create Cache key (only cache normal paginated list, ignore limit as it is always 20)
+  const cacheKey = `ecom:products:all:tag_${tag || 'all'}:sort_${sortBy || 'newest'}:lastId_${lastId || 'none'}`;
+  return await getOrSetCache(cacheKey, 600, fetchProducts);
 };
 
 /**
- * 🌟 Lấy sản phẩm nổi bật (có tag "featured")
+ * 🌟 Get featured products (tagged "featured")
  * @returns {Promise<array>}
  */
 export const getFeaturedProducts = async () => {
@@ -118,7 +159,7 @@ export const getFeaturedProducts = async () => {
       isActive: true,
       tags: 'featured'
     })
-      .sort({ createdAt: -1 })
+      .sort({ _id: 1 }) // Changed createdAt to _id as requested earlier
       .limit(20);
   });
 
@@ -126,9 +167,9 @@ export const getFeaturedProducts = async () => {
 };
 
 /**
- * 📦 Lấy chi tiết sản phẩm theo ID
- * @param {string} id - ID của sản phẩm cần lấy chi tiết
- * @returns {Promise<object>} Đối tượng thông tin sản phẩm
+ * 📦 Get product details by ID
+ * @param {string} id - ID of product to get details
+ * @returns {Promise<object>} Product info object
  */
 export const getProductById = async (id) => {
   const cacheKey = `ecom:products:id_${id}`;
@@ -144,4 +185,31 @@ export const getProductById = async (id) => {
   }
 
   return product;
+};
+
+/**
+ * 🔍 Get keyword suggestions (Autocomplete) via Atlas Search
+ * @param {string} keyword - Keyword typed by user
+ * @param {number} limit - Number of suggestions
+ * @returns {Promise<array>} Array containing product names
+ */
+export const getAutocompleteSuggestions = async (keyword, limit = 10) => {
+  if (!keyword || keyword.length < 2) return [];
+
+  const pipeline = [
+    {
+      $search: {
+        index: 'autocomplete_index',
+        autocomplete: {
+          query: keyword,
+          path: 'name'
+        }
+      }
+    },
+    { $match: { isActive: true } },
+    { $limit: limit },
+    { $project: { _id: 1, name: 1, thumbnail: 1 } }
+  ];
+
+  return await Product.aggregate(pipeline);
 };

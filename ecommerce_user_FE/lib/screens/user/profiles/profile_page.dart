@@ -7,7 +7,7 @@ import '../../../services/user_service.dart';
 import '../../../widgets/common_widgets.dart';
 
 
-/// 👤 Profile Page - Trang tài khoản
+/// 👤 Profile Page
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
 
@@ -77,7 +77,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
 
     if (confirm == true && mounted) {
-      // Hiển thị loading
+      // Show loading
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -102,10 +102,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         await ref.read(authProvider.notifier).logout();
 
         if (mounted) {
-          // Đóng loading dialog
+          // Close loading dialog
           Navigator.pop(context);
 
-          // Cập nhật state → hiển thị "Chưa đăng nhập"
+          // Update state -> show "Not logged in"
           setState(() => _user = null);
 
           ScaffoldMessenger.of(context).showSnackBar(
@@ -131,7 +131,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
   }
 
-  /// Đăng nhập từ profile → mở LoginScreen, sau khi login xong reload user
+  /// Login from profile -> open LoginScreen, after login reload user
   Future<void> _goToLogin() async {
     final result = await Navigator.pushNamed(context, AppRoutes.login);
     if (result == true && mounted) {
@@ -144,7 +144,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final auth = ref.watch(authProvider);
     final isLoggedIn = auth.isLoggedIn;
 
-    // Cập nhật _user từ auth state nếu cần (khi user vừa login)
+    // Update _user from auth state if needed (when user just logged in)
     if (isLoggedIn && auth.user != null) {
       _user = auth.user;
     } else if (!isLoggedIn) {
@@ -159,7 +159,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               onRefresh: _loadUserInfo,
               color: const Color(0xFFFF6B35),
               child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(), // Quan trọng để RefreshIndicator hoạt động với CustomScrollView
+                physics: const AlwaysScrollableScrollPhysics(), // Important for RefreshIndicator to work with CustomScrollView
                 slivers: [
                 // App Bar with user info
                 SliverAppBar(
@@ -196,7 +196,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
   }
 
-  /// Header khi đã đăng nhập
+  /// Header when logged in
   Widget _buildLoggedInHeader() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -228,7 +228,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
   }
 
-  /// Header khi chưa đăng nhập
+  /// Header when not logged in
   Widget _buildGuestHeader() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -264,13 +264,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
   }
 
-  /// Content khi đã đăng nhập
+  /// Content when logged in
   Widget _buildLoggedInContent() {
     return Column(
       children: [
         const SizedBox(height: 16),
 
-        // Đơn hàng section
+        // Order section
         _buildSectionTitle('Đơn hàng của tôi'),
         _buildMenuCard([
           _buildMenuItem(
@@ -283,7 +283,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
         const SizedBox(height: 16),
 
-        // Tài khoản section
+        // Account section
         _buildSectionTitle('Tài khoản'),
         _buildMenuCard([
           _buildMenuItem(
@@ -301,7 +301,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
         const SizedBox(height: 16),
 
-        // Hỗ trợ section
+        // Support section
         _buildSectionTitle('Hỗ trợ'),
         _buildMenuCard([
           _buildMenuItem(
@@ -352,13 +352,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
   }
 
-  /// Content khi chưa đăng nhập
+  /// Content when not logged in
   Widget _buildGuestContent() {
     return Column(
       children: [
         const SizedBox(height: 32),
 
-        // Nút đăng nhập lớn
+        // Large login button
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: SizedBox(
@@ -384,7 +384,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
         const SizedBox(height: 12),
 
-        // Nút đăng ký
+        // Register button
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: SizedBox(
@@ -410,7 +410,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
         const SizedBox(height: 32),
 
-        // Hỗ trợ section (vẫn hiện cho guest)
+        // Support section (still visible to guest)
         _buildSectionTitle('Hỗ trợ'),
         _buildMenuCard([
           _buildMenuItem(

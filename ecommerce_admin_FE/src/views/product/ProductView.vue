@@ -407,15 +407,15 @@ import axios from 'axios'
 
 const router = useRouter()
 
-const allProducts = ref([]) // Chứa dữ liệu gốc từ API
-const displayProducts = ref([]) // Chứa dữ liệu sau khi nhấn nút Tìm kiếm
-const statistics = ref({}) // Thống kê sản phẩm
+const allProducts = ref([]) // Contains original data from API
+const displayProducts = ref([]) // Contains data after clicking Search button
+const statistics = ref({}) // Product statistics
 
 const searchQuery = ref('')
 const selectedTag = ref('')
-const stockFilter = ref('') // Lọc theo tồn kho
+const stockFilter = ref('') // Filter by inventory
 
-// Hàm tính tổng stock của sản phẩm
+// Function to calculate total stock of a product
 const getProductTotalStock = (product) => {
   let total = 0
   if (product.colorVariants && product.colorVariants.length > 0) {
@@ -430,7 +430,7 @@ const getProductTotalStock = (product) => {
   return total
 }
 
-// Kiểm tra sản phẩm có biến thể sắp hết (stock 1-4)
+// Check if product has low stock variant (stock 1-4)
 const hasLowStockVariant = (product) => {
   if (product.colorVariants && product.colorVariants.length > 0) {
     for (const colorVariant of product.colorVariants) {
@@ -447,7 +447,7 @@ const hasLowStockVariant = (product) => {
   return false
 }
 
-// Kiểm tra sản phẩm có biến thể hết hàng (stock = 0)
+// Check if product has out of stock variant (stock = 0)
 const hasOutOfStockVariant = (product) => {
   if (product.colorVariants && product.colorVariants.length > 0) {
     for (const colorVariant of product.colorVariants) {
@@ -463,7 +463,7 @@ const hasOutOfStockVariant = (product) => {
   return false
 }
 
-// Lấy label cho filter
+// Get label for filter
 const getFilterLabel = (filter) => {
   const labels = {
     lowStockVariants: 'Biến thể sắp hết (stock 1-4)',
@@ -474,9 +474,9 @@ const getFilterLabel = (filter) => {
   return labels[filter] || filter
 }
 
-// Lọc theo trạng thái tồn kho
+// Filter by inventory status
 const filterByStock = (filterType) => {
-  // Toggle filter nếu click lại cùng filter
+  // Toggle filter if clicking same filter again
   if (stockFilter.value === filterType) {
     clearStockFilter()
     return
@@ -487,16 +487,16 @@ const filterByStock = (filterType) => {
   displayProducts.value = allProducts.value.filter((product) => {
     switch (filterType) {
       case 'lowStockVariants':
-        // Sản phẩm có ít nhất 1 biến thể có stock từ 1-4
+        // Product has at least 1 variant with stock from 1-4
         return hasLowStockVariant(product)
       case 'outOfStockVariants':
-        // Sản phẩm có ít nhất 1 biến thể hết hàng (stock = 0)
+        // Product has at least 1 variant out of stock (stock = 0)
         return hasOutOfStockVariant(product)
       case 'lowStockProducts':
-        // Sản phẩm có tổng stock > 0 nhưng có biến thể sắp hết
+        // Product has total stock > 0 but has a low stock variant
         return getProductTotalStock(product) > 0 && hasLowStockVariant(product)
       case 'outOfStockProducts':
-        // Sản phẩm có tổng stock = 0
+        // Product has total stock = 0
         return getProductTotalStock(product) === 0
       default:
         return true
@@ -504,24 +504,24 @@ const filterByStock = (filterType) => {
   })
 }
 
-// Xóa filter tồn kho
+// Clear inventory filter
 const clearStockFilter = () => {
   stockFilter.value = ''
   displayProducts.value = allProducts.value
 }
 
-// 1. Lấy dữ liệu ban đầu
+// 1. Get initial data
 const fetchProducts = async () => {
   try {
     const res = await axios.get('/api/admin/products')
     allProducts.value = res.data.data
-    displayProducts.value = res.data.data // Mặc định hiển thị tất cả
+    displayProducts.value = res.data.data // Display all by default
   } catch (error) {
     console.error('Lỗi lấy dữ liệu:', error)
   }
 }
 
-// Lấy thống kê sản phẩm
+// Get product statistics
 const fetchStatistics = async () => {
   try {
     const res = await axios.get('/api/admin/products/stats/overview')
@@ -531,18 +531,18 @@ const fetchStatistics = async () => {
   }
 }
 
-// 2. Hàm xử lý tìm kiếm (Chỉ thực hiện khi nhấn nút)
+// 2. Search handling function (Only executed on button click)
 const handleSearch = () => {
-  // Reset stock filter khi tìm kiếm
+  // Reset stock filter on search
   stockFilter.value = ''
 
   displayProducts.value = allProducts.value.filter((p) => {
-    // Kiểm tra tên (không phân biệt hoa thường)
+    // Check name (case insensitive)
     const matchName = p.name
       .toLowerCase()
       .includes(searchQuery.value.toLowerCase())
 
-    // Kiểm tra tag (Nếu không chọn tag thì mặc định là đúng)
+    // Check tag (If no tag selected, default is true)
     const matchTag =
       selectedTag.value === '' ||
       p.tags?.some((t) => t.toLowerCase() === selectedTag.value.toLowerCase())
@@ -555,8 +555,8 @@ const handleDelete = async (id) => {
   if (confirm('Bạn có chắc muốn xóa sản phẩm này?')) {
     try {
       await axios.delete(`/api/admin/products/delete/${id}`)
-      await fetchProducts() // Load lại toàn bộ và hiển thị lại
-      await fetchStatistics() // Cập nhật lại thống kê
+      await fetchProducts() // Reload all and redisplay
+      await fetchStatistics() // Update statistics
     } catch (err) {
       alert('Lỗi khi xóa!')
     }

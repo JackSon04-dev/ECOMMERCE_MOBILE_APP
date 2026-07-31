@@ -1,9 +1,9 @@
 import redisClient from '../config/redis.js';
 
 /**
- * Lấy dữ liệu từ Redis Cache
- * @param {string} key Khóa lưu trữ trong Redis
- * @returns {object|null} Dữ liệu đã parse hoặc null nếu không tồn tại
+ * Get data from Redis Cache
+ * @param {string} key Storage key in Redis
+ * @returns {object|null} Parsed data or null if not exists
  */
 export const getCache = async (key) => {
     try {
@@ -16,15 +16,15 @@ export const getCache = async (key) => {
         return null;
     } catch (error) {
         console.error(`❌ Lỗi khi lấy cache cho key ${key}:`, error);
-        return null; // Trả về null để hệ thống đi tiếp vào Database thay vì Crash
+        return null; // Return null so system proceeds to Database instead of Crashing
     }
 };
 
 /**
- * Lưu dữ liệu vào Redis Cache với thời gian hết hạn (TTL)
- * @param {string} key Khóa lưu trữ
- * @param {any} data Dữ liệu cần lưu (sẽ được stringify)
- * @param {number} ttl Thời gian sống (giây) - Mặc định 600s (10 phút)
+ * Save data to Redis Cache with TTL
+ * @param {string} key Storage key
+ * @param {any} data Data to save (will be stringified)
+ * @param {number} ttl Time to live (seconds) - Default 600s (10 mins)
  */
 export const setCache = async (key, data, ttl = 600) => {
     try {
@@ -37,8 +37,8 @@ export const setCache = async (key, data, ttl = 600) => {
 };
 
 /**
- * Xóa một Cache cụ thể
- * @param {string} key Khóa cần xóa
+ * Delete a specific Cache
+ * @param {string} key Key to delete
  */
 export const deleteCache = async (key) => {
     try {
@@ -50,32 +50,85 @@ export const deleteCache = async (key) => {
     }
 };
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 /**
- * Siêu hàm Wrapper: Tự động hóa luồng Check Cache -> Gọi DB -> Save Cache
- * @param {string} key Khóa lưu trữ
- * @param {number} ttl Thời gian sống (giây)
- * @param {Function} fetcher Hàm Async gọi xuống Database nếu Cache miss
- * @returns {any|null} Dữ liệu (từ Cache hoặc từ DB)
+ * Acquire a Mutex Lock
+ * @param {string} lockKey Lock key
+ * @param {number} ttl Lock TTL (seconds) - in case process dies without releasing flag
+ * @returns {boolean} true if flag acquired, false if flag is owned
+ */
+export const acquireLock = async (lockKey, ttl = 5) => {
+    try {
+        if (!redisClient.isReady) return true; // Avoid hanging if Redis dies
+        const result = await redisClient.set(lockKey, 'locked', { NX: true, EX: ttl });
+        return result === 'OK';
+    } catch (error) {
+        return true; // Safe fallback bypass
+    }
+};
+
+/**
+ * Release a Mutex Lock
+ */
+export const releaseLock = async (lockKey) => {
+    try {
+        if (!redisClient.isReady) return;
+        await redisClient.del(lockKey);
+    } catch (error) {}
+};
+
+/**
+ * Super Wrapper function: Automate Check Cache -> Call DB -> Save Cache flow
+ * @param {string} key Storage key
+ * @param {number} ttl Time to live (seconds)
+ * @param {Function} fetcher Async function calling DB on Cache miss
+ * @returns {any|null} Data (from Cache or DB)
  */
 export const getOrSetCache = async (key, ttl, fetcher) => {
     try {
-        // Bước 1: Kiểm tra Cache
+        // Step 1: Check Cache
         const cachedData = await getCache(key);
         if (cachedData) {
             return cachedData;
         }
 
-        // Bước 2: Không có Cache -> Chạy hàm gọi DB
-        const freshData = await fetcher();
+        // Step 2: No Cache -> Try to acquire Lock
+        const lockKey = `lock:${key}`;
+        const isLocked = await acquireLock(lockKey);
 
-        // Bước 3: Có dữ liệu mới -> Lưu vào Cache
-        if (freshData) {
-            await setCache(key, freshData, ttl);
+        if (isLocked) {
+            // LOCK ACQUIRED -> Go to DB
+            try {
+                const freshData = await fetcher();
+                if (freshData) {
+                    await setCache(key, freshData, ttl);
+                }
+                return freshData;
+            } finally {
+                // Release flag whether DB succeeds or fails
+                await releaseLock(lockKey);
+            }
+        } else {
+            // LOCK NOT ACQUIRED -> Wait
+            let retryCount = 0;
+            const maxRetries = 20; // 20 * 50ms = max 1s wait
+            
+            while (retryCount < maxRetries) {
+                await sleep(50);
+                const retryData = await getCache(key);
+                if (retryData) {
+                    return retryData;
+                }
+                retryCount++;
+            }
+            
+            // After 1s if the other process hasn't finished -> Force call DB as a workaround
+            console.warn(`⏳ Timeout đợi Lock cho key ${key}, tự động Fallback gọi DB...`);
+            return await fetcher();
         }
-
-        return freshData;
     } catch (error) {
-        // Nếu toàn bộ tiến trình Redis lỗi, vẫn cố gắng gọi DB để ứng dụng không sập
+        // If Redis process entirely fails, still attempt DB call so app doesn't crash
         console.error(`⚠ Lỗi getOrSetCache ở key ${key}, fallback gọi thẳng DB:`, error);
         return await fetcher();
     }

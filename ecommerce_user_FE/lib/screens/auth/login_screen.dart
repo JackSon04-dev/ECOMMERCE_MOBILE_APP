@@ -18,8 +18,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isLoading = false;
   bool _isGoogleLoading = false;
 
-  /// Kiểm tra xem LoginScreen có phải được push lên stack (modal mode)
-  /// hay là màn hình gốc (direct mode)
+  /// Check if LoginScreen was pushed to stack (modal mode)
+  /// or is root screen (direct mode)
   bool get _isModal => Navigator.of(context).canPop();
 
   Future<void> _login() async {
@@ -36,7 +36,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       // get auth state
       final auth = ref.read(authProvider);
       if (auth.user != null) {
-        // Tải thông báo ngay khi đăng nhập để cập nhật UI
+        // Load notifications immediately upon login to update UI
         try {
           legacy_provider.Provider.of<NotificationProvider>(context, listen: false).fetchNotifications();
         } catch (e) {
@@ -44,10 +44,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         }
 
         if (_isModal) {
-          // Được mở từ auth guard → pop(true) trả kết quả về
+          // Opened from auth guard -> pop(true) return result
           Navigator.pop(context, true);
         } else {
-          // Truy cập trực tiếp → vào homes
+          // Direct access -> go to homes
           Navigator.pushNamedAndRemoveUntil(context, AppRoutes.home, (route) => false);
         }
       }
@@ -72,7 +72,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (!mounted) return;
       final auth = ref.read(authProvider);
       if (auth.user != null) {
-        // Tải thông báo ngay khi đăng nhập để cập nhật UI
+        // Load notifications immediately upon login to update UI
         try {
           legacy_provider.Provider.of<NotificationProvider>(context, listen: false).fetchNotifications();
         } catch (e) {

@@ -4,11 +4,11 @@ import User from '../../models/userModel.js'
 import Voucher from '../../models/voucherModel.js'
 import { asyncHandler, ApiError } from '../../middleware/errorMiddleware.js'
 
-// 1. Tổng quan tài chính (Overview)
+// 1. Financial overview (Overview)
 export const getFinancialOverview = asyncHandler(async (req, res) => {
   const now = new Date()
 
-  // Tính ngày bắt đầu/kết thúc các kỳ
+  // Calculate start/end dates of periods
   const todayStart = new Date(now.setHours(0, 0, 0, 0))
   const todayEnd = new Date(now.setHours(23, 59, 59, 999))
 
@@ -37,7 +37,7 @@ export const getFinancialOverview = asyncHandler(async (req, res) => {
     59
   )
 
-  // Hàm tính doanh thu theo khoảng thời gian
+  // Function to calculate revenue over a time period
   const getRevenue = async (startDate, endDate) => {
     const orders = await Order.find({
       createdAt: { $gte: startDate, $lte: endDate },
@@ -46,7 +46,7 @@ export const getFinancialOverview = asyncHandler(async (req, res) => {
     return orders.reduce((sum, order) => sum + order.totalPrice, 0)
   }
 
-  // Tính doanh thu các kỳ
+  // Calculate period revenues
   const [
     todayRevenue,
     yesterdayRevenue,
@@ -63,13 +63,13 @@ export const getFinancialOverview = asyncHandler(async (req, res) => {
     getRevenue(lastMonthStart, lastMonthEnd)
   ])
 
-  // Tính % thay đổi
+  // Calculate % change
   const calculateChange = (current, previous) => {
     if (previous === 0) return current > 0 ? 100 : 0
     return Math.round(((current - previous) / previous) * 100)
   }
 
-  // Giá trị đơn hàng trung bình (AOV)
+  // Average order value (AOV)
   const completedOrders = await Order.find({
     status: { $in: ['Đã giao', 'Thành công'] }
   })
@@ -106,7 +106,7 @@ export const getFinancialOverview = asyncHandler(async (req, res) => {
   })
 });
 
-// 2. Đơn hàng chờ xác nhận
+// 2. Orders pending confirmation
 export const getPendingOrders = asyncHandler(async (req, res) => {
   const pendingOrders = await Order.find({ status: 'Chờ xác nhận' })
     .populate('user', 'username email')
@@ -119,14 +119,14 @@ export const getPendingOrders = asyncHandler(async (req, res) => {
   })
 });
 
-// 3. Top 7 sản phẩm bán chạy nhất
+// 3. Top 7 best-selling products
 export const getTopProducts = asyncHandler(async (req, res) => {
   const topProducts = await Order.aggregate([
-    // Chỉ lấy đơn hàng thành công
+    // Only get successful orders
     { $match: { status: { $in: ['Đã giao', 'Thành công'] } } },
-    // Tách mảng orderItems
+    // Separate orderItems array
     { $unwind: '$orderItems' },
-    // Nhóm theo sản phẩm và tính tổng số lượng bán
+    // Group by product and calculate total sales volume
     {
       $group: {
         _id: '$orderItems.product',
@@ -135,11 +135,11 @@ export const getTopProducts = asyncHandler(async (req, res) => {
         productName: { $first: '$orderItems.productName' }
       }
     },
-    // Sắp xếp theo số lượng bán giảm dần
+    // Sort by sales volume in descending order
     { $sort: { totalSold: -1 } },
-    // Lấy top 7
+    // Get top 7
     { $limit: 7 },
-    // Populate thông tin sản phẩm
+    // Populate product info
     {
       $lookup: {
         from: 'products',
@@ -149,7 +149,7 @@ export const getTopProducts = asyncHandler(async (req, res) => {
       }
     },
     { $unwind: { path: '$productInfo', preserveNullAndEmptyArrays: true } },
-    // Format kết quả
+    // Format result
     {
       $project: {
         _id: 1,
@@ -170,12 +170,12 @@ export const getTopProducts = asyncHandler(async (req, res) => {
   })
 });
 
-// 4. Top khách hàng chi tiêu nhiều nhất
+// 4. Top customers by highest spend
 export const getTopCustomers = asyncHandler(async (req, res) => {
   const topCustomers = await Order.aggregate([
-    // Chỉ lấy đơn hàng đã giao hoặc thành công
+    // Only get delivered or successful orders
     { $match: { status: { $in: ['Đã giao', 'Thành công'] } } },
-    // Nhóm theo user và tính tổng chi tiêu
+    // Group by user and calculate total spend
     {
       $group: {
         _id: '$user',
@@ -183,11 +183,11 @@ export const getTopCustomers = asyncHandler(async (req, res) => {
         orderCount: { $sum: 1 }
       }
     },
-    // Sắp xếp giảm dần theo tổng chi tiêu
+    // Sort in descending order by total spend
     { $sort: { totalSpent: -1 } },
-    // Lấy top 10
+    // Get top 10
     { $limit: 5 },
-    // Populate thông tin user
+    // Populate user info
     {
       $lookup: {
         from: 'users',
@@ -197,7 +197,7 @@ export const getTopCustomers = asyncHandler(async (req, res) => {
       }
     },
     { $unwind: { path: '$userInfo', preserveNullAndEmptyArrays: true } },
-    // Format kết quả
+    // Format result
     {
       $project: {
         _id: 1,
@@ -216,12 +216,12 @@ export const getTopCustomers = asyncHandler(async (req, res) => {
   })
 });
 
-// 5. Voucher được dùng nhiều nhất
+// 5. Most used vouchers
 export const getTopVouchers = asyncHandler(async (req, res) => {
   const topVouchers = await Order.aggregate([
-    // Chỉ lấy đơn thành công có sử dụng voucher
+    // Only get successful orders that used a voucher
     { $match: { 'voucher.voucherId': { $exists: true }, status: { $in: ['Đã giao', 'Thành công'] } } },
-    // Nhóm theo voucher
+    // Group by voucher
     {
       $group: {
         _id: '$voucher.voucherId',
@@ -231,11 +231,11 @@ export const getTopVouchers = asyncHandler(async (req, res) => {
         voucherName: { $first: '$voucher.voucherName' }
       }
     },
-    // Sắp xếp giảm dần
+    // Sort in descending order
     { $sort: { usageCount: -1 } },
-    // Lấy top 5
+    // Get top 5
     { $limit: 5 },
-    // Format kết quả
+    // Format result
     {
       $project: {
         _id: 1,
@@ -254,9 +254,9 @@ export const getTopVouchers = asyncHandler(async (req, res) => {
   })
 });
 
-// 6. Biểu đồ doanh thu theo tháng
+// 6. Monthly revenue chart
 export const getRevenueChart = asyncHandler(async (req, res) => {
-  // Lấy đơn hàng cũ nhất để biết bắt đầu từ tháng nào
+  // Get the oldest order to know which month to start from
   const oldestOrder = await Order.findOne({
     status: { $in: ['Đã giao', 'Thành công'] }
   }).sort({ createdAt: 1 })
@@ -268,11 +268,11 @@ export const getRevenueChart = asyncHandler(async (req, res) => {
     })
   }
 
-  // Aggregate doanh thu theo tháng
+  // Aggregate revenue by month
   const revenueByMonth = await Order.aggregate([
     // Chỉ lấy đơn thành công
     { $match: { status: { $in: ['Đã giao', 'Thành công'] } } },
-    // Nhóm theo tháng và năm
+    // Group by month and year
     {
       $group: {
         _id: {
@@ -283,9 +283,9 @@ export const getRevenueChart = asyncHandler(async (req, res) => {
         orderCount: { $sum: 1 }
       }
     },
-    // Sắp xếp theo thời gian
+    // Sort by time
     { $sort: { '_id.year': 1, '_id.month': 1 } },
-    // Format kết quả
+    // Format result
     {
       $project: {
         _id: 0,

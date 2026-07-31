@@ -260,7 +260,7 @@ class OrderActionHelper {
     try {
       final payosData = await PaymentService.createPayosPayment(order.id);
       if (!context.mounted) return;
-      Navigator.pop(context); // đóng loading
+      Navigator.pop(context); // close loading
 
       if (payosData != null) {
         final paymentResult = await Navigator.pushNamed(

@@ -3,8 +3,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../config/routes.dart';
 
 /// 🛒 Reorder Result Bottom Sheet
-/// Hiển thị kết quả mua lại với animation đẹp
-/// Dùng chung cho cả OrdersPage và OrderDetailPage
+/// Display reorder result with nice animation
+/// Used across OrdersPage and OrderDetailPage
 class ReorderResultSheet extends StatelessWidget {
   final List<String> added;
   final List<String> outOfStock;
@@ -17,7 +17,7 @@ class ReorderResultSheet extends StatelessWidget {
     required this.failed,
   });
 
-  /// Show the bottom sheet - gọi hàm này thay vì showDialog
+  /// Show the bottom sheet - call this function instead of showDialog
   static Future<void> show(
     BuildContext context, {
     required List<String> added,
@@ -63,7 +63,7 @@ class ReorderResultSheet extends StatelessWidget {
             ),
           ),
 
-          // ── Icon & tiêu đề ───────────────────────────────
+          // ── Icon & title ───────────────────────────────
           const SizedBox(height: 8),
           _buildHeader().animate().scale(
                 duration: 400.ms,
@@ -82,7 +82,7 @@ class ReorderResultSheet extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // ── Danh sách sản phẩm ───────────────────────────
+          // ── Product list ───────────────────────────
           if (_total > 0)
             ConstrainedBox(
               constraints: BoxConstraints(
@@ -127,7 +127,7 @@ class ReorderResultSheet extends StatelessWidget {
 
           const SizedBox(height: 24),
 
-          // ── Nút hành động ────────────────────────────────
+          // ── Action buttons ────────────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: _buildActions(context)
@@ -145,7 +145,7 @@ class ReorderResultSheet extends StatelessWidget {
 
     return Column(
       children: [
-        // Vòng tròn icon
+        // Icon circle
         Container(
           width: 72,
           height: 72,
@@ -341,7 +341,7 @@ class ReorderResultSheet extends StatelessWidget {
     if (_hasAdded) {
       return Column(
         children: [
-          // Nút Xem giỏ hàng — primary
+          // View Cart button — primary
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -366,7 +366,7 @@ class ReorderResultSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          // Nút Đóng — secondary
+          // Close button — secondary
           SizedBox(
             width: double.infinity,
             child: TextButton(
@@ -392,7 +392,7 @@ class ReorderResultSheet extends StatelessWidget {
       );
     }
 
-    // Không có sp nào thêm được → chỉ hiện nút Đóng
+    // No product can be added -> only show Close button
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(

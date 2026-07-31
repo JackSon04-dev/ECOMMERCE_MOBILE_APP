@@ -11,7 +11,7 @@ import '../products/products_page.dart';
 import '../notifications/notifications_page.dart';
 import '../profiles/profile_page.dart';
 
-/// 🏠 Main Screen - Màn hình chính với Bottom Navigation
+/// 🏠 Main Screen with Bottom Navigation
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
 
@@ -22,7 +22,7 @@ class MainScreen extends ConsumerStatefulWidget {
 class _MainScreenState extends ConsumerState<MainScreen> {
   int _currentIndex = 0;
 
-  // GlobalKey để truy cập ProductsPage state từ bên ngoài
+  // GlobalKey to access ProductsPage state from outside
   final GlobalKey<ProductsPageState> _productsPageKey = GlobalKey<ProductsPageState>();
 
   late final List<Widget> _pages;
@@ -36,17 +36,17 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       const NotificationsPage(),
       const ProfilePage(),
     ];
-    // Background check: load user nếu có token, không block UI
+    // Background check: load user if token exists, do not block UI
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _silentAuthCheck();
     });
   }
 
-  /// 🔐 Kiểm tra authentication im lặng — không redirect, không block UI
+  /// 🔐 Silent authentication check — no redirect, no UI block
   Future<void> _silentAuthCheck() async {
     print('ℹ️ [Auth] Background checking login status...');
     
-    // Gọi và ĐỢI kết quả kiểm tra đăng nhập
+    // Call and WAIT for login check result
     await ref.read(authProvider.notifier).checkLoginStatus();
     
     final auth = ref.read(authProvider);
@@ -55,23 +55,23 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       
       Provider.of<NotificationProvider>(context, listen: false).fetchNotifications();
       
-      // Kiểm tra và giải phóng thông báo chờ (nếu có)
+      // Check and release pending notifications (if any)
       WidgetsBinding.instance.addPostFrameCallback((_) {
         FcmService.checkPendingNotification();
       });
       
-      // (CartProvider của Riverpod sẽ tự động reload nhờ ref.watch(isLoggedIn))
+      // (CartProvider of Riverpod will auto reload thanks to ref.watch(isLoggedIn))
     } else {
       print('ℹ️ [Auth] Guest mode (not logged in)');
     }
   }
 
-  /// Chuyển sang tab Products và filter theo tag (nếu có)
+  /// Switch to Products tab and filter by tag (if any)
   void _navigateToProducts({String? tag}) {
     setState(() {
       _currentIndex = 1;
     });
-    // Đợi frame tiếp theo để đảm bảo ProductsPage đã build
+    // Wait for next frame to ensure ProductsPage is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _productsPageKey.currentState?.filterByTag(tag);
     });
@@ -97,14 +97,14 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       ),
        floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Hiển thị Bottom Sheet chứa giao diện Chatbot
+          // Show Bottom Sheet containing Chatbot UI
           showModalBottomSheet(
             context: context,
             isScrollControlled: true,
             backgroundColor: Colors.transparent,
             builder: (context) => Padding(
               padding: EdgeInsets.only(
-                // Đảm bảo không bị bàn phím che đi khi gõ chữ
+                // Ensure not covered by keyboard when typing
                 bottom: MediaQuery.of(context).viewInsets.bottom,
               ),
               child: const ChatbotWidget(),

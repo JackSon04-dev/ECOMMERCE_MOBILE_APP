@@ -1,6 +1,6 @@
 /**
- * 🛠️ ApiError - Class tạo lỗi tùy biến
- * Cho phép truyền mã HTTP Status Code và danh sách chi tiết các lỗi kèm theo
+ * 🛠️ ApiError - Custom error class
+ * Allows passing HTTP Status Code and detailed error list
  */
 export class ApiError extends Error {
   constructor(statusCode, message, errors = []) {
@@ -13,45 +13,45 @@ export class ApiError extends Error {
 }
 
 /**
- * 🔄 asyncHandler - Helper tự động bắt lỗi cho các controller async
- * Giúp loại bỏ khối try-catch lặp đi lặp lại trong các file Controller.
+ * 🔄 asyncHandler - Auto error catching helper for async controllers
+ * Eliminates repetitive try-catch blocks in Controller files.
  */
 export const asyncHandler = (fn) => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
 
 /**
- * 🛡️ Global Error Handler Middleware - Bộ xử lý lỗi tập trung của hệ thống
+ * 🛡️ Global Error Handler Middleware - Centralized system error handler
  */
 export const errorHandler = (err, req, res, next) => {
   let statusCode = err.statusCode || 500;
   let message = err.message || 'Lỗi server nội bộ';
   let errors = err.errors || [];
 
-  // Log lỗi chi tiết ra console trên server để lập trình viên dễ debug
+  // Log detailed errors to server console for easier debugging
   console.error(`❌ [Error] Path: ${req.originalUrl} | Method: ${req.method}`);
   console.error(err);
 
-  // 1. Xử lý lỗi upload file của Multer
+  // 1. Handle Multer file upload error
   if (err.code === 'LIMIT_UNEXPECTED_FILE') {
     statusCode = 400;
     message = 'Tên trường upload file không đúng (Phải là thumbnail hoặc images)';
   }
 
-  // 2. Xử lý lỗi trùng lặp dữ liệu của MongoDB (Unique Key - Code 11000)
+  // 2. Handle MongoDB duplicate data error (Unique Key - Code 11000)
   if (err.code === 11000) {
     statusCode = 400;
     const field = Object.keys(err.keyPattern)[0];
     message = field === 'email' ? 'Email đã tồn tại' : 'Dữ liệu đăng ký đã tồn tại';
   }
 
-  // 3. Xử lý lỗi sai định dạng ID của MongoDB (CastError)
+  // 3. Handle MongoDB invalid ID format error (CastError)
   if (err.name === 'CastError') {
     statusCode = 400;
     message = `ID không hợp lệ: Giá trị '${err.value}' không đúng định dạng ObjectId.`;
   }
 
-  // 4. Xử lý lỗi validation dữ liệu của Mongoose (Schema Validation)
+  // 4. Handle Mongoose data validation error (Schema Validation)
   if (err.name === 'ValidationError') {
     statusCode = 400;
     message = 'Dữ liệu gửi lên không hợp lệ';
@@ -61,7 +61,7 @@ export const errorHandler = (err, req, res, next) => {
     }));
   }
 
-  // 5. Xử lý lỗi xác thực JWT
+  // 5. Handle JWT verification error
   if (err.name === 'JsonWebTokenError') {
     statusCode = 401;
     message = 'Token xác thực không hợp lệ. Vui lòng đăng nhập lại.';
@@ -71,13 +71,13 @@ export const errorHandler = (err, req, res, next) => {
     message = 'Token xác thực đã hết hạn. Vui lòng lấy mã mới.';
   }
 
-  // Phản hồi định dạng JSON chuẩn hóa cho Client (Flutter / Vue)
+  // Standardized JSON format response for Client (Flutter / Vue)
   res.status(statusCode).json({
     success: false,
     message,
-    msg: message, // Tương thích ngược với các client cũ đang đọc biến .msg
+    msg: message, // Backward compatibility for older clients reading .msg variable
     errors,
-    // Chỉ hiển thị stack trace ở môi trường development để bảo mật
+    // Only show stack trace in development environment for security
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 };

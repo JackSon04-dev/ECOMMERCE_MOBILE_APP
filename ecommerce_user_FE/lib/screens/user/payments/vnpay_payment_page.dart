@@ -3,8 +3,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../services/payment_service.dart';
 
 /// 💳 VNPay Payment Page
-/// Hiển thị trạng thái thanh toán VNPay
-/// Mở trình duyệt để user thanh toán → quay lại app kiểm tra kết quả
+/// Display VNPay payment status
+/// Open browser for user payment -> return to app to check result
 class VnpayPaymentPage extends StatefulWidget {
   final String orderId;
   final String paymentUrl;
@@ -22,14 +22,14 @@ class VnpayPaymentPage extends StatefulWidget {
 class _VnpayPaymentPageState extends State<VnpayPaymentPage>
     with WidgetsBindingObserver {
   bool _isChecking = false;
-  bool? _paymentResult; // null = chưa kiểm tra, true = thành công, false = thất bại
+  bool? _paymentResult; // null = unchecked, true = success, false = failed
   bool _hasOpenedBrowser = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Tự động mở trình duyệt khi vào trang
+    // Auto open browser on page entry
     _openPaymentUrl();
   }
 
@@ -39,7 +39,7 @@ class _VnpayPaymentPageState extends State<VnpayPaymentPage>
     super.dispose();
   }
 
-  /// Khi user quay lại app từ trình duyệt → tự động kiểm tra thanh toán
+  /// When user returns to app from browser -> auto check payment
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && _hasOpenedBrowser && _paymentResult == null) {
@@ -47,7 +47,7 @@ class _VnpayPaymentPageState extends State<VnpayPaymentPage>
     }
   }
 
-  /// Mở URL thanh toán VNPay trên trình duyệt
+  /// Open VNPay payment URL on browser
   Future<void> _openPaymentUrl() async {
     try {
       final uri = Uri.parse(widget.paymentUrl);
@@ -75,7 +75,7 @@ class _VnpayPaymentPageState extends State<VnpayPaymentPage>
     }
   }
 
-  /// Kiểm tra trạng thái thanh toán từ backend
+  /// Check payment status from backend
   Future<void> _checkPaymentStatus() async {
     if (_isChecking) return;
 
@@ -128,7 +128,7 @@ class _VnpayPaymentPageState extends State<VnpayPaymentPage>
     );
   }
 
-  /// ─── WAITING VIEW: Đang chờ user thanh toán trên trình duyệt ──────────
+  /// ─── WAITING VIEW: Waiting for user payment on browser ──────────
   Widget _buildWaitingView() {
     return Center(
       child: Padding(
@@ -183,7 +183,7 @@ class _VnpayPaymentPageState extends State<VnpayPaymentPage>
                 ],
               )
             else ...[
-              // Nút mở lại trang thanh toán
+              // Button to reopen payment page
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -206,7 +206,7 @@ class _VnpayPaymentPageState extends State<VnpayPaymentPage>
               ),
               const SizedBox(height: 12),
 
-              // Nút kiểm tra thủ công
+              // Manual check button
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
@@ -233,7 +233,7 @@ class _VnpayPaymentPageState extends State<VnpayPaymentPage>
     );
   }
 
-  /// ─── SUCCESS VIEW: Thanh toán thành công ────────────────────────────────
+  /// ─── SUCCESS VIEW: Payment successful ────────────────────────────────
   Widget _buildSuccessView() {
     return Center(
       child: Padding(
@@ -299,7 +299,7 @@ class _VnpayPaymentPageState extends State<VnpayPaymentPage>
     );
   }
 
-  /// ─── FAILED VIEW: Thanh toán thất bại ───────────────────────────────────
+  /// ─── FAILED VIEW: Payment failed ───────────────────────────────────
   Widget _buildFailedView() {
     return Center(
       child: Padding(
@@ -340,7 +340,7 @@ class _VnpayPaymentPageState extends State<VnpayPaymentPage>
 
             const SizedBox(height: 32),
 
-            // Thử lại
+            // Retry
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -366,7 +366,7 @@ class _VnpayPaymentPageState extends State<VnpayPaymentPage>
             ),
             const SizedBox(height: 12),
 
-            // Thanh toán sau
+            // Pay later
             SizedBox(
               width: double.infinity,
               child: TextButton(

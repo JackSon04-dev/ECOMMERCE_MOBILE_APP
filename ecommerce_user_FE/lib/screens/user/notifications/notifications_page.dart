@@ -7,7 +7,7 @@ import '../../../widgets/common_widgets.dart';
 import '../../../services/api_service.dart';
 import '../orders/order_detail_page.dart';
 
-/// 🔔 Notifications Page - Trang thông báo (Sử dụng Provider)
+/// 🔔 Notifications Page (Using Provider)
 class NotificationsPage extends StatefulWidget {
   final String? initialType;
 
@@ -130,7 +130,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         children: [
-                          // --- MỤC 1: ĐƠN HÀNG ---
+                          // --- SECTION 1: ORDERS ---
                           _buildCategorySection(
                             title: 'Đơn hàng',
                             icon: Icons.local_shipping_outlined,
@@ -146,7 +146,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                             },
                           ),
 
-                          // --- MỤC 2: KHUYẾN MÃI ---
+                          // --- SECTION 2: PROMOTIONS ---
                           _buildCategorySection(
                             title: 'Khuyến mãi',
                             icon: Icons.local_offer_outlined,
@@ -162,7 +162,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                             },
                           ),
 
-                          // --- MỤC 3: HỆ THỐNG ---
+                          // --- SECTION 3: SYSTEM ---
                           _buildCategorySection(
                             title: 'Hệ thống',
                             icon: Icons.campaign_outlined,
