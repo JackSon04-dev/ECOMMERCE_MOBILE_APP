@@ -179,7 +179,7 @@ While MongoDB is schemaless, we enforce strict schemas using Mongoose. Here are 
 
 A deeper look into the codebase organization to help developers navigate:
 
-\`\`\`
+```text
 ECOMMERCE_MOBILE_APP/
 │
 ├── ecommerce_backend/          # Node.js Express API
@@ -206,7 +206,7 @@ ECOMMERCE_MOBILE_APP/
 │   │   └── style.css           # Vanilla CSS styling
 │
 └── docker-compose.local.yml    # Container orchestration for local dev
-\`\`\`
+```
 
 ---
 
