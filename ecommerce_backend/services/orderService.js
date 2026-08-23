@@ -178,7 +178,7 @@ export const enqueueOrderCreation = async (userId, orderData) => {
     // Fallback: Process synchronously directly if RabbitMQ is down
     console.warn('⚠️ [enqueueOrderCreation] RabbitMQ lỗi, tự động chuyển sang xử lý đồng bộ:', queueError.message);
     const result = await processCreateOrder(userId, orderData, orderId);
-    
+
     return {
       success: true,
       statusCode: 201,

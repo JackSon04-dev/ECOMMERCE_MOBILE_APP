@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S-Shop | System Architecture — clothesstores.app</title>
+    <meta name="description" content="Interactive architecture diagram of S-Shop E-Commerce Platform deployed on AWS EC2 with Docker, Nginx, and full microservices stack.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --font-display: 'Outfit', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --bg: #06060b;
+            --bg-card: rgba(14, 14, 24, 0.88);
+            --bg-glass: rgba(255,255,255,0.03);
+            --border: rgba(255,255,255,0.07);
+            --text: #e8e8f0;
+            --text2: #8888a0;
+            --text3: #4a4a60;
+            --blue: #4f7df5;
+            --cyan: #22d3ee;
+            --purple: #a855f7;
+            --pink: #ec4899;
+            --green: #10b981;
+            --orange: #f59e0b;
+            --red: #ef4444;
+            --aws-orange: #ff9900;
+            --docker-blue: #2496ed;
+        }
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+        html { scroll-behavior:smooth; scrollbar-width:thin; scrollbar-color: var(--blue) var(--bg); }
+        body {
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===== THREE.JS CANVAS ===== */
+        #bg-canvas {
+            position: fixed; inset:0; z-index:0; pointer-events:none;
+        }
+
+        /* ===== CURSOR GLOW ===== */
+        .cursor-glow {
+            position:fixed; width:500px; height:500px; border-radius:50%;
+            background: radial-gradient(circle, rgba(79,125,245,0.05) 0%, transparent 70%);
+            pointer-events:none; z-index:1; transform:translate(-50%,-50%);
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .page { position:relative; z-index:2; }
+
+        /* ===== HEADER ===== */
+        .header {
+            text-align:center; padding: 45px 20px 15px;
+        }
+        .header-badge {
+            display:inline-flex; align-items:center; gap:8px;
+            padding:6px 18px; border-radius:100px;
+            background: var(--bg-glass); border:1px solid var(--border);
+            font-family:var(--font-mono); font-size:0.65rem; color:var(--cyan);
+            text-transform:uppercase; letter-spacing:3px; margin-bottom:14px;
+        }
+        .header-badge .dot {
+            width:7px; height:7px; border-radius:50%; background:var(--green);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.6)} }
+        .header h1 {
+            font-family:var(--font-display); font-size:clamp(1.8rem,4vw,3rem);
+            font-weight:900; letter-spacing:-1px; line-height:1.15; margin-bottom:10px;
+        }
+        .header h1 .gr {
+            background:linear-gradient(135deg,var(--blue),var(--purple),var(--pink));
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+        }
+        .header p {
+            font-size:0.88rem; color:var(--text2); max-width:560px; margin:0 auto 8px;
+        }
+        .header .hint {
+            font-size:0.72rem; color:var(--text3); font-family:var(--font-mono);
+            display:flex; align-items:center; justify-content:center; gap:12px;
+            flex-wrap: wrap;
+        }
+        .reset-btn {
+            background: var(--bg-glass);
+            border: 1px solid var(--border);
+            color: var(--cyan);
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            padding: 4px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .reset-btn:hover {
+            background: rgba(34,211,238,0.15);
+            border-color: var(--cyan);
+            transform: translateY(-1px);
+            color: #fff;
+        }
+
+        /* ===== METRICS STRIP ===== */
+        .metrics-wrapper {
+            display: flex;
+            justify-content: center;
+            padding: 0 20px;
+            margin-bottom: 20px;
+        }
+        .metrics-strip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            width: 1000px;
+            padding: 14px 22px;
+            background: rgba(14, 14, 24, 0.75);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            flex-wrap: wrap;
+        }
+        .metric-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            min-width: 135px;
+            transition: transform 0.25s ease;
+            padding: 4px;
+        }
+        .metric-item:hover {
+            transform: translateY(-2px);
+        }
+        .metric-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.05rem;
+            flex-shrink: 0;
+            background: var(--bg-glass);
+            border: 1px solid var(--border);
+        }
+        .metric-content {
+            display: flex;
+            flex-direction: column;
+        }
+        .metric-val {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 800;
+            line-height: 1.1;
+            color: var(--text);
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+        .metric-label {
+            font-family: var(--font-mono);
+            font-size: 0.58rem;
+            font-weight: 600;
+            color: var(--text2);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        /* ===== DIAGRAM ===== */
+        .diagram-wrapper {
+            display:flex; justify-content:center; padding: 10px 20px 50px;
+        }
+        .diagram {
+            position:relative;
+            width: 1000px; height: 970px;
+        }
+
+        /* ===== SVG CONNECTIONS LAYER ===== */
+        .connections-svg {
+            position:absolute; inset:0; width:100%; height:100%;
+            pointer-events:none; z-index:6;
+        }
+        .conn-path {
+            fill:none; stroke-width:2.2;
+            stroke-dasharray: 7 4;
+            animation: dashFlow 1.5s linear infinite;
+        }
+        @keyframes dashFlow { to { stroke-dashoffset: -22; } }
+
+        /* Protocol badge on connection */
+        .proto-badge {
+            position:absolute; z-index:15;
+            font-family:var(--font-mono); font-size:0.6rem; font-weight:600;
+            padding: 4px 10px; border-radius:6px;
+            white-space:nowrap; pointer-events:none;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            backdrop-filter: blur(8px);
+            transition: transform 0.05s ease-out;
+        }
+
+        /* ===== NODE ===== */
+        .node {
+            position:absolute; z-index:10;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px 12px 14px;
+            text-align:center;
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+            transition: border-color 0.35s, box-shadow 0.35s;
+            backdrop-filter: blur(14px);
+            transform-origin: center center;
+            width: 140px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        .node:hover {
+            border-color: rgba(79,125,245,0.5);
+            transform: translateY(-4px) scale(1.04);
+            box-shadow: 0 0 32px rgba(79,125,245,0.18);
+            z-index: 20;
+        }
+        .node.dragging {
+            cursor: grabbing !important;
+            z-index: 50 !important;
+            transform: scale(1.06) !important;
+            box-shadow: 0 16px 40px rgba(79,125,245,0.4) !important;
+            border-color: var(--cyan) !important;
+        }
+
+        .node-icon {
+            width:42px; height:42px; border-radius:11px;
+            display:flex; align-items:center; justify-content:center;
+            font-size:1.15rem; margin:0 auto 10px;
+            position:relative;
+            pointer-events: none;
+        }
+        .node-icon::after {
+            content:''; position:absolute; inset:-5px; border-radius:15px;
+            background:inherit; opacity:0.15; filter:blur(10px); z-index:-1;
+        }
+        .node-title {
+            font-family:var(--font-display); font-size:0.78rem; font-weight:700;
+            margin-bottom:3px; line-height:1.2;
+            pointer-events: none;
+        }
+        .node-sub {
+            font-size:0.6rem; color:var(--text3); line-height:1.3;
+            pointer-events: none;
+        }
+
+        /* Node widths */
+        .node.wide { width:165px; }
+        .node.narrow { width:130px; }
+
+        /* ===== BOUNDARIES ===== */
+        .boundary {
+            position:absolute; border-radius:18px; z-index:1;
+            pointer-events:none;
+        }
+        .boundary-label {
+            position:absolute; top:-12px; font-family:var(--font-mono);
+            font-size:0.62rem; font-weight:700; letter-spacing:2px;
+            text-transform:uppercase; padding:3px 14px; border-radius:6px;
+        }
+
+        .ec2-boundary {
+            border: 1.5px dashed rgba(255,153,0,0.3);
+            background: rgba(255,153,0,0.015);
+        }
+        .ec2-boundary .boundary-label {
+            left:24px; color:var(--aws-orange);
+            background: rgba(255,153,0,0.1); border:1px solid rgba(255,153,0,0.25);
+        }
+
+        .docker-boundary {
+            border: 1.5px dashed rgba(36,150,237,0.3);
+            background: rgba(36,150,237,0.015);
+        }
+        .docker-boundary .boundary-label {
+            left:20px; color:var(--docker-blue);
+            background: rgba(36,150,237,0.1); border:1px solid rgba(36,150,237,0.25);
+        }
+        .docker-network-label {
+            position:absolute; bottom:10px; right:16px;
+            font-family:var(--font-mono); font-size:0.55rem; color:rgba(36,150,237,0.4);
+            letter-spacing:1px;
+        }
+
+        /* ===== DETAIL OVERLAY ===== */
+        .detail-overlay {
+            position:fixed; inset:0; z-index:1000;
+            display:none; align-items:center; justify-content:center;
+            perspective: 1200px;
+        }
+        .detail-overlay.active { display:flex; }
+        .detail-backdrop {
+            position:absolute; inset:0;
+            background: rgba(4,4,8,0.78);
+            backdrop-filter: blur(8px);
+            cursor:pointer;
+        }
+        .detail-panel {
+            position:relative; z-index:1;
+            width:90%; max-width:580px; max-height:85vh;
+            background: linear-gradient(145deg, rgba(16,16,28,0.97), rgba(10,10,18,0.98));
+            border:1px solid var(--border);
+            border-radius:20px;
+            overflow-y:auto; overflow-x:hidden;
+            scrollbar-width:thin; scrollbar-color: var(--blue) transparent;
+            transform: rotateY(-8deg) rotateX(4deg) scale(0.85);
+            opacity:0;
+        }
+        .detail-panel::-webkit-scrollbar { width:4px; }
+        .detail-panel::-webkit-scrollbar-thumb { background:var(--blue); border-radius:2px; }
+
+        .detail-close {
+            position:sticky; top:0; z-index:10;
+            display:flex; justify-content:flex-end; padding:16px 20px 0;
+        }
+        .detail-close button {
+            width:36px; height:36px; border-radius:10px;
+            background:var(--bg-glass); border:1px solid var(--border);
+            color:var(--text2); font-size:1rem; cursor:pointer;
+            transition: all 0.2s;
+        }
+        .detail-close button:hover {
+            background:rgba(239,68,68,0.15); border-color:var(--red); color:var(--red);
+        }
+
+        .detail-header {
+            display:flex; align-items:center; gap:16px;
+            padding:8px 28px 20px;
+        }
+        .detail-header-icon {
+            width:56px; height:56px; border-radius:14px;
+            display:flex; align-items:center; justify-content:center;
+            font-size:1.5rem; flex-shrink:0;
+        }
+        .detail-header h2 {
+            font-family:var(--font-display); font-size:1.35rem; font-weight:800;
+            line-height:1.2;
+        }
+        .detail-header h2 small {
+            display:block; font-size:0.7rem; font-weight:500;
+            color:var(--text2); margin-top:4px;
+        }
+
+        .detail-body { padding: 0 28px 28px; }
+
+        .detail-section { margin-bottom:20px; }
+        .detail-section-title {
+            font-family:var(--font-mono); font-size:0.62rem; font-weight:600;
+            text-transform:uppercase; letter-spacing:2px; color:var(--text3);
+            margin-bottom:10px; display:flex; align-items:center; gap:8px;
+        }
+        .detail-section-title::after {
+            content:''; flex:1; height:1px; background:var(--border);
+        }
+
+        .detail-desc {
+            font-size:0.82rem; color:var(--text2); line-height:1.7; margin-bottom:20px;
+        }
+
+        .detail-tech-grid {
+            display:flex; flex-wrap:wrap; gap:8px;
+        }
+        .detail-tech-tag {
+            display:flex; align-items:center; gap:6px;
+            padding:7px 13px; border-radius:9px;
+            background:var(--bg-glass); border:1px solid var(--border);
+            font-size:0.72rem; font-weight:600;
+            transition: all 0.2s;
+        }
+        .detail-tech-tag:hover {
+            border-color: var(--blue);
+            transform: translateY(-2px);
+        }
+        .detail-tech-tag i { font-size:0.7rem; }
+
+        .detail-protocols {
+            display:flex; flex-direction:column; gap:8px;
+        }
+        .detail-proto-row {
+            display:flex; align-items:center; gap:10px;
+            padding:10px 14px; border-radius:10px;
+            background:var(--bg-glass); border:1px solid var(--border);
+        }
+        .detail-proto-method {
+            font-family:var(--font-mono); font-size:0.6rem; font-weight:700;
+            padding:3px 9px; border-radius:5px; text-transform:uppercase;
+            flex-shrink:0;
+        }
+        .detail-proto-target {
+            font-size:0.75rem; font-weight:600;
+        }
+        .detail-proto-desc {
+            font-size:0.65rem; color:var(--text3); margin-left:auto;
+        }
+
+        .detail-features {
+            display:grid; grid-template-columns: 1fr 1fr; gap:6px;
+        }
+        .detail-feature {
+            display:flex; align-items:center; gap:7px;
+            font-size:0.74rem; color:var(--text2);
+            padding:6px 0;
+        }
+        .detail-feature i {
+            font-size:0.55rem; color:var(--green); flex-shrink:0;
+        }
+
+        .detail-files {
+            display: flex; flex-wrap: wrap; gap: 6px;
+        }
+        .detail-file {
+            font-family: var(--font-mono); font-size: 0.62rem;
+            padding: 4px 10px; border-radius: 6px;
+            background: var(--bg-glass); border: 1px solid var(--border);
+            color: var(--text3);
+        }
+
+        /* ===== COLOR UTILS ===== */
+        .bg-blue{background:rgba(79,125,245,.12);color:var(--blue)}
+        .bg-cyan{background:rgba(34,211,238,.12);color:var(--cyan)}
+        .bg-purple{background:rgba(168,85,247,.12);color:var(--purple)}
+        .bg-pink{background:rgba(236,72,153,.12);color:var(--pink)}
+        .bg-green{background:rgba(16,185,129,.12);color:var(--green)}
+        .bg-orange{background:rgba(245,158,11,.12);color:var(--orange)}
+        .bg-red{background:rgba(239,68,68,.12);color:var(--red)}
+
+        /* ===== RESPONSIVE ===== */
+        @media(max-width:1200px){
+            .diagram-wrapper { overflow-x:auto; justify-content:flex-start; }
+            .diagram { min-width:1000px; }
+            .metrics-strip { width: 1000px; }
+        }
+
+        /* ===== LOADING ===== */
+        #loader {
+            position:fixed; inset:0; z-index:9999;
+            background:var(--bg);
+            display:flex; align-items:center; justify-content:center; flex-direction:column; gap:20px;
+        }
+        .loader-title {
+            font-family:var(--font-display); font-size:2rem; font-weight:900;
+            background:linear-gradient(135deg,var(--blue),var(--purple),var(--pink));
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+        }
+        .loader-bar-wrap { width:180px; height:2px; background:rgba(255,255,255,.06); border-radius:2px; overflow:hidden; }
+        .loader-bar { width:0; height:100%; background:linear-gradient(90deg,var(--blue),var(--purple)); border-radius:2px; transition:width .2s; }
+        .loader-hint { font-family:var(--font-mono); font-size:.65rem; color:var(--text3); letter-spacing:2px; text-transform:uppercase; }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            text-align:center; padding:30px 20px 40px;
+            font-size:0.7rem; color:var(--text3);
+            border-top:1px solid var(--border);
+            font-family:var(--font-mono);
+        }
+        .footer strong { color: var(--text2); }
+    </style>
+</head>
+<body>
+
+<!-- Loader -->
+<div id="loader">
+    <div class="loader-title">S-Shop</div>
+    <div class="loader-bar-wrap"><div class="loader-bar" id="loader-bar"></div></div>
+    <div class="loader-hint">Loading architecture...</div>
+</div>
+
+<!-- Three.js BG -->
+<canvas id="bg-canvas"></canvas>
+
+<!-- Cursor -->
+<div class="cursor-glow" id="cursor-glow"></div>
+
+<!-- Page -->
+<div class="page" id="page">
+
+    <header class="header">
+        <div class="header-badge"><span class="dot"></span> Production Architecture</div>
+        <h1>Kiến trúc <span class="gr">S-Shop Platform</span></h1>
+        <p>Sơ đồ triển khai toàn bộ hệ thống E-Commerce trên AWS EC2 với Docker Compose — từ domain <strong>clothesstores.app</strong> đến từng service bên trong container.</p>
+        <div class="hint">
+            <span><i class="fas fa-hand-pointer"></i> Click xem chi tiết 3D</span>
+            <span>•</span>
+            <span><i class="fas fa-arrows-alt"></i> Kéo thả module di chuyển tự do</span>
+            <span>•</span>
+            <button class="reset-btn" onclick="resetNodePositions()"><i class="fas fa-undo"></i> Reset vị trí</button>
+        </div>
+    </header>
+
+    <!-- PROJECT METRICS SUMMARY STRIP -->
+    <div class="metrics-wrapper">
+        <div class="metrics-strip">
+            <div class="metric-item">
+                <div class="metric-icon" style="color:var(--docker-blue)"><i class="fab fa-docker"></i></div>
+                <div class="metric-content">
+                    <div class="metric-val"><span class="count-num" data-target="6">0</span> <small style="font-size:0.65rem;color:var(--text3)">Containers</small></div>
+                    <div class="metric-label">Docker Services</div>
+                </div>
+            </div>
+
+            <div class="metric-item">
+                <div class="metric-icon" style="color:var(--green)"><i class="fas fa-database"></i></div>
+                <div class="metric-content">
+                    <div class="metric-val"><span class="count-num" data-target="8">0</span> <small style="font-size:0.65rem;color:var(--text3)">Collections</small></div>
+                    <div class="metric-label">MongoDB Schemas</div>
+                </div>
+            </div>
+
+            <div class="metric-item">
+                <div class="metric-icon" style="color:var(--orange)"><i class="fas fa-envelope-open-text"></i></div>
+                <div class="metric-content">
+                    <div class="metric-val"><span class="count-num" data-target="4">0</span> <small style="font-size:0.65rem;color:var(--text3)">AMQP Queues</small></div>
+                    <div class="metric-label">RabbitMQ Queues</div>
+                </div>
+            </div>
+
+            <div class="metric-item">
+                <div class="metric-icon" style="color:var(--cyan)"><i class="fas fa-server"></i></div>
+                <div class="metric-content">
+                    <div class="metric-val"><span class="count-num" data-target="11">0</span> <small style="font-size:0.65rem;color:var(--text3)">Services</small></div>
+                    <div class="metric-label">Express Core MVC</div>
+                </div>
+            </div>
+
+            <div class="metric-item">
+                <div class="metric-icon" style="color:var(--purple)"><i class="fas fa-mobile-alt"></i></div>
+                <div class="metric-content">
+                    <div class="metric-val">2 <small style="font-size:0.65rem;color:var(--text3)">Apps</small></div>
+                    <div class="metric-label">Flutter & Vue 3</div>
+                </div>
+            </div>
+
+            <div class="metric-item">
+                <div class="metric-icon" style="color:var(--aws-orange)"><i class="fas fa-globe"></i></div>
+                <div class="metric-content">
+                    <div class="metric-val" style="font-size:0.82rem;color:var(--cyan);">clothesstores.app</div>
+                    <div class="metric-label">AWS EC2 · HSTS</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="diagram-wrapper">
+        <div class="diagram" id="diagram">
+
+            <!-- === SVG CONNECTIONS === -->
+            <svg class="connections-svg" id="conn-svg">
+                <defs>
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="3.5" result="blur"/>
+                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                </defs>
+            </svg>
+
+            <!-- === BOUNDARIES === -->
+            <!-- EC2 -->
+            <div class="boundary ec2-boundary" style="left:110px; top:245px; width:770px; height:570px;">
+                <span class="boundary-label"><i class="fab fa-aws"></i> &nbsp;AWS EC2 Instance</span>
+            </div>
+            <!-- Docker -->
+            <div class="boundary docker-boundary" style="left:130px; top:285px; width:730px; height:510px;">
+                <span class="boundary-label"><i class="fab fa-docker"></i> &nbsp;Docker Compose</span>
+                <span class="docker-network-label">network: ecommerce_local_net (bridge)</span>
+            </div>
+
+            <!-- ============================= -->
+            <!-- ROW 1: EXTERNAL CLIENTS & DNS -->
+            <!-- ============================= -->
+            <div class="node wide" id="node-mobile" style="left:140px; top:15px;" data-detail="mobile">
+                <div class="node-icon bg-blue"><i class="fas fa-mobile-alt"></i></div>
+                <div class="node-title">📱 Flutter App</div>
+                <div class="node-sub">Customer · iOS & Android</div>
+            </div>
+
+            <div class="node wide" id="node-dns" style="left:405px; top:80px;" data-detail="dns">
+                <div class="node-icon bg-orange"><i class="fas fa-globe"></i></div>
+                <div class="node-title">🌐 clothesstores.app</div>
+                <div class="node-sub">Namecheap DNS · HTTPS</div>
+            </div>
+
+            <div class="node wide" id="node-admin-browser" style="left:670px; top:15px;" data-detail="admin-browser">
+                <div class="node-icon bg-purple"><i class="fas fa-desktop"></i></div>
+                <div class="node-title">💻 Admin Dashboard</div>
+                <div class="node-sub">Vue 3 · Browser</div>
+            </div>
+
+            <!-- ============================= -->
+            <!-- DOCKER SERVICES (ROWS 2 & 3)  -->
+            <!-- ============================= -->
+            <div class="node wide" id="node-nginx" style="left:160px; top:320px;" data-detail="nginx">
+                <div class="node-icon bg-green"><i class="fas fa-shield-alt"></i></div>
+                <div class="node-title">🛡️ Nginx</div>
+                <div class="node-sub">Reverse Proxy · SSL · :443</div>
+            </div>
+
+            <div class="node" id="node-admin-static" style="left:410px; top:320px;" data-detail="admin-static">
+                <div class="node-icon bg-purple"><i class="fab fa-vuejs"></i></div>
+                <div class="node-title">Admin Web</div>
+                <div class="node-sub">Static SPA · Nginx</div>
+            </div>
+
+            <div class="node" id="node-cron" style="left:710px; top:380px;" data-detail="cron">
+                <div class="node-icon bg-purple"><i class="fas fa-clock"></i></div>
+                <div class="node-title">⏱️ Cron</div>
+                <div class="node-sub">Scheduler · Jobs</div>
+            </div>
+
+            <div class="node wide" id="node-backend" style="left:385px; top:480px;" data-detail="backend">
+                <div class="node-icon bg-cyan"><i class="fas fa-server"></i></div>
+                <div class="node-title">⚙️ Express API</div>
+                <div class="node-sub">Node.js · REST · :5000</div>
+            </div>
+
+            <div class="node" id="node-redis" style="left:160px; top:510px;" data-detail="redis">
+                <div class="node-icon bg-red"><i class="fas fa-bolt"></i></div>
+                <div class="node-title">⚡ Redis</div>
+                <div class="node-sub">Cache · :6379</div>
+            </div>
+
+            <div class="node" id="node-rabbitmq" style="left:610px; top:530px;" data-detail="rabbitmq">
+                <div class="node-icon bg-orange"><i class="fas fa-envelope-open-text"></i></div>
+                <div class="node-title">📫 RabbitMQ</div>
+                <div class="node-sub">AMQP · :5672</div>
+            </div>
+
+            <div class="node" id="node-worker" style="left:410px; top:660px;" data-detail="worker">
+                <div class="node-icon bg-blue"><i class="fas fa-hard-hat"></i></div>
+                <div class="node-title">👷 Worker</div>
+                <div class="node-sub">Consumer · FCM</div>
+            </div>
+
+            <!-- ============================= -->
+            <!-- ROW 4: EXTERNAL SERVICES      -->
+            <!-- ============================= -->
+            <div class="node narrow" id="node-mongodb" style="left:50px; top:870px;" data-detail="mongodb">
+                <div class="node-icon bg-green"><i class="fas fa-database"></i></div>
+                <div class="node-title">MongoDB</div>
+                <div class="node-sub">Atlas · Cloud</div>
+            </div>
+
+            <div class="node narrow" id="node-cloudinary" style="left:240px; top:870px;" data-detail="cloudinary">
+                <div class="node-icon bg-blue"><i class="fas fa-cloud-upload-alt"></i></div>
+                <div class="node-title">Cloudinary</div>
+                <div class="node-sub">Image CDN</div>
+            </div>
+
+            <div class="node narrow" id="node-firebase" style="left:430px; top:870px;" data-detail="firebase">
+                <div class="node-icon bg-orange"><i class="fas fa-fire"></i></div>
+                <div class="node-title">Firebase</div>
+                <div class="node-sub">FCM · Push</div>
+            </div>
+
+            <div class="node narrow" id="node-payment" style="left:630px; top:870px;" data-detail="payment">
+                <div class="node-icon bg-pink"><i class="fas fa-credit-card"></i></div>
+                <div class="node-title">PayOS</div>
+                <div class="node-sub">Webhook · VietQR</div>
+            </div>
+
+            <div class="node narrow" id="node-gemini" style="left:820px; top:870px;" data-detail="gemini">
+                <div class="node-icon bg-cyan"><i class="fas fa-brain"></i></div>
+                <div class="node-title">Gemini AI</div>
+                <div class="node-sub">NLP · Chatbot</div>
+            </div>
+
+            <!-- Protocol badges positioned by JS -->
+        </div>
+    </div>
+
+    <footer class="footer">
+        <strong>S-Shop</strong> &nbsp;—&nbsp; Built by <strong>Ngọc Sơn</strong> &nbsp;|&nbsp; Full-Stack E-Commerce Platform &nbsp;|&nbsp; 2024
+    </footer>
+</div>
+
+<!-- Detail Overlay -->
+<div class="detail-overlay" id="detail-overlay">
+    <div class="detail-backdrop" id="detail-backdrop"></div>
+    <div class="detail-panel" id="detail-panel"></div>
+</div>
+
+<script>
+// ================================================== //
+// MODULE DATA (AUDITED & ALIGNED WITH CODEBASE)       //
+// ================================================== //
+const DATA = {
+    mobile: {
+        icon: '<i class="fas fa-mobile-alt"></i>', iconClass: 'bg-blue',
+        title: '📱 Flutter Mobile App', sub: 'Customer Facing — iOS & Android',
+        desc: 'Ứng dụng di động thương mại điện tử cross-platform cho khách hàng mua sắm, tích hợp AI chatbot trợ lý thông minh, thanh toán VietQR PayOS, theo dõi tiến trình đơn hàng real-time và nhận thông báo đẩy FCM.',
+        tech: [
+            {icon:'fas fa-feather-alt', name:'Flutter / Dart', c:'var(--blue)'},
+            {icon:'fas fa-sync-alt', name:'Riverpod', c:'var(--purple)'},
+            {icon:'fas fa-sync', name:'Provider', c:'var(--orange)'},
+            {icon:'fab fa-google', name:'Google Sign-In', c:'var(--red)'},
+            {icon:'fas fa-lock', name:'Secure Storage', c:'var(--green)'},
+            {icon:'fas fa-fire', name:'Firebase FCM', c:'var(--orange)'},
+            {icon:'fas fa-qrcode', name:'qr_flutter', c:'var(--cyan)'},
+            {icon:'fas fa-magic', name:'flutter_animate', c:'var(--pink)'},
+        ],
+        protocols: [
+            {method:'HTTPS', methodBg:'rgba(16,185,129,.15)', methodColor:'var(--green)', target:'clothesstores.app', desc:'REST API calls'},
+            {method:'REST', methodBg:'rgba(79,125,245,.15)', methodColor:'var(--blue)', target:'→ Nginx → Backend :5000', desc:'JSON payload'},
+        ],
+        features: [
+            'Product search & dynamic filters',
+            'AI Chatbot shopping drawer',
+            'Cart & Checkout flow',
+            'PayOS VietQR / VNPay / ZaloPay',
+            'Push notifications & FCM Token',
+            'Order tracking timeline',
+            'Product reviews & star ratings',
+            'Size guide sheet modal',
+            'Auto reorder result sheet',
+            'Notification Read/Unread tracking'
+        ],
+        files: ['lib/screens/', 'lib/widgets/chatbot_widget.dart', 'lib/widgets/size_guide_sheet.dart', 'lib/widgets/reorder_result_sheet.dart', 'lib/providers/', 'lib/services/'],
+    },
+    'admin-browser': {
+        icon: '<i class="fas fa-desktop"></i>', iconClass: 'bg-purple',
+        title: '💻 Admin Dashboard', sub: 'Management Interface — Vue 3 SPA',
+        desc: 'Bảng điều khiển quản trị web xây dựng bằng Vue.js 3 (Composition API) & Vite. Cung cấp báo cáo doanh thu real-time qua MongoDB Aggregation, quản lý sản phẩm biến thể Color/Size, đơn hàng, voucher và phát thông báo Broadcast FCM.',
+        tech: [
+            {icon:'fab fa-vuejs', name:'Vue.js 3', c:'var(--green)'},
+            {icon:'fas fa-bolt', name:'Vite', c:'var(--purple)'},
+            {icon:'fas fa-exchange-alt', name:'Axios Interceptors', c:'var(--blue)'},
+            {icon:'fas fa-route', name:'Vue Router', c:'var(--cyan)'},
+            {icon:'fas fa-chart-line', name:'Aggregation Pipeline', c:'var(--orange)'},
+        ],
+        protocols: [
+            {method:'HTTPS', methodBg:'rgba(16,185,129,.15)', methodColor:'var(--green)', target:'clothesstores.app', desc:'Browser access'},
+            {method:'REST', methodBg:'rgba(79,125,245,.15)', methodColor:'var(--blue)', target:'→ /api/* → Backend', desc:'Axios HTTP client'},
+        ],
+        features: [
+            'Revenue dashboard ($group, $sum)',
+            'Product CRUD & Variant Matrix',
+            'Low stock warning alerts',
+            'Order processing & RabbitMQ dispatch',
+            'Voucher creation & expiry',
+            'Review moderation & ratings',
+            'FCM Broadcast Campaign Creator',
+            'Auto Access/Refresh Token rotation'
+        ],
+        files: ['src/views/DashboardView.vue', 'src/views/product/', 'src/views/order/', 'src/views/notification/', 'src/views/review/', 'src/router/'],
+    },
+    dns: {
+        icon: '<i class="fas fa-globe"></i>', iconClass: 'bg-orange',
+        title: '🌐 clothesstores.app', sub: 'Domain & DNS — Namecheap',
+        desc: 'Domain .app mua từ Namecheap. DNS A Record trỏ tới Public IP của AWS EC2 instance. TLD .app được Google bắt buộc HSTS preloaded (bắt buộc HTTPS), chứng chỉ Let\'s Encrypt SSL tự động gia hạn.',
+        tech: [
+            {icon:'fas fa-globe', name:'Namecheap DNS', c:'var(--orange)'},
+            {icon:'fas fa-certificate', name:'Let\'s Encrypt SSL', c:'var(--green)'},
+            {icon:'fas fa-lock', name:'.app HSTS Preloaded', c:'var(--red)'},
+            {icon:'fas fa-map-marker-alt', name:'A Record → EC2 IP', c:'var(--blue)'},
+        ],
+        protocols: [
+            {method:'DNS', methodBg:'rgba(245,158,11,.15)', methodColor:'var(--orange)', target:'A Record → EC2 Public IP', desc:'Domain resolution'},
+            {method:'HTTPS', methodBg:'rgba(16,185,129,.15)', methodColor:'var(--green)', target:'TLS 1.3 · Port 443', desc:'Encrypted traffic'},
+        ],
+        features: [
+            'DNS A Record configuration',
+            'Forced HTTPS (HSTS preloaded)',
+            'Let\'s Encrypt auto-renewal',
+            'www subdomain redirect'
+        ],
+        files: [],
+    },
+    nginx: {
+        icon: '<i class="fas fa-shield-alt"></i>', iconClass: 'bg-green',
+        title: '🛡️ Nginx Reverse Proxy', sub: 'SSL Termination · Load Balancer · Static Server',
+        desc: 'Nginx đóng vai trò là cổng vào duy nhất của hệ thống. Xử lý SSL termination (Let\'s Encrypt), serve Admin SPA static files, và reverse proxy tất cả request /api/* sang Express backend container qua Docker network.',
+        tech: [
+            {icon:'fas fa-shield-alt', name:'Nginx Alpine', c:'var(--green)'},
+            {icon:'fas fa-certificate', name:'SSL/TLS', c:'var(--green)'},
+            {icon:'fas fa-random', name:'proxy_pass', c:'var(--blue)'},
+            {icon:'fas fa-file-code', name:'try_files SPA', c:'var(--purple)'},
+        ],
+        protocols: [
+            {method:'HTTPS', methodBg:'rgba(16,185,129,.15)', methodColor:'var(--green)', target:'Incoming :443', desc:'SSL termination'},
+            {method:'HTTP', methodBg:'rgba(79,125,245,.15)', methodColor:'var(--blue)', target:'proxy_pass http://backend:5000', desc:'Internal Docker'},
+            {method:'301', methodBg:'rgba(245,158,11,.15)', methodColor:'var(--orange)', target:'HTTP :80 → HTTPS :443', desc:'Force redirect'},
+        ],
+        features: [
+            'SSL termination (Let\'s Encrypt)',
+            'Reverse proxy /api → backend:5000',
+            'Serve Admin Vue SPA (try_files)',
+            'HTTP :80 → HTTPS :443 redirect',
+            'X-Real-IP forwarding',
+            'WebSocket Upgrade header support'
+        ],
+        files: ['nginx.conf', 'nginx.local.conf', 'Dockerfile'],
+    },
+    'admin-static': {
+        icon: '<i class="fab fa-vuejs"></i>', iconClass: 'bg-purple',
+        title: '📦 Admin Web Static', sub: 'Vue 3 SPA — Served by Nginx',
+        desc: 'Bản build production của Admin Dashboard được biên dịch bởi Vite (npm run build). Nginx serve các file static từ /usr/share/nginx/html với try_files fallback cho Vue Router SPA client-side routing.',
+        tech: [
+            {icon:'fab fa-vuejs', name:'Vue 3 Build', c:'var(--green)'},
+            {icon:'fas fa-file-code', name:'Static HTML/JS/CSS', c:'var(--blue)'},
+            {icon:'fas fa-shield-alt', name:'Nginx Host', c:'var(--green)'},
+        ],
+        protocols: [
+            {method:'HTTP', methodBg:'rgba(79,125,245,.15)', methodColor:'var(--blue)', target:'Nginx location /', desc:'Static file serving'},
+            {method:'REST', methodBg:'rgba(34,211,238,.15)', methodColor:'var(--cyan)', target:'/api/* → proxy_pass', desc:'API via Nginx proxy'},
+        ],
+        features: [
+            'Vite production bundle optimization',
+            'SPA try_files routing fallback',
+            'Shared Nginx container',
+            'Client-side route guards'
+        ],
+        files: ['index.html', 'dist/'],
+    },
+    backend: {
+        icon: '<i class="fas fa-server"></i>', iconClass: 'bg-cyan',
+        title: '⚙️ Express.js API Server', sub: 'Core Backend — Node.js v18+ · Port 5000',
+        desc: 'Trung tâm xử lý business logic theo mô hình MVC. Quản lý 11 Business Services và 8 Mongoose Schemas. Bảo mật bằng JWT auth, rate-limiting chống DDoS, NoSQL injection sanitization và Cloudinary file upload.',
+        tech: [
+            {icon:'fab fa-node-js', name:'Node.js v18+', c:'var(--green)'},
+            {icon:'fas fa-server', name:'Express.js', c:'var(--blue)'},
+            {icon:'fas fa-database', name:'Mongoose ODM', c:'var(--green)'},
+            {icon:'fas fa-key', name:'JWT Auth', c:'var(--orange)'},
+            {icon:'fas fa-shield-virus', name:'bcryptjs', c:'var(--red)'},
+            {icon:'fas fa-check-circle', name:'Joi Validation', c:'var(--blue)'},
+            {icon:'fas fa-tachometer-alt', name:'Rate Limiter', c:'var(--pink)'},
+            {icon:'fas fa-compress-alt', name:'Compression', c:'var(--cyan)'},
+        ],
+        protocols: [
+            {method:'HTTP', methodBg:'rgba(79,125,245,.15)', methodColor:'var(--blue)', target:'← Nginx proxy_pass :5000', desc:'Incoming requests'},
+            {method:'REDIS', methodBg:'rgba(239,68,68,.15)', methodColor:'var(--red)', target:'→ redis://redis:6379', desc:'Cache / Sessions'},
+            {method:'AMQP', methodBg:'rgba(245,158,11,.15)', methodColor:'var(--orange)', target:'→ amqp://rabbitmq:5672', desc:'Publish jobs'},
+            {method:'HTTPS', methodBg:'rgba(16,185,129,.15)', methodColor:'var(--green)', target:'→ MongoDB Atlas / Cloudinary / Firebase', desc:'External APIs'},
+        ],
+        features: [
+            '11 Business Services & 8 Mongoose Schemas',
+            'JWT Access/Refresh token rotation',
+            'Multer → Cloudinary file storage',
+            'PayOS / VNPay / ZaloPay integrations',
+            'Crypto-js HMAC SHA512 verification',
+            'express-rate-limit chống DDoS',
+            'express-mongo-sanitize NoSQL prevention',
+            'Gemini AI NLP search service'
+        ],
+        files: ['server.js', 'controllers/ (15 files)', 'services/ (11 files)', 'models/ (8 schemas)', 'middleware/', 'routes/'],
+    },
+    redis: {
+        icon: '<i class="fas fa-bolt"></i>', iconClass: 'bg-red',
+        title: '⚡ Redis 7 Cache', sub: 'In-Memory Store · Port 6379',
+        desc: 'Redis 7 Alpine phục vụ caching hiệu năng cao trong Docker network: Cache trạng thái thanh toán payment_status (300s TTL) cho Polling API, AI Intent Cache dùng chung cho Gemini AI, và Session / Stock locking chống overselling.',
+        tech: [
+            {icon:'fas fa-bolt', name:'Redis 7 Alpine', c:'var(--red)'},
+            {icon:'fas fa-memory', name:'In-Memory Store', c:'var(--orange)'},
+        ],
+        protocols: [
+            {method:'REDIS', methodBg:'rgba(239,68,68,.15)', methodColor:'var(--red)', target:'redis://redis:6379', desc:'Internal Docker network'},
+        ],
+        features: [
+            'payment_status cache (300s TTL)',
+            'AI Intent global query cache',
+            'Stock locking chống overselling',
+            'Base64 sessionId intent cache',
+            'Graceful Redis fallback',
+            'No external port exposed'
+        ],
+        files: ['config/redis.js', 'services/redisService.js'],
+    },
+    rabbitmq: {
+        icon: '<i class="fas fa-envelope-open-text"></i>', iconClass: 'bg-orange',
+        title: '📫 RabbitMQ Message Broker', sub: 'Message Queue · AMQP :5672',
+        desc: 'RabbitMQ 3 Management Alpine quản lý async message queues. Điều phối 4 hàng đợi chuyên biệt giúp giảm tải Express event loop và tách rời các tác vụ nặng.',
+        tech: [
+            {icon:'fas fa-envelope-open-text', name:'RabbitMQ 3', c:'var(--orange)'},
+            {icon:'fas fa-code', name:'amqplib', c:'var(--blue)'},
+        ],
+        protocols: [
+            {method:'AMQP', methodBg:'rgba(245,158,11,.15)', methodColor:'var(--orange)', target:'amqp://rabbitmq:5672', desc:'Message queue protocol'},
+            {method:'HTTP', methodBg:'rgba(79,125,245,.15)', methodColor:'var(--blue)', target:'Management UI :15672', desc:'Admin dashboard'},
+        ],
+        features: [
+            'order_creation_queue (High-concurrency order creation)',
+            'payos_payment_queue (PayOS Webhook async processing)',
+            'fcm_broadcast_queue (Mass FCM push notifications)',
+            'cancel_order_queue (Auto-cancel unpaid order queue)',
+            'Management Dashboard UI (:15672)',
+            'Consumer acknowledgment & prefetch throttling'
+        ],
+        files: ['config/rabbitmq.js', 'services/rabbitmqService.js'],
+    },
+    worker: {
+        icon: '<i class="fas fa-hard-hat"></i>', iconClass: 'bg-blue',
+        title: '👷 Background Worker', sub: 'RabbitMQ Consumer · worker.js',
+        desc: 'Container Node.js độc lập (local_worker) lắng nghe 4 hàng đợi RabbitMQ. Thực hiện xử lý ngầm tạo đơn hàng, cập nhật thanh toán PayOS Webhook, phát thông báo đẩy FCM và hủy đơn quá hạn.',
+        tech: [
+            {icon:'fab fa-node-js', name:'Node.js', c:'var(--green)'},
+            {icon:'fas fa-code', name:'amqplib Consumer', c:'var(--orange)'},
+            {icon:'fas fa-fire', name:'Firebase Admin', c:'var(--orange)'},
+        ],
+        protocols: [
+            {method:'AMQP', methodBg:'rgba(245,158,11,.15)', methodColor:'var(--orange)', target:'← rabbitmq:5672', desc:'Consume jobs'},
+            {method:'HTTPS', methodBg:'rgba(16,185,129,.15)', methodColor:'var(--green)', target:'→ Firebase FCM API', desc:'Send notifications'},
+            {method:'HTTPS', methodBg:'rgba(16,185,129,.15)', methodColor:'var(--green)', target:'→ MongoDB Atlas', desc:'Database writes'},
+        ],
+        features: [
+            'Consumer order_creation_queue (prefetch 10)',
+            'Consumer payos_payment_queue',
+            'Consumer fcm_broadcast_queue',
+            'Consumer cancel_order_queue',
+            'Chiến lược ack (xóa tin nhắn lỗi nghiệp vụ)',
+            'Chiến lược nack/requeue (thử lại khi mất kết nối DB)',
+            'Firebase Admin Push Alert dispatch'
+        ],
+        files: ['worker.js'],
+    },
+    cron: {
+        icon: '<i class="fas fa-clock"></i>', iconClass: 'bg-purple',
+        title: '⏱️ Cron Worker Scheduler', sub: 'Task Scheduler · cron.js',
+        desc: 'Container Node.js riêng biệt (local_cron) chạy node-cron. Đặt lịch quét định kỳ 15 phút/lần tìm các đơn hàng online chờ xác nhận chưa thanh toán quá 30 phút để đẩy vào cancel_order_queue.',
+        tech: [
+            {icon:'fab fa-node-js', name:'Node.js', c:'var(--green)'},
+            {icon:'fas fa-clock', name:'node-cron', c:'var(--purple)'},
+        ],
+        protocols: [
+            {method:'HTTPS', methodBg:'rgba(16,185,129,.15)', methodColor:'var(--green)', target:'→ MongoDB Atlas', desc:'Scheduled queries'},
+            {method:'AMQP', methodBg:'rgba(245,158,11,.15)', methodColor:'var(--orange)', target:'→ rabbitmq:5672', desc:'Publish cleanup jobs'},
+        ],
+        features: [
+            'Quét đơn quá hạn 15 phút/lần (*/15 * * * *)',
+            'Lọc đơn hàng online unpaid > 30 phút',
+            'Publish lệnh hủy vào cancel_order_queue',
+            'Hoàn trả tồn kho tự động',
+            'Hệ thống chạy ngầm Docker độc lập'
+        ],
+        files: ['cron.js'],
+    },
+    mongodb: {
+        icon: '<i class="fas fa-database"></i>', iconClass: 'bg-green',
+        title: '🗄️ MongoDB Atlas', sub: 'Cloud Database · 8 Collections',
+        desc: 'Cơ sở dữ liệu đám mây MongoDB Atlas quản lý 8 Mongoose Schemas. Hỗ trợ embedded color/size variants, Order Product Snapshot bảo toàn giá tại thời điểm mua, và Aggregation pipelines cho analytics.',
+        tech: [
+            {icon:'fas fa-database', name:'MongoDB Atlas', c:'var(--green)'},
+            {icon:'fas fa-code', name:'Mongoose ODM', c:'var(--green)'},
+        ],
+        protocols: [
+            {method:'HTTPS', methodBg:'rgba(16,185,129,.15)', methodColor:'var(--green)', target:'mongodb+srv://', desc:'TLS encrypted'},
+        ],
+        features: [
+            '8 Mongoose Schemas (User, Product, Order, Cart, Review, Voucher, Notification, NotificationRead)',
+            'Order Product Snapshot (Bảo toàn thông tin mua)',
+            'Embedded Color & Size variants array',
+            'Lịch sử trạng thái đơn statusHistory',
+            'MongoDB Aggregation Pipelines ($group, $sum)',
+            'Indexed queries & TLS Encryption'
+        ],
+        files: ['models/userModel.js', 'models/productModel.js', 'models/orderModel.js', 'models/cartModel.js', 'models/reviewModel.js', 'models/voucherModel.js', 'models/notification.js', 'models/notificationRead.js'],
+    },
+    cloudinary: {
+        icon: '<i class="fas fa-cloud-upload-alt"></i>', iconClass: 'bg-blue',
+        title: '☁️ Cloudinary CDN', sub: 'Image Storage & Optimization',
+        desc: 'Dịch vụ phân phối hình ảnh CDN tích hợp qua multer-storage-cloudinary. Tự động tối ưu hóa ảnh biến thể màu sắc sản phẩm và ảnh banner thông báo đẩy FCM.',
+        tech: [
+            {icon:'fas fa-cloud', name:'Cloudinary API', c:'var(--blue)'},
+            {icon:'fas fa-upload', name:'multer-storage-cloudinary', c:'var(--purple)'},
+        ],
+        protocols: [
+            {method:'HTTPS', methodBg:'rgba(16,185,129,.15)', methodColor:'var(--green)', target:'Cloudinary REST API', desc:'Upload & transform'},
+        ],
+        features: [
+            'Upload ảnh biến thể màu sắc sản phẩm',
+            'Upload ảnh banner thông báo FCM',
+            'Tự động chuyển đổi WebP / Image optimization',
+            'Phân phối CDN toàn cầu',
+            'Tạo URL biến đổi linh hoạt (Transformations)'
+        ],
+        files: ['config/cloudinary.js'],
+    },
+    firebase: {
+        icon: '<i class="fas fa-fire"></i>', iconClass: 'bg-orange',
+        title: '🔥 Firebase FCM Push Notifications', sub: 'Cloud Messaging — Push Alerts',
+        desc: 'Firebase Admin SDK v13 gửi thông báo đẩy real-time đến thiết bị di động khi trạng thái đơn hàng thay đổi. Tự động kiểm tra và xóa các Token lỗi/hết hạn khỏi Database.',
+        tech: [
+            {icon:'fas fa-fire', name:'Firebase Admin SDK v13', c:'var(--orange)'},
+            {icon:'fas fa-bell', name:'Cloud Messaging (FCM)', c:'var(--orange)'},
+        ],
+        protocols: [
+            {method:'HTTPS', methodBg:'rgba(16,185,129,.15)', methodColor:'var(--green)', target:'FCM API v1', desc:'Send notifications'},
+        ],
+        features: [
+            'Push notification thời gian thực khi đổi trạng thái đơn',
+            'Invalid Token Auto-Cleanup (Dọn dẹp Token lỗi khỏi DB)',
+            'Rich Push Notification kèm hình ảnh sản phẩm',
+            'Payload chuyển hướng ứng dụng (data payload)',
+            'Gửi thông báo cá nhân & Broadcast chiến dịch'
+        ],
+        files: ['services/fcmService.js', 'services/notificationService.js'],
+    },
+    payment: {
+        icon: '<i class="fas fa-credit-card"></i>', iconClass: 'bg-pink',
+        title: '💳 PayOS & Payment Gateways', sub: 'PayOS Webhook · VietQR · VNPay · ZaloPay',
+        desc: 'Tích hợp cổng thanh toán trực tiếp PayOS chính thức với mã VietQR tự động và xác thực chữ ký Webhook checksum. Đồng thời hỗ trợ môi trường Sandbox Dev cho VNPay (QueryDr/Return) và ZaloPay (HMAC SHA256).',
+        tech: [
+            {icon:'fas fa-cash-register', name:'PayOS (@payos/node)', c:'var(--pink)'},
+            {icon:'fas fa-credit-card', name:'VNPay (vnpay)', c:'var(--blue)'},
+            {icon:'fas fa-wallet', name:'ZaloPay', c:'var(--blue)'},
+            {icon:'fas fa-fingerprint', name:'Crypto Checksum & HMAC', c:'var(--red)'},
+        ],
+        protocols: [
+            {method:'WEBHOOK', methodBg:'rgba(236,72,153,.15)', methodColor:'var(--pink)', target:'POST /api/payments/webhook', desc:'PayOS Checksum verified'},
+            {method:'HTTPS', methodBg:'rgba(16,185,129,.15)', methodColor:'var(--green)', target:'PayOS VietQR API', desc:'Dynamic QR generation'},
+            {method:'REDIS', methodBg:'rgba(239,68,68,.15)', methodColor:'var(--red)', target:'payment_status:${id}', desc:'Fast Polling Cache'},
+        ],
+        features: [
+            'PayOS VietQR & Webhook trực tiếp (Chính thức)',
+            'Xác thực chữ ký số Checksum & HMAC SHA512',
+            'VNPay Sandbox (SHA512 + QueryDr polling)',
+            'ZaloPay Sandbox (HMAC SHA256 + Query API)',
+            'Redis payment_status cache (300s TTL)',
+            'Xử lý bất đồng bộ Webhook qua RabbitMQ'
+        ],
+        files: ['services/paymentService.js', 'controllers/user/paymentController.js'],
+    },
+    gemini: {
+        icon: '<i class="fas fa-brain"></i>', iconClass: 'bg-cyan',
+        title: '🧠 Google Gemini AI Engine', sub: 'NLP Engine — AI Chatbot',
+        desc: 'Sử dụng @google/generative-ai (Gemini 3.5 Flash / Gemini Pro) để phân tích ngôn ngữ tự nhiên thành JSON filter. Sử dụng MD5 Intent Hash -> Base64 SessionId cho phép phân trang không trạng thái (Stateless Pagination) và fallback an toàn.',
+        tech: [
+            {icon:'fas fa-brain', name:'@google/generative-ai', c:'var(--cyan)'},
+            {icon:'fas fa-language', name:'Intent Parser (NLP)', c:'var(--purple)'},
+            {icon:'fas fa-hashtag', name:'MD5 → Base64 Hash', c:'var(--blue)'},
+        ],
+        protocols: [
+            {method:'HTTPS', methodBg:'rgba(16,185,129,.15)', methodColor:'var(--green)', target:'Gemini API', desc:'NLP intent parsing'},
+        ],
+        features: [
+            'Xử lý ngôn ngữ tự nhiên tiếng Việt (Gemini 3.5 Flash)',
+            'Trích xuất Intent → MongoDB Query Filter',
+            'Stateless Deep Pagination (Base64 SessionId)',
+            'Global Intent Redis Cache',
+            'Cache Bypass với trang > 10 (.skip().limit(20))',
+            'Graceful Buffer Fallback khi Redis sự cố'
+        ],
+        files: ['services/chatBotService.js', 'controllers/user/chatBotController.js'],
+    },
+};
+
+// ================================================== //
+// CONNECTION DEFINITIONS                              //
+// ================================================== //
+const CONNECTIONS = [
+    // 1. Mobile App -> DNS
+    { from:'node-mobile', to:'node-dns', color:'var(--green)', proto:'HTTPS', protoSub:'REST API' },
+
+    // 2. Admin Browser -> DNS
+    { from:'node-admin-browser', to:'node-dns', color:'var(--green)', proto:'HTTPS', protoSub:'Browser' },
+
+    // 3. DNS -> Nginx
+    { from:'node-dns', to:'node-nginx', color:'var(--green)', proto:'HTTPS :443', protoSub:'TLS 1.3' },
+
+    // 4. Nginx -> Admin Static
+    { from:'node-nginx', to:'node-admin-static', color:'var(--purple)', proto:'HTTP', protoSub:'try_files', type:'horizontal' },
+
+    // 5. Nginx -> Backend
+    { from:'node-nginx', to:'node-backend', color:'var(--blue)', proto:'HTTP', protoSub:'proxy_pass :5000' },
+
+    // 6. Backend -> Redis
+    { from:'node-backend', to:'node-redis', color:'var(--red)', proto:'REDIS', protoSub:'redis:6379' },
+
+    // 7. Backend -> RabbitMQ
+    { from:'node-backend', to:'node-rabbitmq', color:'var(--orange)', proto:'AMQP', protoSub:'publish job' },
+
+    // 8. Cron -> RabbitMQ
+    { from:'node-cron', to:'node-rabbitmq', color:'var(--purple)', proto:'AMQP', protoSub:'publish' },
+
+    // 9. RabbitMQ -> Worker
+    { from:'node-rabbitmq', to:'node-worker', color:'var(--orange)', proto:'AMQP', protoSub:'consume' },
+
+    // 10. Backend -> MongoDB
+    { from:'node-backend', to:'node-mongodb', color:'var(--green)', proto:'HTTPS', protoSub:'mongodb+srv' },
+
+    // 11. Backend -> Cloudinary
+    { from:'node-backend', to:'node-cloudinary', color:'var(--blue)', proto:'HTTPS', protoSub:'REST API' },
+
+    // 12. Worker -> Firebase
+    { from:'node-worker', to:'node-firebase', color:'var(--orange)', proto:'HTTPS', protoSub:'FCM API' },
+
+    // 13. Backend -> Payment (PayOS Webhook)
+    { from:'node-backend', to:'node-payment', color:'var(--pink)', proto:'HTTPS', protoSub:'PayOS Webhook' },
+
+    // 14. Backend -> Gemini
+    { from:'node-backend', to:'node-gemini', color:'var(--cyan)', proto:'HTTPS', protoSub:'Gemini API' }
+];
+
+// ================================================== //
+// THREE.JS BACKGROUND                                 //
+// ================================================== //
+(function initThree() {
+    const canvas = document.getElementById('bg-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera.position.z = 50;
+
+    const count = 400;
+    const pos = new Float32Array(count*3);
+    const cols = new Float32Array(count*3);
+    const palette = [new THREE.Color(0x4f7df5), new THREE.Color(0xa855f7), new THREE.Color(0x22d3ee), new THREE.Color(0x10b981)];
+    for(let i=0;i<count;i++){
+        pos[i*3]=(Math.random()-.5)*140;
+        pos[i*3+1]=(Math.random()-.5)*140;
+        pos[i*3+2]=(Math.random()-.5)*60;
+        const c=palette[Math.floor(Math.random()*palette.length)];
+        cols[i*3]=c.r; cols[i*3+1]=c.g; cols[i*3+2]=c.b;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+    geo.setAttribute('color', new THREE.BufferAttribute(cols,3));
+    const mat = new THREE.PointsMaterial({size:1, vertexColors:true, transparent:true, opacity:0.35, blending:THREE.AdditiveBlending, sizeAttenuation:true});
+    const pts = new THREE.Points(geo, mat);
+    scene.add(pts);
+
+    // Wireframe shapes
+    const shapes = [];
+    const geos = [new THREE.IcosahedronGeometry(2,0), new THREE.OctahedronGeometry(1.5,0), new THREE.TetrahedronGeometry(1.8,0)];
+    for(let i=0;i<8;i++){
+        const m = new THREE.Mesh(geos[i%geos.length], new THREE.MeshBasicMaterial({color:palette[i%palette.length], wireframe:true, transparent:true, opacity:0.05}));
+        m.position.set((Math.random()-.5)*100, (Math.random()-.5)*100, (Math.random()-.5)*30);
+        m.userData = {rx:Math.random()*0.008, ry:Math.random()*0.008, iy:m.position.y, sp:Math.random()*0.002+0.001, rng:Math.random()*4+2};
+        scene.add(m); shapes.push(m);
+    }
+
+    let mx=0,my=0, t=0;
+    window.addEventListener('mousemove', e=>{mx=(e.clientX/window.innerWidth-.5)*2; my=(e.clientY/window.innerHeight-.5)*2;});
+    (function anim(){
+        requestAnimationFrame(anim); t+=0.005;
+        pts.rotation.x+=0.0002; pts.rotation.y+=0.0004;
+        camera.position.x+=(mx*2-camera.position.x)*0.015;
+        camera.position.y+=(-my*2-camera.position.y)*0.015;
+        camera.lookAt(scene.position);
+        shapes.forEach(s=>{s.rotation.x+=s.userData.rx; s.rotation.y+=s.userData.ry; s.position.y=s.userData.iy+Math.sin(t*s.userData.sp*200)*s.userData.rng;});
+        renderer.render(scene,camera);
+    })();
+    window.addEventListener('resize',()=>{camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight);});
+})();
+
+// ================================================== //
+// CURSOR GLOW                                          //
+// ================================================== //
+(function(){
+    const g=document.getElementById('cursor-glow');
+    let tx=0,ty=0,cx=0,cy=0;
+    document.addEventListener('mousemove',e=>{tx=e.clientX;ty=e.clientY;});
+    (function a(){cx+=(tx-cx)*0.06;cy+=(ty-cy)*0.06;g.style.left=cx+'px';g.style.top=cy+'px';requestAnimationFrame(a);})();
+})();
+
+// ================================================== //
+// LOADER                                               //
+// ================================================== //
+(function(){
+    const bar=document.getElementById('loader-bar'), loader=document.getElementById('loader');
+    let p=0;
+    const iv=setInterval(()=>{
+        p+=Math.random()*18+8;
+        if(p>=100){p=100;clearInterval(iv);bar.style.width='100%';
+            setTimeout(()=>{gsap.to(loader,{opacity:0,duration:.6,ease:'power2.out',onComplete:()=>{loader.style.display='none';initDiagram();}});},200);
+        } bar.style.width=p+'%';
+    },120);
+})();
+
+// ================================================== //
+// DRAW SVG CONNECTIONS (DYNAMIC REAL-TIME UPDATE)      //
+// ================================================== //
+function getNodeCenter(id) {
+    const el = document.getElementById(id);
+    const d = document.getElementById('diagram');
+    const dr = d.getBoundingClientRect();
+    const er = el.getBoundingClientRect();
+    return {
+        x: er.left - dr.left + er.width/2,
+        y: er.top - dr.top + er.height/2,
+        top: er.top - dr.top,
+        bottom: er.top - dr.top + er.height,
+        left: er.left - dr.left,
+        right: er.left - dr.left + er.width,
+        w: er.width,
+        h: er.height
+    };
+}
+
+function drawConnections() {
+    const svg = document.getElementById('conn-svg');
+    const defs = svg.querySelector('defs');
+    svg.innerHTML = '';
+    svg.appendChild(defs);
+
+    document.querySelectorAll('.proto-badge').forEach(b => b.remove());
+
+    const diagram = document.getElementById('diagram');
+
+    CONNECTIONS.forEach((conn, idx) => {
+        const from = getNodeCenter(conn.from);
+        const to = getNodeCenter(conn.to);
+
+        let pathD = '';
+        let badgeX = 0, badgeY = 0;
+
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+
+        let x1, y1, x2, y2;
+
+        if (conn.type === 'horizontal') {
+            x1 = dx > 0 ? from.right : from.left;
+            y1 = from.y;
+            x2 = dx > 0 ? to.left : to.right;
+            y2 = to.y;
+            pathD = `M ${x1} ${y1} L ${x2} ${y2}`;
+            badgeX = (x1 + x2) / 2;
+            badgeY = (y1 + y2) / 2;
+        } else {
+            // Smart dynamic curve
+            if (Math.abs(dy) >= Math.abs(dx) * 0.8) {
+                // Vertical priority
+                x1 = from.x;
+                y1 = dy > 0 ? from.bottom : from.top;
+                x2 = to.x;
+                y2 = dy > 0 ? to.top : to.bottom;
+                const dir = dy > 0 ? 1 : -1;
+                const cp = Math.min(Math.abs(dy) * 0.45, 80);
+                pathD = `M ${x1} ${y1} C ${x1} ${y1 + dir * cp}, ${x2} ${y2 - dir * cp}, ${x2} ${y2}`;
+            } else {
+                // Diagonal / horizontal curve
+                x1 = dx > 0 ? from.right : from.left;
+                y1 = dy > 0 ? from.bottom : from.top;
+                x2 = dx > 0 ? to.left : to.right;
+                y2 = dy > 0 ? to.top : to.bottom;
+                const cpY = Math.min(Math.abs(dy) * 0.5, 90);
+                const dirY = dy > 0 ? 1 : -1;
+                pathD = `M ${x1} ${y1} C ${x1} ${y1 + dirY * cpY}, ${x2} ${y2 - dirY * cpY}, ${x2} ${y2}`;
+            }
+            badgeX = (x1 + x2) / 2;
+            badgeY = (y1 + y2) / 2;
+        }
+
+        // 1. Glow path
+        const glow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        glow.setAttribute('d', pathD);
+        glow.setAttribute('fill', 'none');
+        glow.setAttribute('stroke', conn.color);
+        glow.setAttribute('stroke-width', '6');
+        glow.setAttribute('stroke-opacity', '0.14');
+        glow.setAttribute('filter', 'url(#glow)');
+        svg.appendChild(glow);
+
+        // 2. Main path
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', pathD);
+        path.setAttribute('class', 'conn-path');
+        path.setAttribute('stroke', conn.color);
+        path.setAttribute('stroke-opacity', '0.75');
+        path.style.animationDelay = (idx * 0.15) + 's';
+        svg.appendChild(path);
+
+        // 3. Moving particle
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('r', '3.5');
+        circle.setAttribute('fill', conn.color);
+        circle.setAttribute('filter', 'url(#glow)');
+        circle.setAttribute('opacity', '1');
+        const animMotion = document.createElementNS('http://www.w3.org/2000/svg', 'animateMotion');
+        animMotion.setAttribute('dur', (2.5 + (idx % 4) * 0.4) + 's');
+        animMotion.setAttribute('repeatCount', 'indefinite');
+        animMotion.setAttribute('path', pathD);
+        circle.appendChild(animMotion);
+        svg.appendChild(circle);
+
+        // 4. Protocol badge
+        const badge = document.createElement('div');
+        badge.className = 'proto-badge';
+        badge.style.color = conn.color;
+        badge.style.background = `color-mix(in srgb, ${conn.color} 10%, #0a0a14)`;
+        badge.style.border = `1px solid color-mix(in srgb, ${conn.color} 25%, transparent)`;
+
+        badge.style.left = badgeX + 'px';
+        badge.style.top = badgeY + 'px';
+        badge.style.transform = 'translate(-50%, -50%)';
+        badge.innerHTML = `<strong>${conn.proto}</strong> <span style="opacity:.65;margin-left:3px">${conn.protoSub}</span>`;
+        diagram.appendChild(badge);
+    });
+}
+
+// ================================================== //
+// DRAG AND DROP & REAL-TIME CONNECTIONS              //
+// ================================================== //
+const INITIAL_POSITIONS = {
+    'node-mobile': { left: '140px', top: '15px' },
+    'node-admin-browser': { left: '670px', top: '15px' },
+    'node-dns': { left: '405px', top: '80px' },
+    'node-nginx': { left: '160px', top: '320px' },
+    'node-admin-static': { left: '410px', top: '320px' },
+    'node-cron': { left: '710px', top: '380px' },
+    'node-backend': { left: '385px', top: '480px' },
+    'node-redis': { left: '160px', top: '510px' },
+    'node-rabbitmq': { left: '610px', top: '530px' },
+    'node-worker': { left: '410px', top: '660px' },
+    'node-mongodb': { left: '50px', top: '870px' },
+    'node-cloudinary': { left: '240px', top: '870px' },
+    'node-firebase': { left: '430px', top: '870px' },
+    'node-payment': { left: '630px', top: '870px' },
+    'node-gemini': { left: '820px', top: '870px' }
+};
+
+function initDragAndDrop() {
+    const nodes = document.querySelectorAll('.node');
+    const diagram = document.getElementById('diagram');
+
+    nodes.forEach(node => {
+        let startX = 0, startY = 0;
+        let initialLeft = 0, initialTop = 0;
+        let isDragging = false;
+        let hasMoved = false;
+
+        function onPointerDown(e) {
+            if (e.type === 'mousedown' && e.button !== 0) return;
+
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            startX = clientX;
+            startY = clientY;
+
+            const rect = node.getBoundingClientRect();
+            const diagramRect = diagram.getBoundingClientRect();
+
+            initialLeft = rect.left - diagramRect.left;
+            initialTop = rect.top - diagramRect.top;
+
+            isDragging = true;
+            hasMoved = false;
+
+            window.addEventListener('mousemove', onPointerMove, { passive: false });
+            window.addEventListener('touchmove', onPointerMove, { passive: false });
+            window.addEventListener('mouseup', onPointerUp);
+            window.addEventListener('touchend', onPointerUp);
+        }
+
+        function onPointerMove(e) {
+            if (!isDragging) return;
+
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            const dx = clientX - startX;
+            const dy = clientY - startY;
+
+            if (!hasMoved && Math.hypot(dx, dy) > 4) {
+                hasMoved = true;
+                node.classList.add('dragging');
+            }
+
+            if (hasMoved) {
+                if (e.cancelable) e.preventDefault();
+
+                let newLeft = initialLeft + dx;
+                let newTop = initialTop + dy;
+
+                const diagramW = diagram.clientWidth;
+                const diagramH = diagram.clientHeight;
+                const nodeW = node.offsetWidth;
+                const nodeH = node.offsetHeight;
+
+                newLeft = Math.max(0, Math.min(diagramW - nodeW, newLeft));
+                newTop = Math.max(0, Math.min(diagramH - nodeH, newTop));
+
+                node.style.left = newLeft + 'px';
+                node.style.top = newTop + 'px';
+
+                // Real-time line update
+                requestAnimationFrame(drawConnections);
+            }
+        }
+
+        function onPointerUp(e) {
+            if (!isDragging) return;
+
+            isDragging = false;
+            node.classList.remove('dragging');
+
+            window.removeEventListener('mousemove', onPointerMove);
+            window.removeEventListener('touchmove', onPointerMove);
+            window.removeEventListener('mouseup', onPointerUp);
+            window.removeEventListener('touchend', onPointerUp);
+
+            if (!hasMoved) {
+                openDetail(node.dataset.detail);
+            }
+        }
+
+        node.addEventListener('mousedown', onPointerDown);
+        node.addEventListener('touchstart', onPointerDown, { passive: true });
+    });
+}
+
+function resetNodePositions() {
+    const nodes = document.querySelectorAll('.node');
+    let completed = 0;
+
+    nodes.forEach(node => {
+        const orig = INITIAL_POSITIONS[node.id];
+        if (!orig) return;
+
+        gsap.to(node, {
+            left: orig.left,
+            top: orig.top,
+            duration: 0.7,
+            ease: 'power3.inOut',
+            onUpdate: drawConnections,
+            onComplete: () => {
+                completed++;
+                if (completed === nodes.length) {
+                    drawConnections();
+                }
+            }
+        });
+    });
+}
+
+// ================================================== //
+// DETAIL PANEL                                         //
+// ================================================== //
+function openDetail(key) {
+    const data = DATA[key];
+    if (!data) return;
+
+    const overlay = document.getElementById('detail-overlay');
+    const panel = document.getElementById('detail-panel');
+
+    let techHTML = data.tech.map(t =>
+        `<div class="detail-tech-tag"><i class="${t.icon}" style="color:${t.c}"></i> ${t.name}</div>`
+    ).join('');
+
+    let protoHTML = data.protocols.map(p =>
+        `<div class="detail-proto-row">
+            <span class="detail-proto-method" style="background:${p.methodBg};color:${p.methodColor}">${p.method}</span>
+            <span class="detail-proto-target">${p.target}</span>
+            <span class="detail-proto-desc">${p.desc}</span>
+        </div>`
+    ).join('');
+
+    let featHTML = data.features.map(f =>
+        `<div class="detail-feature"><i class="fas fa-check-circle"></i> ${f}</div>`
+    ).join('');
+
+    let filesHTML = data.files.length > 0 ? `
+        <div class="detail-section">
+            <div class="detail-section-title">Files</div>
+            <div class="detail-files">${data.files.map(f => `<span class="detail-file">${f}</span>`).join('')}</div>
+        </div>` : '';
+
+    panel.innerHTML = `
+        <div class="detail-close"><button onclick="closeDetail()"><i class="fas fa-times"></i></button></div>
+        <div class="detail-header">
+            <div class="detail-header-icon ${data.iconClass}">${data.icon}</div>
+            <h2>${data.title}<small>${data.sub}</small></h2>
+        </div>
+        <div class="detail-body">
+            <p class="detail-desc">${data.desc}</p>
+
+            <div class="detail-section">
+                <div class="detail-section-title">Technology Stack</div>
+                <div class="detail-tech-grid">${techHTML}</div>
+            </div>
+
+            <div class="detail-section">
+                <div class="detail-section-title">Communication Protocols</div>
+                <div class="detail-protocols">${protoHTML}</div>
+            </div>
+
+            <div class="detail-section">
+                <div class="detail-section-title">Key Features</div>
+                <div class="detail-features">${featHTML}</div>
+            </div>
+
+            ${filesHTML}
+        </div>
+    `;
+
+    overlay.classList.add('active');
+
+    gsap.fromTo(panel, {
+        rotateY: -12, rotateX: 6, scale: 0.8, opacity: 0,
+        transformOrigin: 'center center'
+    }, {
+        rotateY: 0, rotateX: 0, scale: 1, opacity: 1,
+        duration: 0.65, ease: 'power3.out'
+    });
+
+    gsap.fromTo('#detail-backdrop', {opacity:0}, {opacity:1, duration:0.4});
+
+    gsap.fromTo(panel.querySelectorAll('.detail-section, .detail-desc, .detail-header'), {
+        opacity: 0, y: 20
+    }, {
+        opacity: 1, y: 0,
+        duration: 0.5, stagger: 0.08, delay: 0.2, ease: 'power2.out'
+    });
+}
+
+function closeDetail() {
+    const overlay = document.getElementById('detail-overlay');
+    const panel = document.getElementById('detail-panel');
+
+    gsap.to(panel, {
+        rotateY: 8, rotateX: -4, scale: 0.85, opacity: 0,
+        duration: 0.45, ease: 'power2.in'
+    });
+    gsap.to('#detail-backdrop', {
+        opacity: 0, duration: 0.35,
+        onComplete: () => overlay.classList.remove('active')
+    });
+}
+
+// ================================================== //
+// INIT DIAGRAM                                         //
+// ================================================== //
+function initDiagram() {
+    // Initial connection rendering
+    drawConnections();
+
+    // Initialize drag and drop behavior
+    initDragAndDrop();
+
+    // Animated count-up counter for metrics
+    document.querySelectorAll('.count-num').forEach(el => {
+        const target = +el.dataset.target;
+        gsap.to(el, {
+            innerText: target,
+            duration: 1.5,
+            snap: { innerText: 1 },
+            ease: 'power2.out'
+        });
+    });
+
+    // Detail backdrop close
+    document.getElementById('detail-backdrop').addEventListener('click', closeDetail);
+
+    // ESC to close
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeDetail();
+    });
+
+    // Entrance animations
+    const nodes = document.querySelectorAll('.node');
+    gsap.fromTo(nodes, {opacity:0, scale:0.7, y:20}, {
+        opacity:1, scale:1, y:0,
+        duration:0.6, stagger:0.05, ease:'back.out(1.2)'
+    });
+
+    gsap.fromTo('.ec2-boundary', {opacity:0, scale:0.95}, {opacity:1, scale:1, duration:0.8, delay:0.3, ease:'power2.out'});
+    gsap.fromTo('.docker-boundary', {opacity:0, scale:0.95}, {opacity:1, scale:1, duration:0.8, delay:0.5, ease:'power2.out'});
+
+    gsap.fromTo('.proto-badge', {opacity:0}, {opacity:1, duration:0.5, stagger:0.04, delay:0.8, ease:'power2.out'});
+
+    // Redraw connections on resize
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(drawConnections, 200);
+    });
+}
+</script>
+</body>
+</html>
