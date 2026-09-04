@@ -349,6 +349,39 @@ const LANG = {
     admin_s1_item2_desc: 'Multi-variant Product CRUD (Color/Size), order processing, discount voucher management, and user review moderation.',
     admin_s1_item3_title: 'Smart Touchpoints:',
     admin_s1_item3_desc: 'An intuitive Dashboard with real-time revenue charts, low-stock alerts, and an FCM Broadcast notification campaign tool.',
+
+    admin_s2_item1_title: 'Component-Based Architecture:',
+    admin_s2_item1_desc: 'Uses Vue 3 with <span class="bw-tag">Composition API</span> to organize code in a modular way, clearly separating Logic, Template, and Style.',
+    admin_s2_item2_title: 'State Management (Reactivity):',
+    admin_s2_item2_desc: 'Uses Vue 3 built-in <span class="bw-tag">ref</span> and <span class="bw-tag">reactive</span> to manage local state for dynamic Forms and data lists.',
+
+    admin_s3_item1_title: 'Consistency:',
+    admin_s3_item1_desc: 'Standard admin layout with Sidebar Navigation and Topbar, maintaining a solid structural frame through the <span class="bw-tag">Vue Router View</span> system.',
+    admin_s3_item2_title: 'Vanilla CSS:',
+    admin_s3_item2_desc: 'Uses pure CSS with a shared CSS Variables system (e.g., var(--blue), var(--red)...) to optimize bundle size instead of heavy UI libraries.',
+    admin_s3_item3_title: 'Reusable Component System:',
+    admin_s3_item3_desc: 'Encapsulates shared UI components like Data Tables, Modal Forms, and Confirmation Buttons for easy maintainability.',
+
+    admin_s4_item1_title: 'Auto-Refresh Token (Axios Interceptors):',
+    admin_s4_item1_desc: 'Automatically catches HTTP 401, silently calls /auth/refresh, re-issues the token, and <span class="bw-tag">replays</span> the failed original request.',
+    admin_s4_item2_title: 'Failed Queue Pattern:',
+    admin_s4_item2_desc: 'Handles Race Conditions efficiently. While one request is refreshing, subsequent 401 requests are queued in <span class="bw-tag">failedQueue</span>. After a new token is obtained, all are resolved in bulk.',
+    admin_s4_item3_title: 'Multi-platform Data Handling:',
+    admin_s4_item3_desc: 'Communicates via FormData protocol for APIs that upload multiple product images to Cloudinary.',
+
+    admin_s5_item1_title: 'Session Management:',
+    admin_s5_item1_desc: 'Securely stores <span class="bw-tag">accessToken</span> in Local Storage to maintain login state across browser sessions.',
+    admin_s5_item2_title: 'Route Guards (Safe Navigation):',
+    admin_s5_item2_desc: 'Hooks into <span class="bw-tag">router.beforeEach</span> to block all unauthenticated access to the Dashboard and auto-redirects to the Login screen.',
+    admin_s5_item3_title: 'Force Logout Cascade:',
+    admin_s5_item3_desc: 'If the Refresh Token also expires (or a user is banned), the system automatically clears LocalStorage and forces an immediate complete logout.',
+
+    admin_s6_item1_title: 'Vite Bundler:',
+    admin_s6_item1_desc: 'Uses the ultra-fast <span class="bw-tag">Vite</span> toolchain for extremely fast HMR during development and optimized static bundle size for Production Builds.',
+    admin_s6_item2_title: 'Lazy Loading Routes:',
+    admin_s6_item2_desc: 'Applies code-splitting via the <span class="bw-tag">import()</span> function at the Router level. The browser only loads the JS for the admin view currently being accessed.',
+    admin_s6_item3_title: 'Bandwidth Optimization (Images):',
+    admin_s6_item3_desc: 'Instead of loading full-size originals, the Admin receives pre-resized thumbnails from Cloudinary (width/height), reducing network traffic by tens of times.',
   }
 };
 

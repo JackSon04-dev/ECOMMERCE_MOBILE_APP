@@ -1310,15 +1310,7 @@
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
-                            <div class="bw-section-content">
-                                <div class="bw-item">
-                                    <div class="bw-item-bullet" style="background:var(--orange)"></div>
-                                    <div class="bw-item-text"><strong data-lang-key="deploy_s1_item1_title">Tạo Keystore (Khóa bí mật):</strong> <span data-lang-key="deploy_s1_item1_desc">Trước khi build ứng dụng Flutter, phải tạo một Keystore để làm khóa bí mật. Khóa này đảm bảo tính xác thực cho app và bắt buộc phải lưu trữ cẩn thận để có quyền phát hành các bản cập nhật (updates) của app sau này.</span></div>
-                                </div>
-                                <div class="bw-item">
-                                    <div class="bw-item-bullet" style="background:var(--blue)"></div>
-                                    <div class="bw-item-text"><strong data-lang-key="deploy_s1_item2_title">Build APK Release:</strong> <span data-lang-key="deploy_s1_item2_desc">Cấu hình file build để liên kết với Keystore, sau đó chạy lệnh build xuất ra file cài đặt <span class="bw-tag">.apk</span> tối ưu dung lượng để cài đặt trực tiếp trên thiết bị Android.</span></div>
-                                </div>
+                            <div class="bw-section-content" data-section-id="deploy-s1">
                             </div>
                         </div>
                     </div>
@@ -1331,7 +1323,7 @@
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
-                            <div class="bw-section-content">
+                            <div class="bw-section-content" data-section-id="deploy-s2">
                                 <div class="bw-item">
                                     <div class="bw-item-bullet" style="background:var(--orange)"></div>
                                     <div class="bw-item-text"><strong>Thiết lập AWS EC2 & Domain:</strong> Khởi tạo Instance EC2 trên AWS tại khu vực Singapore (ap-southeast-1). Lấy IPv4 Public của VPS dán vào DNS Namecheap cho domain <span class="bw-tag">clothesstores.app</span> và SSH vào VPS để Git Clone source code.</div>
@@ -1374,11 +1366,7 @@
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
-                            <div class="bw-section-content">
-                                <div class="bw-item">
-                                    <div class="bw-item-bullet" style="background:var(--green)"></div>
-                                    <div class="bw-item-text"><strong>Triển khai MongoDB Atlas (Low Latency):</strong> Khởi tạo Cluster cơ sở dữ liệu trên MongoDB Atlas. Điểm mấu chốt là chọn <strong>cùng Region Singapore</strong> với máy chủ AWS EC2. Tư duy thiết kế Global này giúp khoảng cách vật lý giữa API và Database gần như bằng 0, tối ưu hóa triệt để độ trễ mạng khi các service giao tiếp nội bộ.</div>
-                                </div>
+                            <div class="bw-section-content" data-section-id="deploy-s3">
                             </div>
                         </div>
                     </div>
@@ -1407,7 +1395,7 @@
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
-                            <div class="bw-section-content">
+                            <div class="bw-section-content" data-section-id="backend-s1">
                                 <div class="bw-inline-tags">
                                     <span class="bw-tag"><i class="fas fa-cubes" style="color:var(--cyan)"></i>
                                         Microservices</span>
@@ -1428,7 +1416,7 @@
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
-                            <div class="bw-section-content">
+                            <div class="bw-section-content" data-section-id="backend-s2">
                                 <div class="bw-item">
                                     <div class="bw-item-bullet" style="background:var(--red)"></div>
                                     <div class="bw-item-text"><strong>Authentication & Authorization:</strong> JWT
@@ -1459,10 +1447,7 @@
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
-                            <div class="bw-section-content">
-                                <div class="bw-item">
-                                    <div class="bw-item-bullet" style="background:var(--green)"></div>
-                                    <div class="bw-item-text"><strong>Response Compression:</strong> Toàn bộ phản hồi
+                            <div class="bw-section-content" data-section-id="backend-s3">
                                         nén Gzip. Giảm kích thước từ <span class="bw-tag">23KB → 1.5KB</span> với 20
                                         object sản phẩm/request.</div>
                                 </div>
@@ -1502,10 +1487,7 @@
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
-                            <div class="bw-section-content">
-                                <div class="bw-item">
-                                    <div class="bw-item-bullet" style="background:var(--orange)"></div>
-                                    <div class="bw-item-text"><strong>Message Queue (RabbitMQ):</strong> Đẩy tác vụ nặng
+                            <div class="bw-section-content" data-section-id="backend-s4">
                                         vào queue — Worker xử lý riêng, giải phóng main server. Hạn chế mất dữ liệu khi
                                         server dừng đột ngột.</div>
                                 </div>
@@ -1551,10 +1533,7 @@
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
-                            <div class="bw-section-content">
-                                <div class="bw-item">
-                                    <div class="bw-item-bullet" style="background:var(--cyan)"></div>
-                                    <div class="bw-item-text"><strong>AI Chatbot (Gemini API):</strong> Phân tích câu
+                            <div class="bw-section-content" data-section-id="backend-s5">
                                         hỏi tự nhiên thành bộ filter MongoDB. Kết quả cache theo filter — nhiều user hỏi
                                         giống nhau share 1 cache.</div>
                                 </div>
@@ -1618,10 +1597,7 @@
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
-                            <div class="bw-section-content">
-                                <div class="bw-item">
-                                    <div class="bw-item-bullet" style="background:var(--pink)"></div>
-                                    <div class="bw-item-text"><strong data-lang-key="mobile_s1_item1_title">Mục tiêu sản phẩm:</strong> <span data-lang-key="mobile_s1_item1_desc">Ứng dụng thương mại điện tử chuyên biệt ngành hàng thời trang, cung cấp trải nghiệm mua sắm mượt mà từ khâu tìm kiếm đến thanh toán.</span></div>
+                            <div class="bw-section-content" data-section-id="mobile-s1"> điện tử chuyên biệt ngành hàng thời trang, cung cấp trải nghiệm mua sắm mượt mà từ khâu tìm kiếm đến thanh toán.</span></div>
                                 </div>
                                 <div class="bw-item">
                                     <div class="bw-item-bullet" style="background:var(--blue)"></div>
@@ -1647,10 +1623,7 @@
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
-                            <div class="bw-section-content">
-                                <div class="bw-item">
-                                    <div class="bw-item-bullet" style="background:var(--cyan)"></div>
-                                    <div class="bw-item-text"><strong>Kiến trúc MVC (Model-View-Controller):</strong>
+                            <div class="bw-section-content" data-section-id="mobile-s2">
                                         Ứng dụng tổ chức mã nguồn theo mô hình MVC. <span class="bw-tag">Model</span>
                                         (thư mục models) xử lý cấu trúc dữ liệu, <span class="bw-tag">View</span>
                                         (screens/widgets) đảm nhận UI, và <span class="bw-tag">Controller</span>
@@ -1683,10 +1656,7 @@
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
-                            <div class="bw-section-content">
-                                <div class="bw-item">
-                                    <div class="bw-item-bullet" style="background:var(--orange)"></div>
-                                    <div class="bw-item-text"><strong>Tính nhất quán (Consistency):</strong> Bọc các màn
+                            <div class="bw-section-content" data-section-id="mobile-s3">
                                         hình bằng <span class="bw-tag">CustomAppBar</span> và <span
                                             class="bw-tag">BottomNavBar</span> đóng gói sẵn, chặn triệt để lỗi giật/xô
                                         lệch layout (layout shift) khi chuyển Tab.</div>
@@ -1715,7 +1685,7 @@
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
-                            <div class="bw-section-content">
+                            <div class="bw-section-content" data-section-id="mobile-s4">
                                 <div class="bw-item">
                                     <div class="bw-item-bullet" style="background:var(--purple)"></div>
                                     <div class="bw-item-text"><strong>Auto-Refresh Token & Race Condition Lock:</strong>
@@ -1749,10 +1719,7 @@
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
-                            <div class="bw-section-content">
-                                <div class="bw-item">
-                                    <div class="bw-item-bullet" style="background:var(--red)"></div>
-                                    <div class="bw-item-text"><strong>Bảo mật Token:</strong> Mã hóa accessToken và
+                            <div class="bw-section-content" data-section-id="mobile-s5">
                                         refreshToken thông qua <span class="bw-tag">flutter_secure_storage</span>.</div>
                                 </div>
                                 <div class="bw-item">
@@ -1834,7 +1801,7 @@
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
-                            <div class="bw-section-content">
+                            <div class="bw-section-content" data-section-id="admin-s1">
                                 <div class="bw-item">
                                     <div class="bw-item-bullet" style="background:var(--pink)"></div>
                                     <div class="bw-item-text"><strong>Mục tiêu sản phẩm:</strong> Hệ thống quản trị
@@ -1866,7 +1833,7 @@
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
-                            <div class="bw-section-content">
+                            <div class="bw-section-content" data-section-id="admin-s2">
                                 <div class="bw-item">
                                     <div class="bw-item-bullet" style="background:var(--blue)"></div>
                                     <div class="bw-item-text"><strong>Kiến trúc Component-Based:</strong> Sử dụng Vue 3
@@ -1892,7 +1859,7 @@
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
-                            <div class="bw-section-content">
+                            <div class="bw-section-content" data-section-id="admin-s3">
                                 <div class="bw-item">
                                     <div class="bw-item-bullet" style="background:var(--orange)"></div>
                                     <div class="bw-item-text"><strong>Tính nhất quán (Consistency):</strong> Layout quản
@@ -1923,7 +1890,7 @@
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
-                            <div class="bw-section-content">
+                            <div class="bw-section-content" data-section-id="admin-s4">
                                 <div class="bw-item">
                                     <div class="bw-item-bullet" style="background:var(--purple)"></div>
                                     <div class="bw-item-text"><strong>Auto-Refresh Token (Axios Interceptors):</strong>
@@ -1954,7 +1921,7 @@
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
-                            <div class="bw-section-content">
+                            <div class="bw-section-content" data-section-id="admin-s5">
                                 <div class="bw-item">
                                     <div class="bw-item-bullet" style="background:var(--red)"></div>
                                     <div class="bw-item-text"><strong>Quản lý Phiên (Session):</strong> Lưu trữ an toàn
@@ -1985,7 +1952,7 @@
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
-                            <div class="bw-section-content">
+                            <div class="bw-section-content" data-section-id="admin-s6">
                                 <div class="bw-item">
                                     <div class="bw-item-bullet" style="background:var(--green)"></div>
                                     <div class="bw-item-text"><strong>Vite Bundler:</strong> Sử dụng bộ công cụ <span
@@ -2090,6 +2057,7 @@
                 icon: '<i class="fas fa-mobile-alt"></i>', iconClass: 'bg-blue',
                 title: '📱 Flutter Mobile App', sub: 'Customer Facing — Android',
                 desc: 'Ứng dụng di động thương mại điện tử cross-platform cho khách hàng mua sắm, tích hợp AI chatbot trợ lý thông minh, thanh toán VietQR PayOS, theo dõi tiến trình đơn hàng real-time và nhận thông báo đẩy FCM.',
+                desc_en: 'Cross-platform e-commerce mobile app for customers, featuring an AI chatbot shopping assistant, PayOS VietQR payment, real-time order tracking, and Firebase FCM push notifications.',
                 tech: [
                     { icon: 'fas fa-feather-alt', name: 'Flutter / Dart', c: 'var(--blue)' },
                     { icon: 'fas fa-sync-alt', name: 'Riverpod', c: 'var(--purple)' },
@@ -2122,6 +2090,7 @@
                 icon: '<i class="fas fa-desktop"></i>', iconClass: 'bg-purple',
                 title: '💻 Admin Dashboard', sub: 'Management Interface — Vue 3 SPA',
                 desc: 'Bảng điều khiển quản trị web xây dựng bằng Vue.js 3 (Composition API) & Vite. Cung cấp báo cáo doanh thu real-time qua MongoDB Aggregation, quản lý sản phẩm biến thể Color/Size, đơn hàng, voucher và phát thông báo Broadcast FCM.',
+                desc_en: 'Web-based admin dashboard built with Vue.js 3 (Composition API) & Vite. Provides real-time revenue reports via MongoDB Aggregation, multi-variant product management, order & voucher management, and FCM Broadcast campaigns.',
                 tech: [
                     { icon: 'fab fa-vuejs', name: 'Vue.js 3', c: 'var(--green)' },
                     { icon: 'fas fa-bolt', name: 'Vite', c: 'var(--purple)' },
@@ -2149,6 +2118,7 @@
                 icon: '<i class="fas fa-globe"></i>', iconClass: 'bg-orange',
                 title: '🌐 clothesstores.app', sub: 'Domain & DNS — Namecheap',
                 desc: 'Domain .app mua từ Namecheap. DNS A Record trỏ tới Public IP của AWS EC2 instance. TLD .app được Google bắt buộc HSTS preloaded (bắt buộc HTTPS), chứng chỉ Let\'s Encrypt SSL tự động gia hạn.',
+                desc_en: 'The .app domain purchased from Namecheap. DNS A Record points to the AWS EC2 public IP. The .app TLD is Google-mandated HSTS preloaded (HTTPS-only), with Let's Encrypt SSL auto-renewal.',
                 tech: [
                     { icon: 'fas fa-globe', name: 'Namecheap DNS', c: 'var(--orange)' },
                     { icon: 'fas fa-certificate', name: 'Let\'s Encrypt SSL', c: 'var(--green)' },
@@ -2171,6 +2141,7 @@
                 icon: '<i class="fas fa-shield-alt"></i>', iconClass: 'bg-green',
                 title: '🛡️ Nginx Reverse Proxy', sub: 'SSL Termination · Load Balancer · Static Server',
                 desc: 'Nginx đóng vai trò là cổng vào duy nhất của hệ thống. Xử lý SSL termination (Let\'s Encrypt), serve Admin SPA static files, và reverse proxy tất cả request /api/* sang Express backend container qua Docker network.',
+                desc_en: 'Nginx acts as the sole gateway to the system. Handles SSL termination (Let's Encrypt), serves Admin SPA static files, and reverse-proxies all /api/* requests to the Express backend container over the Docker network.',
                 tech: [
                     { icon: 'fas fa-shield-alt', name: 'Nginx Alpine', c: 'var(--green)' },
                     { icon: 'fas fa-certificate', name: 'SSL/TLS', c: 'var(--green)' },
@@ -2196,6 +2167,7 @@
                 icon: '<i class="fab fa-vuejs"></i>', iconClass: 'bg-purple',
                 title: '📦 Admin Web Static', sub: 'Vue 3 SPA — Served by Nginx',
                 desc: 'Bản build production của Admin Dashboard được biên dịch bởi Vite (npm run build). Nginx serve các file static từ /usr/share/nginx/html với try_files fallback cho Vue Router SPA client-side routing.',
+                desc_en: 'Admin Dashboard production build compiled by Vite (npm run build). Nginx serves static files with try_files fallback for Vue Router client-side routing.',
                 tech: [
                     { icon: 'fab fa-vuejs', name: 'Vue 3 Build', c: 'var(--green)' },
                     { icon: 'fas fa-file-code', name: 'Static HTML/JS/CSS', c: 'var(--blue)' },
@@ -2217,6 +2189,7 @@
                 icon: '<i class="fas fa-server"></i>', iconClass: 'bg-cyan',
                 title: '⚙️ Express.js API Server', sub: 'Core Backend — Node.js v20+ · Port 5000',
                 desc: 'Trung tâm xử lý business logic theo mô hình MVC. Quản lý 11 Business Services và 8 Mongoose Schemas. Bảo mật bằng JWT auth, rate-limiting chống DDoS, NoSQL injection sanitization và Cloudinary file upload.',
+                desc_en: 'Central business logic processor following the MVC pattern. Manages 11 Business Services and 8 Mongoose Schemas. Secured with JWT auth, DDoS rate-limiting, NoSQL injection sanitization, and Cloudinary file uploads.',
                 tech: [
                     { icon: 'fab fa-node-js', name: 'Node.js v20+', c: 'var(--green)' },
                     { icon: 'fas fa-server', name: 'Express.js', c: 'var(--blue)' },
@@ -2249,6 +2222,7 @@
                 icon: '<i class="fas fa-bolt"></i>', iconClass: 'bg-red',
                 title: '⚡ Redis 7 Cache', sub: 'In-Memory Store · Port 6379',
                 desc: 'Redis 7 Alpine phục vụ caching hiệu năng cao trong Docker network: Cache trạng thái thanh toán payment_status (300s TTL) cho Polling API, AI Intent Cache dùng chung cho Gemini AI, và Session / Stock locking chống overselling.',
+                desc_en: 'Redis 7 Alpine provides high-performance caching within the Docker network: payment status cache (300s TTL) for Polling APIs, shared AI Intent Cache for Gemini, and stock locking to prevent overselling.',
                 tech: [
                     { icon: 'fas fa-bolt', name: 'Redis 7 Alpine', c: 'var(--red)' },
                     { icon: 'fas fa-memory', name: 'In-Memory Store', c: 'var(--orange)' },
@@ -2270,6 +2244,7 @@
                 icon: '<i class="fas fa-envelope-open-text"></i>', iconClass: 'bg-orange',
                 title: '📫 RabbitMQ Message Broker', sub: 'Message Queue · AMQP :5672',
                 desc: 'RabbitMQ 3 Management Alpine quản lý async message queues. Điều phối 4 hàng đợi chuyên biệt giúp giảm tải Express event loop và tách rời các tác vụ nặng.',
+                desc_en: 'RabbitMQ 3 Management Alpine manages async message queues. Coordinates 4 specialized queues to offload the Express event loop and decouple heavy tasks.',
                 tech: [
                     { icon: 'fas fa-envelope-open-text', name: 'RabbitMQ 3', c: 'var(--orange)' },
                     { icon: 'fas fa-code', name: 'amqplib', c: 'var(--blue)' },
@@ -2292,6 +2267,7 @@
                 icon: '<i class="fas fa-hard-hat"></i>', iconClass: 'bg-blue',
                 title: '👷 Background Worker', sub: 'RabbitMQ Consumer · worker.js',
                 desc: 'Container Node.js độc lập (local_worker) lắng nghe 4 hàng đợi RabbitMQ. Thực hiện xử lý ngầm tạo đơn hàng, cập nhật thanh toán PayOS Webhook, phát thông báo đẩy FCM và hủy đơn quá hạn.',
+                desc_en: 'An independent Node.js container consuming 4 RabbitMQ queues. Handles background order creation, PayOS Webhook payment updates, FCM push notifications, and expired order cancellation.',
                 tech: [
                     { icon: 'fab fa-node-js', name: 'Node.js', c: 'var(--green)' },
                     { icon: 'fas fa-code', name: 'amqplib Consumer', c: 'var(--orange)' },
@@ -2317,6 +2293,7 @@
                 icon: '<i class="fas fa-clock"></i>', iconClass: 'bg-purple',
                 title: '⏱️ Cron Worker Scheduler', sub: 'Task Scheduler · cron.js',
                 desc: 'Container Node.js riêng biệt (local_cron) chạy node-cron. Đặt lịch quét định kỳ 15 phút/lần tìm các đơn hàng online chờ xác nhận chưa thanh toán quá 30 phút để đẩy vào cancel_order_queue.',
+                desc_en: 'A separate Node.js container running node-cron. Scans every 15 minutes for online orders unpaid for over 30 minutes, then pushes them to the cancel_order_queue.',
                 tech: [
                     { icon: 'fab fa-node-js', name: 'Node.js', c: 'var(--green)' },
                     { icon: 'fas fa-clock', name: 'node-cron', c: 'var(--purple)' },
@@ -2338,6 +2315,7 @@
                 icon: '<i class="fas fa-database"></i>', iconClass: 'bg-green',
                 title: '🗄️ MongoDB Atlas', sub: 'Cloud Database · 8 Collections',
                 desc: 'Cơ sở dữ liệu đám mây MongoDB Atlas quản lý 8 Mongoose Schemas. Hỗ trợ embedded color/size variants, Order Product Snapshot bảo toàn giá tại thời điểm mua, và Aggregation pipelines cho analytics.',
+                desc_en: 'MongoDB Atlas cloud database managing 8 Mongoose Schemas. Supports embedded color/size variants, Order Product Snapshots preserving purchase-time pricing, and Aggregation Pipelines for analytics.',
                 tech: [
                     { icon: 'fas fa-database', name: 'MongoDB Atlas', c: 'var(--green)' },
                     { icon: 'fas fa-code', name: 'Mongoose ODM', c: 'var(--green)' },
@@ -2359,6 +2337,7 @@
                 icon: '<i class="fas fa-cloud-upload-alt"></i>', iconClass: 'bg-blue',
                 title: '☁️ Cloudinary CDN', sub: 'Image Storage & Optimization',
                 desc: 'Dịch vụ phân phối hình ảnh CDN tích hợp qua multer-storage-cloudinary. Tự động tối ưu hóa ảnh biến thể màu sắc sản phẩm và ảnh banner thông báo đẩy FCM.',
+                desc_en: 'CDN image delivery service integrated via multer-storage-cloudinary. Automatically optimizes product color variant images and FCM push notification banner images.',
                 tech: [
                     { icon: 'fas fa-cloud', name: 'Cloudinary API', c: 'var(--blue)' },
                     { icon: 'fas fa-upload', name: 'multer-storage-cloudinary', c: 'var(--purple)' },
@@ -2379,6 +2358,7 @@
                 icon: '<i class="fas fa-fire"></i>', iconClass: 'bg-orange',
                 title: '🔥 Firebase FCM Push Notifications', sub: 'Cloud Messaging — Push Alerts',
                 desc: 'Firebase Admin SDK v13 gửi thông báo đẩy real-time đến thiết bị di động khi trạng thái đơn hàng thay đổi. Tự động kiểm tra và xóa các Token lỗi/hết hạn khỏi Database.',
+                desc_en: 'Firebase Admin SDK v13 sends real-time push notifications to mobile devices when order status changes. Automatically detects and removes invalid/expired tokens from the database.',
                 tech: [
                     { icon: 'fas fa-fire', name: 'Firebase Admin SDK v13', c: 'var(--orange)' },
                     { icon: 'fas fa-bell', name: 'Cloud Messaging (FCM)', c: 'var(--orange)' },
@@ -2399,6 +2379,7 @@
                 icon: '<i class="fas fa-credit-card"></i>', iconClass: 'bg-pink',
                 title: '💳 PayOS & Payment Gateways', sub: 'PayOS Webhook · VietQR · VNPay · ZaloPay',
                 desc: 'Tích hợp cổng thanh toán trực tiếp PayOS chính thức với mã VietQR tự động và xác thực chữ ký Webhook checksum. Đồng thời hỗ trợ môi trường Sandbox Dev cho VNPay (QueryDr/Return) và ZaloPay (HMAC SHA256).',
+                desc_en: 'Direct integration with the official PayOS gateway with auto-generated VietQR codes and HMAC webhook signature verification. Also supports Sandbox Dev for VNPay (QueryDr/Return) and ZaloPay (HMAC SHA256).',
                 tech: [
                     { icon: 'fas fa-cash-register', name: 'PayOS (@payos/node)', c: 'var(--pink)' },
                     { icon: 'fas fa-credit-card', name: 'VNPay (vnpay)', c: 'var(--blue)' },
@@ -2424,6 +2405,7 @@
                 icon: '<i class="fas fa-brain"></i>', iconClass: 'bg-cyan',
                 title: '🧠 Google Gemini AI Engine', sub: 'NLP Engine — AI Chatbot',
                 desc: 'Sử dụng @google/generative-ai (Gemini 3.5 Flash / Gemini Pro) để phân tích ngôn ngữ tự nhiên thành JSON filter. Sử dụng MD5 Intent Hash -> Base64 SessionId cho phép phân trang không trạng thái (Stateless Pagination) và fallback an toàn.',
+                desc_en: 'Uses @google/generative-ai (Gemini Flash / Gemini Pro) to parse natural language into JSON filter objects. Uses MD5 Intent Hash -> Base64 SessionId for stateless pagination and safe fallback.',
                 tech: [
                     { icon: 'fas fa-brain', name: '@google/generative-ai', c: 'var(--cyan)' },
                     { icon: 'fas fa-language', name: 'Intent Parser (NLP)', c: 'var(--purple)' },
@@ -2838,6 +2820,10 @@
             const overlay = document.getElementById('detail-overlay');
             const panel = document.getElementById('detail-panel');
 
+            // Pick description by current language
+            const desc = (typeof currentLang !== 'undefined' && currentLang === 'en' && data.desc_en)
+                ? data.desc_en : data.desc;
+
             let techHTML = data.tech.map(t =>
                 `<div class="detail-tech-tag"><i class="${t.icon}" style="color:${t.c}"></i> ${t.name}</div>`
             ).join('');
@@ -2867,7 +2853,7 @@
             <h2>${data.title}<small>${data.sub}</small></h2>
         </div>
         <div class="detail-body">
-            <p class="detail-desc">${data.desc}</p>
+            <p class="detail-desc">${desc}</p>
 
             <div class="detail-section">
                 <div class="detail-section-title">Technology Stack</div>
