@@ -15,6 +15,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="lang.js"></script>
     <style>
         :root {
             --font-display: 'Outfit', sans-serif;
@@ -185,6 +186,45 @@
             border-color: var(--cyan);
             transform: translateY(-1px);
             color: #fff;
+        }
+
+        /* ===== LANGUAGE SWITCHER ===== */
+        .lang-switcher {
+            position: fixed;
+            top: 18px;
+            right: 22px;
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(255,255,255,0.88);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 4px 6px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        }
+        .lang-btn {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 5px 12px;
+            border-radius: 7px;
+            border: none;
+            cursor: pointer;
+            background: transparent;
+            color: var(--text3);
+            letter-spacing: 0.5px;
+            transition: all 0.22s ease;
+        }
+        .lang-btn:hover {
+            color: var(--blue);
+            background: rgba(37,99,235,0.07);
+        }
+        .lang-btn.active {
+            background: var(--blue);
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(37,99,235,0.25);
         }
 
         /* ===== METRICS STRIP ===== */
@@ -1062,13 +1102,19 @@
 
 <body>
 
+    <!-- Language Switcher -->
+    <div class="lang-switcher">
+        <button class="lang-btn active" data-lang="vi" onclick="applyLang('vi')">VI</button>
+        <button class="lang-btn" data-lang="en" onclick="applyLang('en')">EN</button>
+    </div>
+
     <!-- Loader -->
     <div id="loader">
         <div class="loader-title">S-Shop</div>
         <div class="loader-bar-wrap">
             <div class="loader-bar" id="loader-bar"></div>
         </div>
-        <div class="loader-hint">Loading architecture...</div>
+        <div class="loader-hint" id="lang-loader-hint">Loading architecture...</div>
     </div>
 
     <!-- Three.js BG -->
@@ -1081,18 +1127,17 @@
     <div class="page" id="page">
 
         <header class="header">
-            <div class="header-badge"><span class="dot"></span> Production Architecture</div>
-            <h1>Kiến trúc <span class="gr">S-Shop Platform</span></h1>
-            <p>Sơ đồ triển khai toàn bộ hệ thống E-Commerce trên AWS EC2 với Docker Compose — từ domain
+            <div class="header-badge"><span class="dot"></span> <span id="lang-badge">Production Architecture</span></div>
+            <h1><span id="lang-h1-plain">Kiến trúc </span><span class="gr" id="lang-h1-gradient">S-Shop Platform</span></h1>
+            <p id="lang-subtitle">Sơ đồ triển khai toàn bộ hệ thống E-Commerce trên AWS EC2 với Docker Compose — từ domain
                 <strong>clothesstores.app</strong> đến từng service bên trong container.
             </p>
             <div class="hint">
-                <span><i class="fas fa-hand-pointer"></i> Click xem chi tiết 3D</span>
+                <span><i class="fas fa-hand-pointer"></i> <span id="lang-hint-click">Click xem chi tiết 3D</span></span>
                 <span>•</span>
-                <span><i class="fas fa-arrows-alt"></i> Kéo thả module di chuyển tự do</span>
+                <span><i class="fas fa-arrows-alt"></i> <span id="lang-hint-drag">Kéo thả module di chuyển tự do</span></span>
                 <span>•</span>
-                <button class="reset-btn" onclick="resetNodePositions()"><i class="fas fa-undo"></i> Reset vị
-                    trí</button>
+                <button class="reset-btn" id="lang-reset-btn" onclick="resetNodePositions()"><i class="fas fa-undo"></i> Reset vị trí</button>
             </div>
         </header>
 
@@ -1251,8 +1296,8 @@
                     <div class="bw-header-icon" style="background:rgba(245, 158, 11, 0.12); color:var(--orange)"><i
                             class="fas fa-rocket"></i></div>
                     <div class="bw-header-text">
-                        <h2>🚀 Deployment & Infrastructure</h2>
-                        <span>AWS EC2 · Docker Compose · Nginx SSL · Let's Encrypt · 6 Containers</span>
+                        <h2 data-lang-key="deploy_title">🚀 Deployment & Infrastructure</h2>
+                        <span data-lang-key="deploy_subtitle">AWS EC2 · Docker Compose · Nginx SSL · Let's Encrypt · 6 Containers</span>
                     </div>
                 </div>
                 <div class="bw-sections">
@@ -1261,24 +1306,18 @@
                     <div class="bw-section" data-bw-section>
                         <div class="bw-section-header" onclick="toggleBwSection(this)">
                             <div class="bw-section-num bg-orange">1</div>
-                            <div class="bw-section-title">Mobile App Build (APK) & Keystore</div>
+                            <div class="bw-section-title" data-lang-key="deploy_s1_title">Mobile App Build (APK) & Keystore</div>
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
                             <div class="bw-section-content">
                                 <div class="bw-item">
                                     <div class="bw-item-bullet" style="background:var(--orange)"></div>
-                                    <div class="bw-item-text"><strong>Tạo Keystore (Khóa bí mật):</strong> Trước khi
-                                        build ứng dụng Flutter, phải tạo một Keystore để làm khóa bí mật. Khóa này đảm
-                                        bảo tính xác thực cho app và bắt buộc phải lưu trữ cẩn thận để có quyền phát
-                                        hành các bản cập nhật (updates) của app sau này.</div>
+                                    <div class="bw-item-text"><strong data-lang-key="deploy_s1_item1_title">Tạo Keystore (Khóa bí mật):</strong> <span data-lang-key="deploy_s1_item1_desc">Trước khi build ứng dụng Flutter, phải tạo một Keystore để làm khóa bí mật. Khóa này đảm bảo tính xác thực cho app và bắt buộc phải lưu trữ cẩn thận để có quyền phát hành các bản cập nhật (updates) của app sau này.</span></div>
                                 </div>
                                 <div class="bw-item">
                                     <div class="bw-item-bullet" style="background:var(--blue)"></div>
-                                    <div class="bw-item-text"><strong>Build APK Release:</strong> Cấu hình file build để
-                                        liên kết với Keystore, sau đó chạy lệnh build xuất ra file cài đặt <span
-                                            class="bw-tag">.apk</span> tối ưu dung lượng để cài đặt trực tiếp trên thiết
-                                        bị Android.</div>
+                                    <div class="bw-item-text"><strong data-lang-key="deploy_s1_item2_title">Build APK Release:</strong> <span data-lang-key="deploy_s1_item2_desc">Cấu hình file build để liên kết với Keystore, sau đó chạy lệnh build xuất ra file cài đặt <span class="bw-tag">.apk</span> tối ưu dung lượng để cài đặt trực tiếp trên thiết bị Android.</span></div>
                                 </div>
                             </div>
                         </div>
@@ -1288,7 +1327,7 @@
                     <div class="bw-section" data-bw-section>
                         <div class="bw-section-header" onclick="toggleBwSection(this)">
                             <div class="bw-section-num bg-blue">2</div>
-                            <div class="bw-section-title">AWS EC2, Docker & HTTPS SSL</div>
+                            <div class="bw-section-title" data-lang-key="deploy_s2_title">AWS EC2, Docker & HTTPS SSL</div>
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
@@ -1331,7 +1370,7 @@
                     <div class="bw-section" data-bw-section>
                         <div class="bw-section-header" onclick="toggleBwSection(this)">
                             <div class="bw-section-num bg-green">3</div>
-                            <div class="bw-section-title">MongoDB Atlas Cloud Database</div>
+                            <div class="bw-section-title" data-lang-key="deploy_s3_title">MongoDB Atlas Cloud Database</div>
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
@@ -1354,8 +1393,8 @@
                 <div class="bw-header">
                     <div class="bw-header-icon"><i class="fas fa-server"></i></div>
                     <div class="bw-header-text">
-                        <h2>⚙️ Backend Module Overview</h2>
-                        <span>Node.js · Express.js · MVC · 11 Services · 8 Schemas</span>
+                        <h2 data-lang-key="backend_title">⚙️ Backend Module Overview</h2>
+                        <span data-lang-key="backend_subtitle">Node.js · Express.js · MVC · 11 Services · 8 Schemas</span>
                     </div>
                 </div>
                 <div class="bw-sections">
@@ -1364,7 +1403,7 @@
                     <div class="bw-section open" data-bw-section>
                         <div class="bw-section-header" onclick="toggleBwSection(this)">
                             <div class="bw-section-num bg-cyan">1</div>
-                            <div class="bw-section-title">Layered Architecture</div>
+                            <div class="bw-section-title" data-lang-key="backend_s1_title">Layered Architecture</div>
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
@@ -1385,7 +1424,7 @@
                     <div class="bw-section" data-bw-section>
                         <div class="bw-section-header" onclick="toggleBwSection(this)">
                             <div class="bw-section-num bg-red">2</div>
-                            <div class="bw-section-title">Security</div>
+                            <div class="bw-section-title" data-lang-key="backend_s2_title">Security</div>
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
@@ -1416,7 +1455,7 @@
                     <div class="bw-section" data-bw-section>
                         <div class="bw-section-header" onclick="toggleBwSection(this)">
                             <div class="bw-section-num bg-green">3</div>
-                            <div class="bw-section-title">Improving Performance</div>
+                            <div class="bw-section-title" data-lang-key="backend_s3_title">Improving Performance</div>
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
@@ -1459,7 +1498,7 @@
                     <div class="bw-section" data-bw-section>
                         <div class="bw-section-header" onclick="toggleBwSection(this)">
                             <div class="bw-section-num bg-orange">4</div>
-                            <div class="bw-section-title">Scalability & High Availability</div>
+                            <div class="bw-section-title" data-lang-key="backend_s4_title">Scalability & High Availability</div>
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
@@ -1508,7 +1547,7 @@
                     <div class="bw-section" data-bw-section>
                         <div class="bw-section-header" onclick="toggleBwSection(this)">
                             <div class="bw-section-num bg-pink">5</div>
-                            <div class="bw-section-title">Additional Features</div>
+                            <div class="bw-section-title" data-lang-key="backend_s5_title">Additional Features</div>
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
@@ -1565,8 +1604,8 @@
                     <div class="bw-header-icon" style="background:rgba(37, 99, 235, 0.12); color:var(--blue)"><i
                             class="fas fa-mobile-alt"></i></div>
                     <div class="bw-header-text">
-                        <h2>📱 Mobile App UI Overview</h2>
-                        <span>Flutter · Dart · Riverpod · 12 Services · 7 Models · 20+ Screens</span>
+                        <h2 data-lang-key="mobile_title">📱 Mobile App UI Overview</h2>
+                        <span data-lang-key="mobile_subtitle">Flutter · Dart · Riverpod · 12 Services · 7 Models · 20+ Screens</span>
                     </div>
                 </div>
                 <div class="bw-sections">
@@ -1575,16 +1614,14 @@
                     <div class="bw-section" data-bw-section>
                         <div class="bw-section-header" onclick="toggleBwSection(this)">
                             <div class="bw-section-num bg-pink">1</div>
-                            <div class="bw-section-title">Product & Business Layer</div>
+                            <div class="bw-section-title" data-lang-key="mobile_s1_title">Product & Business Layer</div>
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
                             <div class="bw-section-content">
                                 <div class="bw-item">
                                     <div class="bw-item-bullet" style="background:var(--pink)"></div>
-                                    <div class="bw-item-text"><strong>Mục tiêu sản phẩm:</strong> Ứng dụng thương mại
-                                        điện tử chuyên biệt ngành hàng thời trang, cung cấp trải nghiệm mua sắm mượt mà
-                                        từ khâu tìm kiếm đến thanh toán.</div>
+                                    <div class="bw-item-text"><strong data-lang-key="mobile_s1_item1_title">Mục tiêu sản phẩm:</strong> <span data-lang-key="mobile_s1_item1_desc">Ứng dụng thương mại điện tử chuyên biệt ngành hàng thời trang, cung cấp trải nghiệm mua sắm mượt mà từ khâu tìm kiếm đến thanh toán.</span></div>
                                 </div>
                                 <div class="bw-item">
                                     <div class="bw-item-bullet" style="background:var(--blue)"></div>
@@ -1606,7 +1643,7 @@
                     <div class="bw-section" data-bw-section>
                         <div class="bw-section-header" onclick="toggleBwSection(this)">
                             <div class="bw-section-num bg-blue">2</div>
-                            <div class="bw-section-title">Architecture & State Management</div>
+                            <div class="bw-section-title" data-lang-key="mobile_s2_title">Architecture & State Management</div>
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
@@ -1642,7 +1679,7 @@
                     <div class="bw-section" data-bw-section>
                         <div class="bw-section-header" onclick="toggleBwSection(this)">
                             <div class="bw-section-num bg-orange">3</div>
-                            <div class="bw-section-title">User Interface & User Experience</div>
+                            <div class="bw-section-title" data-lang-key="mobile_s3_title">User Interface & User Experience</div>
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
@@ -1674,7 +1711,7 @@
                     <div class="bw-section" data-bw-section>
                         <div class="bw-section-header" onclick="toggleBwSection(this)">
                             <div class="bw-section-num bg-purple">4</div>
-                            <div class="bw-section-title">API & Network Integration</div>
+                            <div class="bw-section-title" data-lang-key="mobile_s4_title">API & Network Integration</div>
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
@@ -1708,7 +1745,7 @@
                     <div class="bw-section" data-bw-section>
                         <div class="bw-section-header" onclick="toggleBwSection(this)">
                             <div class="bw-section-num bg-red">5</div>
-                            <div class="bw-section-title">Local Storage & Security</div>
+                            <div class="bw-section-title" data-lang-key="mobile_s5_title">Local Storage & Security</div>
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
@@ -1737,7 +1774,7 @@
                     <div class="bw-section" data-bw-section>
                         <div class="bw-section-header" onclick="toggleBwSection(this)">
                             <div class="bw-section-num bg-green">6</div>
-                            <div class="bw-section-title">Performance Optimization</div>
+                            <div class="bw-section-title" data-lang-key="mobile_s6_title">Performance Optimization</div>
                             <i class="fas fa-chevron-down bw-section-chevron"></i>
                         </div>
                         <div class="bw-section-body">
@@ -1783,8 +1820,8 @@
                     <div class="bw-header-icon" style="background:rgba(126, 34, 206, 0.12); color:var(--purple)"><i
                             class="fas fa-desktop"></i></div>
                     <div class="bw-header-text">
-                        <h2>💻 Admin Dashboard UI Overview</h2>
-                        <span>Vue 3 · Vite · Axios · Composition API · 14 Views · Lazy Loading</span>
+                        <h2 data-lang-key="admin_title">💻 Admin Dashboard UI Overview</h2>
+                        <span data-lang-key="admin_subtitle">Vue 3 · Vite · Axios · Composition API · 14 Views · Lazy Loading</span>
                     </div>
                 </div>
                 <div class="bw-sections">
@@ -1983,7 +2020,7 @@
                     <div class="metric-content">
                         <div class="metric-val"><span class="count-num" data-target="6">0</span> <small
                                 style="font-size:0.65rem;color:var(--text3)">Containers</small></div>
-                        <div class="metric-label">Docker Services</div>
+                        <div class="metric-label" data-metric-label="metric_docker_label">Docker Services</div>
                     </div>
                 </div>
 
@@ -1992,7 +2029,7 @@
                     <div class="metric-content">
                         <div class="metric-val"><span class="count-num" data-target="8">0</span> <small
                                 style="font-size:0.65rem;color:var(--text3)">Collections</small></div>
-                        <div class="metric-label">MongoDB Schemas</div>
+                        <div class="metric-label" data-metric-label="metric_mongo_label">MongoDB Schemas</div>
                     </div>
                 </div>
 
@@ -2001,7 +2038,7 @@
                     <div class="metric-content">
                         <div class="metric-val"><span class="count-num" data-target="4">0</span> <small
                                 style="font-size:0.65rem;color:var(--text3)">AMQP Queues</small></div>
-                        <div class="metric-label">RabbitMQ Queues</div>
+                        <div class="metric-label" data-metric-label="metric_queues_label">RabbitMQ Queues</div>
                     </div>
                 </div>
 
