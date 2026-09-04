@@ -174,7 +174,40 @@ const LANG = {
     admin_s1_item2_title: 'Tính năng cốt lõi:',
     admin_s1_item2_desc: 'Quản lý CRUD Sản phẩm đa biến thể (Màu/Size), xử lý đơn hàng, quản lý mã giảm giá, và kiểm duyệt đánh giá từ người dùng.',
     admin_s1_item3_title: 'Điểm chạm thông minh:',
-    admin_s1_item3_desc: 'Bảng điều khiển (Dashboard) trực quan với biểu đồ doanh thu theo thời gian thực, cảnh báo tồn kho thấp, và công cụ phát thông báo FCM Broadcast.',
+    admin_s1_item3_desc: 'Bảng điều khiển (Dashboard) trực quan với biểu đồ doanh thu theo thời gian thực (MongoDB Aggregation). Cập nhật trạng thái đơn hàng 1-click tự động đẩy thông báo FCM tới app khách hàng qua RabbitMQ.',
+
+    admin_s2_item1_title: 'Kiến trúc Component-Based:',
+    admin_s2_item1_desc: 'Sử dụng Vue 3 với <span class="bw-tag">Composition API</span> để tổ chức code module hóa, phân tách rõ ràng giữa Logic, Template và Style.',
+    admin_s2_item2_title: 'State Management (Reactivity):',
+    admin_s2_item2_desc: 'Sử dụng <span class="bw-tag">ref</span> và <span class="bw-tag">reactive</span> tích hợp sẵn của Vue 3 để quản lý trạng thái local cho các biểu mẫu (Forms) và danh sách dữ liệu động.',
+
+    admin_s3_item1_title: 'Tính nhất quán (Consistency):',
+    admin_s3_item1_desc: 'Layout quản trị tiêu chuẩn với Sidebar Navigation và Topbar, duy trì bộ khung vững chắc qua hệ thống <span class="bw-tag">Vue Router View</span>.',
+    admin_s3_item2_title: 'Vanilla CSS:',
+    admin_s3_item2_desc: 'Sử dụng CSS thuần với hệ thống CSS Variables chung (như var(--blue), var(--red)...) giúp tối ưu hóa kích thước thay vì lạm dụng thư viện UI cồng kềnh.',
+    admin_s3_item3_title: 'Hệ thống Reusable Components:',
+    admin_s3_item3_desc: 'Đóng gói các thành phần UI dùng chung như Bảng dữ liệu (Data Table), Biểu mẫu Modal, Nút xác nhận để dễ bảo trì.',
+
+    admin_s4_item1_title: 'Auto-Refresh Token (Axios Interceptors):',
+    admin_s4_item1_desc: 'Tự động bắt lỗi HTTP 401, gọi ngầm API /auth/refresh, cấp lại Token và tự động <span class="bw-tag">replay</span> request lỗi gốc.',
+    admin_s4_item2_title: 'Failed Queue Pattern:',
+    admin_s4_item2_desc: 'Xử lý Race Condition hiệu quả. Khi 1 request đang refresh, các request 401 đến sau sẽ được đẩy vào <span class="bw-tag">failedQueue</span>. Sau khi lấy token mới, resolve hàng loạt.',
+    admin_s4_item3_title: 'Xử lý dữ liệu đa nền:',
+    admin_s4_item3_desc: 'Giao tiếp qua giao thức FormData cho các API Upload nhiều ảnh sản phẩm lên Cloudinary.',
+
+    admin_s5_item1_title: 'Quản lý Phiên (Session):',
+    admin_s5_item1_desc: 'Lưu trữ an toàn <span class="bw-tag">accessToken</span> vào Local Storage để duy trì trạng thái đăng nhập trên trình duyệt.',
+    admin_s5_item2_title: 'Route Guards (Điều hướng an toàn):',
+    admin_s5_item2_desc: 'Bắt sự kiện <span class="bw-tag">router.beforeEach</span>, chặn mọi truy cập chưa xác thực vào Dashboard và tự động điều hướng về màn hình Login.',
+    admin_s5_item3_title: 'Force Logout Cascade:',
+    admin_s5_item3_desc: 'Nếu Refresh Token cũng hết hạn (hoặc user bị ban), hệ thống tự dọn dẹp LocalStorage và ép đăng xuất hoàn toàn (Force Logout) ngay lập tức.',
+
+    admin_s6_item1_title: 'Vite Bundler:',
+    admin_s6_item1_desc: 'Sử dụng bộ công cụ <span class="bw-tag">Vite</span> siêu tốc để HMR cực nhanh khi dev và tối ưu hóa dung lượng bundle tĩnh khi Build Production.',
+    admin_s6_item2_title: 'Lazy Loading Routes:',
+    admin_s6_item2_desc: 'Áp dụng kỹ thuật code-splitting thông qua hàm <span class="bw-tag">import()</span> ở cấp độ Router. Trình duyệt chỉ tải JS của màn hình quản lý nào đang được xem.',
+    admin_s6_item3_title: 'Tối ưu hóa Băng thông (Images):',
+    admin_s6_item3_desc: 'Thay vì tải ảnh lớn gốc, Admin nhận các thumbnail từ Cloudinary đã được resize sẵn (width/height), làm giảm hàng chục lần lưu lượng mạng.',
   },
 
   // ─────────────────────────────────────────────────────────── //
@@ -440,6 +473,16 @@ function applyLang(lang) {
       } else {
         el.innerHTML = t[key];
       }
+    }
+  });
+
+  // Widgets - complex items (title + desc)
+  document.querySelectorAll('[data-lang-item]').forEach(el => {
+    const key = el.getAttribute('data-lang-item');
+    const title = t[key + '_title'];
+    const desc = t[key + '_desc'];
+    if (title !== undefined && desc !== undefined) {
+      el.innerHTML = `<strong>${title}</strong> ${desc}`;
     }
   });
 
