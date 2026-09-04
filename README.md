@@ -1,21 +1,21 @@
-# 🌟 S-Shop: Comprehensive E-Commerce Platform
+# 🌟 S-Shop: Nền tảng Thương mại Điện tử Toàn diện
 
-Welcome to **S-Shop**, a full-featured, high-performance E-Commerce platform designed to deliver a seamless shopping experience for customers and powerful management tools for administrators. 
+Chào mừng bạn đến với **S-Shop**, nền tảng Thương mại Điện tử hiệu năng cao, đầy đủ tính năng được thiết kế nhằm mang lại trải nghiệm mua sắm mượt mà cho khách hàng và bộ công cụ quản lý mạnh mẽ cho quản trị viên.
 
-This project is built with a modern, decoupled microservices-like architecture, integrating a cross-platform mobile app, a web-based admin dashboard, a robust backend API, and a highly intelligent AI chatbot assistant.
+Dự án này được xây dựng theo kiến trúc mô-đun hiện đại (tương tự microservices), tích hợp ứng dụng di động đa nền tảng, bảng điều khiển quản trị (admin dashboard) trên web, API backend mạnh mẽ và trợ lý chatbot AI thông minh.
 
 ---
 
-## 🏗 Bird's Eye View: System Architecture
+## 🏗 Tổng quan Hệ thống: Kiến trúc (System Architecture)
 
-The S-Shop ecosystem is divided into several highly specialized layers to ensure maximum scalability, maintainability, and performance even during high-traffic events like Flash Sales.
+Hệ sinh thái S-Shop được chia thành nhiều lớp chuyên biệt nhằm đảm bảo khả năng mở rộng (scalability), khả năng bảo trì (maintainability) và hiệu năng tối đa ngay cả trong các sự kiện lượng truy cập cao như Flash Sale.
 
-### Architecture Diagram (Conceptual)
+### Sơ đồ Kiến trúc (Khái niệm)
 ```mermaid
 graph TD
     %% Clients
-    MobileApp[📱 Flutter Mobile App]
-    AdminDash[💻 Vue 3 Admin Dashboard]
+    MobileApp[📱 Ứng dụng di động Flutter]
+    AdminDash[💻 Bảng điều khiển Admin Vue 3]
 
     %% Gateway & Load Balancing
     Nginx[🌐 Nginx Reverse Proxy / Load Balancer]
@@ -23,10 +23,10 @@ graph TD
     %% Core Services
     BackendAPI[⚙️ Node.js Express API]
     BackgroundWorker[👷 RabbitMQ Workers]
-    CronService[⏱️ Scheduled Cron Jobs]
+    CronService[⏱️ Lịch trình Cron Jobs]
     
     %% AI Service
-    ChatbotService[🧠 AI Chatbot Service]
+    ChatbotService[🧠 Dịch vụ Chatbot AI]
     Gemini[🤖 Google Gemini API]
 
     %% Data Layer
@@ -46,13 +46,13 @@ graph TD
     BackendAPI -->|Publish Job| RabbitMQ((📫 RabbitMQ))
     RabbitMQ -->|Consume Job| BackgroundWorker
     
-    BackendAPI <-->|Read/Write| MongoDB
+    BackendAPI <-->|Đọc/Ghi| MongoDB
     BackendAPI <-->|Cache/Session| Redis
-    BackendAPI -->|Upload Images| Cloudinary
+    BackendAPI -->|Tải ảnh lên| Cloudinary
     
     BackgroundWorker <--> MongoDB
-    BackgroundWorker -->|Send Notification| Firebase
-    CronService -->|Automated Tasks| MongoDB
+    BackgroundWorker -->|Gửi thông báo| Firebase
+    CronService -->|Tác vụ tự động| MongoDB
     
     BackendAPI <--> ChatbotService
     ChatbotService <--> Gemini
@@ -63,249 +63,246 @@ graph TD
 
 ---
 
-## 🚀 The Technology Stack (By Module - Audited & Verified)
+## 🚀 Công nghệ Sử dụng (Theo Mô-đun - Đã kiểm định & Xác minh)
 
-### 1. 📱 Mobile App (Customer Facing)
-Located in `ecommerce_user_FE/`
-The customer-facing application is built for extreme fluidity and cross-platform compatibility.
-- **Framework:** Flutter (Dart) - Single codebase compiling to native iOS and Android.
-- **State Management:** Riverpod & Provider (Dual-pattern usage for scalable, reactive state handling).
-- **Authentication:** Google Sign-In, Custom JWT-based Email/Password Auth.
-- **Local Storage:** `flutter_secure_storage` for encrypted tokens, `shared_preferences` for non-sensitive app settings.
-- **Networking:** `http` package with custom wrappers for robust API calls and interceptors.
-- **Push Notifications:** Firebase Cloud Messaging (`firebase_messaging`, `flutter_local_notifications`).
-- **UI/UX:** Material Design 3, custom animations (`flutter_animate`), slidable lists (`flutter_slidable`), and grid views for product catalogs.
+### 1. 📱 Mobile App (Dành cho Khách hàng)
+Nằm tại thư mục `ecommerce_user_FE/`
+Ứng dụng dành cho khách hàng được xây dựng hướng tới sự mượt mà và khả năng tương thích đa nền tảng.
+- **Framework:** Flutter (Dart) - Một mã nguồn duy nhất biên dịch ra ứng dụng native cho cả iOS và Android.
+- **Quản lý trạng thái (State Management):** Riverpod & Provider (Sử dụng song song hai mô hình để xử lý trạng thái linh hoạt và mở rộng tốt).
+- **Xác thực (Authentication):** Google Sign-In, Đăng nhập/Đăng ký bằng Email/Mật khẩu dựa trên JWT tùy chỉnh.
+- **Lưu trữ cục bộ (Local Storage):** `flutter_secure_storage` để mã hóa token, `shared_preferences` cho các cài đặt không nhạy cảm của ứng dụng.
+- **Mạng (Networking):** Gói `http` với các wrapper tùy chỉnh để gọi API và chặn request/response (interceptors) mạnh mẽ.
+- **Thông báo đẩy (Push Notifications):** Firebase Cloud Messaging (`firebase_messaging`, `flutter_local_notifications`).
+- **Giao diện (UI/UX):** Material Design 3, hiệu ứng chuyển động tùy chỉnh (`flutter_animate`), danh sách vuốt slidable (`flutter_slidable`), và danh sách lưới (grid view) cho danh mục sản phẩm.
 
-### 2. 💻 Admin Dashboard (Management Interface)
-Located in `ecommerce_admin_FE/`
-A responsive web interface for store owners and managers to control inventory and track orders.
-- **Framework:** Vue.js 3 (Composition API) for a modern, lightweight, reactive UI.
-- **Build Tool:** Vite for blazing-fast Hot Module Replacement (HMR) and optimized production builds.
-- **HTTP Client:** Axios with highly customized global request/response interceptors to handle seamless Token Refresh logic and race conditions.
-- **Routing:** Vue Router with Navigation Guards to protect admin-only routes and handle automated redirects upon token expiration.
-- **Styling:** Custom CSS (`style.css`) without relying on heavy external UI frameworks, ensuring minimal bundle size.
+### 2. 💻 Admin Dashboard (Giao diện Quản trị)
+Nằm tại thư mục `ecommerce_admin_FE/`
+Giao diện web phản hồi linh hoạt (responsive) dành cho chủ cửa hàng và quản lý để kiểm soát tồn kho và theo dõi đơn hàng.
+- **Framework:** Vue.js 3 (Composition API) mang lại giao diện người dùng hiện đại, nhẹ nhàng và phản hồi nhanh.
+- **Công cụ Build (Build Tool):** Vite cho khả năng Thay thế Mô-đun Nóng (HMR - Hot Module Replacement) cực nhanh và tối ưu hóa bản build production.
+- **HTTP Client:** Axios với bộ chặn request/response toàn cục được tùy chỉnh chuyên sâu để xử lý logic Refresh Token mượt mà và tránh tình trạng race condition.
+- **Điều hướng (Routing):** Vue Router với Navigation Guards để bảo vệ các tuyến đường chỉ dành cho admin và tự động chuyển hướng khi token hết hạn.
+- **Styling:** CSS thuần (`style.css`), không phụ thuộc vào các UI framework cồng kềnh bên ngoài, giúp giảm tối đa dung lượng bundle.
 
 ### 3. ⚙️ Core Backend API
-Located in `ecommerce_backend/`
-The brain of the system, handling business logic, data persistence, and security.
+Nằm tại thư mục `ecommerce_backend/`
+Trái tim của hệ thống, xử lý logic kinh doanh, lưu trữ dữ liệu và bảo mật.
 - **Runtime:** Node.js (v18+)
-- **Framework:** Express.js utilizing an MVC (Model-View-Controller) pattern.
-- **Database:** MongoDB with Mongoose ODM (`mongoose`).
-- **Caching & Sessions:** Redis (`redis`) for extremely fast read operations and session management.
-- **Authentication:** JWT (JSON Web Tokens) with access and refresh strategies, password hashing via `bcryptjs`.
-- **File Uploads:** `multer` integrated with Cloudinary (`multer-storage-cloudinary`) for optimized image delivery and CDN caching.
-- **Payment Processing:** Integrated natively with **VNPay**, **ZaloPay**, and **PayOS** including secure webhook listeners.
-- **Push Notifications:** Firebase Admin SDK (`firebase-admin`) for real-time transactional order updates.
+- **Framework:** Express.js áp dụng mô hình MVC (Model-View-Controller).
+- **Cơ sở dữ liệu (Database):** MongoDB với Mongoose ODM (`mongoose`).
+- **Caching & Sessions:** Redis (`redis`) cho các thao tác đọc cực nhanh và quản lý phiên làm việc.
+- **Xác thực (Authentication):** JWT (JSON Web Tokens) với chiến lược Access Token & Refresh Token, mã hóa mật khẩu bằng `bcryptjs`.
+- **Tải tệp lên (File Uploads):** `multer` tích hợp với Cloudinary (`multer-storage-cloudinary`) để tối ưu hóa việc phân phối hình ảnh và caching qua CDN.
+- **Xử lý Thanh toán:** Tích hợp trực tiếp với **VNPay**, **ZaloPay**, và **PayOS** bao gồm cả bộ lắng nghe Webhook an toàn.
+- **Thông báo đẩy (Push Notifications):** Firebase Admin SDK (`firebase-admin`) để cập nhật trạng thái đơn hàng thời gian thực.
 
-### 4. 🧠 Intelligent AI Chatbot Service
-A cutting-edge feature providing 24/7 intelligent customer support and semantic product searching.
-- **Core Engine:** Google Gemini AI (via `@google/generative-ai`).
-- **Hybrid Caching Architecture:**
-  - **Intent Parsing:** Translates natural language (e.g., "áo sơ mi nam trắng rẻ") into structured MongoDB queries (`{"tag": "aosomi", "color": "Trắng"}`).
-  - **Stateless Session IDs:** To allow deep pagination without repeatedly calling the Gemini API (saving quotas and time):
-    - The parsed JSON intent is hashed and converted into a **Base64 String** (using Node.js native `Buffer.from` and `crypto.createHash('md5')`).
-    - This string becomes the `sessionId` returned to the Flutter app via the `http` package.
-    - When the user scrolls down, Flutter sends back `?page=2&sessionId=Base64String`.
-    - Backend decodes the string back into the MongoDB query instantly using `Buffer`.
-  - **Global Intent Caching:** Multiple users with the same semantic intent share the exact same Redis cache, saving massive amounts of RAM and API quotas.
-- **Deep Pagination Bypass:** For pages 1-10, it uses Redis cache buffering. For deep queries (page > 10), it dynamically bypasses the cache and queries MongoDB directly (`.skip().limit(20)`) to prevent memory overflow.
+### 4. 🧠 Dịch vụ Chatbot AI Thông minh
+Tính năng tiên tiến cung cấp dịch vụ hỗ trợ khách hàng 24/7 và tìm kiếm sản phẩm theo ngữ nghĩa (semantic search).
+- **Core Engine:** Google Gemini AI (thông qua `@google/generative-ai`).
+- **Kiến trúc Caching Lai (Hybrid Caching Architecture):**
+  - **Phân tích Ý định (Intent Parsing):** Chuyển đổi ngôn ngữ tự nhiên (ví dụ: "áo sơ mi nam trắng rẻ") thành truy vấn MongoDB có cấu trúc (`{"tag": "aosomi", "color": "Trắng"}`).
+  - **Session ID Không Trạng thái (Stateless Session IDs):** Cho phép phân trang sâu mà không cần gọi lại Gemini API liên tục (tiết kiệm quota và thời gian):
+    - Ý định JSON sau khi phân tích sẽ được băm (hash) và chuyển thành một **Chuỗi Base64** (sử dụng module native `Buffer.from` và `crypto.createHash('md5')` của Node.js).
+    - Chuỗi này trở thành `sessionId` trả về cho ứng dụng Flutter thông qua gói `http`.
+    - Khi người dùng cuộn xuống, Flutter gửi lại `?page=2&sessionId=ChuỗiBase64`.
+    - Backend giải mã chuỗi ngược lại thành truy vấn MongoDB ngay lập tức bằng `Buffer`.
+  - **Cache Ý định Toàn cục (Global Intent Caching):** Nhiều người dùng có cùng ý định tìm kiếm sẽ chia sẻ chung một Redis cache, tiết kiệm dung lượng RAM và hạn chế vượt quota API.
+- **Bỏ qua Phân trang Sâu (Deep Pagination Bypass):** Đối với các trang 1-10, hệ thống sử dụng bộ đệm Redis cache. Đối với các truy vấn sâu (trang > 10), hệ thống sẽ linh hoạt bỏ qua cache và truy vấn trực tiếp vào MongoDB (`.skip().limit(20)`) để tránh tràn bộ nhớ.
 
-### 5. 👷 Background Processing & Infrastructure
-To ensure the main API remains responsive during traffic spikes (like Flash Sales), heavy tasks are offloaded.
-- **Message Broker:** RabbitMQ (`amqplib`). Used for asynchronous tasks like processing heavy operations without blocking the Express event loop.
-- **Task Scheduling:** `node-cron` running in completely isolated Docker containers. Automatically cleans up expired sessions and auto-cancels unpaid orders after predefined timeouts.
-- **Reverse Proxy:** Nginx. Handles SSL termination, load balancing, and static asset serving for the web frontend.
-- **Containerization:** Docker & Docker Compose for guaranteed environment consistency across Dev, Staging, and Production.
-
----
-
-## 🌟 Detailed Feature Breakdown
-
-### 🛍️ For Customers (Mobile App)
-* **Smart Authentication:** Seamless Google Login (via `google_sign_in`) or traditional Email/Password with JWT. Persistent sessions are kept encrypted via `flutter_secure_storage`.
-* **Intelligent Product Discovery:** 
-  * Advanced filtering (Price, Color, Size, Categories, Ratings) mapping directly to Mongoose queries.
-  * **AI Chatbot Assistant:** Ask for products naturally (via `@google/generative-ai`). The bot understands constraints and uses vertical Flutter GridView layouts to display suggested products elegantly.
-* **Shopping Cart & Checkout:**
-  * Persistent shopping cart synchronized via the backend API (`Carts` MongoDB model) and cached locally via `Riverpod`.
-  * Real-time stock validation during the checkout process via Mongoose queries checking embedded `sizes` arrays.
-  * Integration with VNPay (`vnpay`), ZaloPay, and PayOS (`@payos/node`) for local banking transactions or Cash on Delivery (COD).
-  * Voucher application system mapping to the `Vouchers` model for accurate final price recalculation.
-* **Order Management & Tracking:**
-  * Detailed order history with timeline tracking pulling from the `Orders` snapshot schema.
-  * Real-time Firebase Push Notifications (`firebase_messaging`) triggered asynchronously via RabbitMQ when order status changes.
-* **Product Reviews:** Verified purchase review system with star ratings and comments tied to the `Reviews` schema.
-
-### 👔 For Administrators (Web Dashboard)
-* **Executive Overview:** Real-time dashboard showing core metrics computed via Mongoose Aggregation pipelines (`$group`, `$sum`).
-* **Product Management (PIM):**
-  * Create, Read, Update, Delete (CRUD) operations for products using Vue 3 reactive states.
-  * Variant Management: Easily manage stock for different Color and Size combinations.
-  * Image uploading directly to Cloudinary CDN via `multer-storage-cloudinary` with automatic link generation.
-* **Order Processing:**
-  * Order management lists fetched via Axios.
-  * 1-click status updates that publish jobs to RabbitMQ (`amqplib`), which subsequently trigger Firebase Push Notifications (`firebase-admin`) to the customer's phone.
-* **Voucher Management:** Create and manage promotional codes using Vue Router forms.
-
-### ⚙️ System & Under-the-Hood Features
-* **Automated Order Expiration:** A dedicated cron-worker (`node-cron`) constantly monitors the `Orders` collection. If an online payment is pending for more than a configured timeframe, it auto-cancels the order and releases the stock back to the inventory pool.
-* **Webhook Security:** Cryptographically verified webhooks from VNPay, ZaloPay, and PayOS using `crypto-js` HMAC SHA512 signatures to ensure payment confirmations cannot be spoofed.
-* **Graceful Degradation:** The AI Chatbot is designed to survive Redis crashes. If Redis goes down, the backend uses the native `Buffer` decoded `sessionId` to reconstruct queries directly against MongoDB without bothering the user.
-* **Rate Limiting & Security:** `express-rate-limit` to prevent DDoS attacks on authentication endpoints, combined with `express-mongo-sanitize` to prevent NoSQL injections.
+### 5. 👷 Xử lý Hậu trường (Background Processing) & Hạ tầng
+Để đảm bảo API chính luôn phản hồi nhanh chóng trong các đợt lượng truy cập tăng đột biến (như Flash Sale), các tác vụ nặng sẽ được đẩy xuống background.
+- **Message Broker:** RabbitMQ (`amqplib`). Được sử dụng cho các tác vụ bất đồng bộ nhằm xử lý các thao tác nặng mà không làm tắc nghẽn event loop của Express.
+- **Lập lịch Tác vụ (Task Scheduling):** `node-cron` chạy trong các container Docker hoàn toàn biệt lập. Tự động dọn dẹp các phiên hết hạn và tự động hủy các đơn hàng chưa thanh toán sau khoảng thời gian quy định.
+- **Reverse Proxy:** Nginx. Xử lý SSL termination, cân bằng tải (load balancing) và phân phối các tệp tĩnh cho giao diện web.
+- **Container hóa (Containerization):** Docker & Docker Compose đảm bảo tính đồng nhất về môi trường giữa Dev, Staging và Production.
 
 ---
 
-## 🗄️ Database Schema Overview (MongoDB)
+## 🌟 Chi tiết các Tính năng
 
-While MongoDB is schemaless, we enforce strict schemas using Mongoose. Here are the core collections based on the actual models directory:
+### 🛍️ Dành cho Khách hàng (Mobile App)
+* **Xác thực Thông minh:** Đăng nhập mượt mà qua Google (`google_sign_in`) hoặc Email/Mật khẩu truyền thống với JWT. Duy trì phiên đăng nhập được mã hóa an toàn qua `flutter_secure_storage`.
+* **Khám phá Sản phẩm Thông minh:** 
+  * Bộ lọc nâng cao (Giá, Màu sắc, Kích thước, Danh mục, Đánh giá) ánh xạ trực tiếp tới các truy vấn Mongoose.
+  * **Trợ lý Chatbot AI:** Tìm kiếm sản phẩm bằng ngôn ngữ tự nhiên (qua `@google/generative-ai`). Bot hiểu được các điều kiện lọc và sử dụng giao diện GridView dạng dọc trong Flutter để hiển thị gợi ý sản phẩm đẹp mắt.
+* **Giỏ hàng & Thanh toán:**
+  * Giỏ hàng được lưu trữ và đồng bộ qua Backend API (model `Carts` trong MongoDB) và cache cục bộ bằng `Riverpod`.
+  * Kiểm tra tồn kho theo thời gian thực trong quá trình thanh toán thông qua truy vấn Mongoose vào mảng `sizes` lồng nhau.
+  * Tích hợp với VNPay (`vnpay`), ZaloPay, và PayOS (`@payos/node`) cho các giao dịch ngân hàng nội địa hoặc Thanh toán khi nhận hàng (COD).
+  * Hệ thống áp dụng Mã giảm giá (Voucher) ánh xạ tới model `Vouchers` để tính toán lại chính xác giá cuối cùng.
+* **Quản lý & Theo dõi Đơn hàng:**
+  * Lịch sử đơn hàng chi tiết với mốc thời gian theo dõi được trích xuất từ schema lưu trữ `Orders`.
+  * Thông báo đẩy Firebase thời gian thực (`firebase_messaging`) được kích hoạt bất đồng bộ qua RabbitMQ khi trạng thái đơn hàng thay đổi.
+* **Đánh giá Sản phẩm:** Hệ thống đánh giá dành cho mua hàng đã xác minh với số sao và bình luận được liên kết với schema `Reviews`.
 
-1. **`Users` (`userModel.js`)**: Stores authentication data, roles (`admin`, `user`), password hashes, and user metadata.
+### 👔 Dành cho Quản trị viên (Web Dashboard)
+* **Tổng quan Báo cáo (Executive Overview):** Dashboard thời gian thực hiển thị các chỉ số cốt lõi được tính toán qua Mongoose Aggregation pipelines (`$group`, `$sum`).
+* **Quản lý Sản phẩm (PIM):**
+  * Thao tác Thêm, Xem, Sửa, Xóa (CRUD) cho sản phẩm sử dụng trạng thái phản hồi reactive của Vue 3.
+  * Quản lý Biến thể (Variant): Dễ dàng quản lý số lượng tồn kho cho các kết hợp Màu sắc và Kích thước khác nhau.
+  * Tải ảnh trực tiếp lên Cloudinary CDN thông qua `multer-storage-cloudinary` với tính năng tự động tạo đường dẫn.
+* **Xử lý Đơn hàng:**
+  * Danh sách quản lý đơn hàng được tải về thông qua Axios.
+  * Cập nhật trạng thái chỉ bằng 1 cú nhấp chuột, xuất tác vụ vào RabbitMQ (`amqplib`), từ đó kích hoạt Thông báo đẩy Firebase (`firebase-admin`) đến điện thoại của khách hàng.
+* **Quản lý Voucher:** Tạo và quản lý các mã khuyến mãi bằng các form giao diện Vue Router.
+
+### ⚙️ Tính năng Hệ thống & Ngầm bên dưới (Under-the-Hood)
+* **Tự động Hủy Đơn hàng Hết hạn:** Một cron-worker riêng biệt (`node-cron`) liên tục theo dõi collection `Orders`. Nếu đơn hàng thanh toán trực tuyến chờ quá thời gian cấu hình, hệ thống sẽ tự động hủy đơn và hoàn trả lại số lượng tồn kho.
+* **Bảo mật Webhook:** Xác thực mã hóa các webhook từ VNPay, ZaloPay, và PayOS bằng chữ ký HMAC SHA512 với `crypto-js` để đảm bảo xác nhận thanh toán không thể bị giả mạo.
+* **Khả năng Chịu lỗi Linh hoạt (Graceful Degradation):** Chatbot AI được thiết kế để hoạt động tốt ngay cả khi Redis gặp sự cố. Nếu Redis ngưng hoạt động, backend sẽ dùng `sessionId` được giải mã bằng `Buffer` native để tái tạo truy vấn trực tiếp vào MongoDB mà không làm gián đoạn trải nghiệm người dùng.
+* **Giới hạn Tần suất Truy cập (Rate Limiting) & Bảo mật:** `express-rate-limit` chống tấn công DDoS vào các endpoint xác thực, kết hợp với `express-mongo-sanitize` để ngăn chặn các cuộc tấn công NoSQL Injection.
+
+---
+
+## 🗄️ Tổng quan Schema Cơ sở dữ liệu (MongoDB)
+
+Mặc dù MongoDB là cơ sở dữ liệu schemaless, chúng tôi vẫn áp dụng cấu trúc schema nghiêm ngặt thông qua Mongoose. Dưới đây là các collection cốt lõi trong thư mục models:
+
+1. **`Users` (`userModel.js`)**: Lưu trữ dữ liệu xác thực, vai trò (`admin`, `user`), hash mật khẩu, và thông tin người dùng.
 2. **`Products` (`productModel.js`)**: 
-   - Contains core info (name, description, price, finalPrice).
-   - **Embeds `colorVariants`**: An array of colors.
-   - **Embeds `sizes`**: Inside each color, an array of sizes and their specific `stock` quantity.
-3. **`Categories`**: Category grouping logic.
+   - Chứa thông tin cơ bản (tên, mô tả, giá gốc, giá sau giảm `finalPrice`).
+   - **Lồng `colorVariants`**: Một mảng các màu sắc.
+   - **Lồng `sizes`**: Bên trong mỗi màu sắc là một mảng kích thước và số lượng tồn kho `stock` tương ứng.
+3. **`Categories`**: Logic phân loại danh mục sản phẩm.
 4. **`Orders` (`orderModel.js`)**: 
-   - Stores snapshots of products at the time of purchase.
-   - Tracks `paymentMethod`, `paymentStatus`, `orderStatus`, and comprehensive `shippingAddress`.
-5. **`Reviews` (`reviewModel.js`)**: Links `userId` to `productId` with star ratings and textual comments.
-6. **`Carts` (`cartModel.js`)**: Persistent cart logic holding arrays of selected variants and quantities.
-7. **`Vouchers` (`voucherModel.js`)**: Promotional codes with expiry dates and discount parameters.
-8. **`Notifications` & `NotificationReads` (`notification.js`, `notificationRead.js`)**: System and transactional notifications tracking read status per user.
+   - Lưu bản chụp (snapshot) thông tin sản phẩm tại thời điểm mua.
+   - Theo dõi `paymentMethod`, `paymentStatus`, `orderStatus`, và chi tiết `shippingAddress`.
+5. **`Reviews` (`reviewModel.js`)**: Liên kết `userId` với `productId` cùng điểm đánh giá sao và bình luận văn bản.
+6. **`Carts` (`cartModel.js`)**: Logic giỏ hàng lưu trữ các mảng biến thể sản phẩm được chọn và số lượng tương ứng.
+7. **`Vouchers` (`voucherModel.js`)**: Mã giảm giá kèm ngày hết hạn và thông số giảm giá.
+8. **`Notifications` & `NotificationReads` (`notification.js`, `notificationRead.js`)**: Thông báo hệ thống và thông báo giao dịch, theo dõi trạng thái đã đọc của từng người dùng.
 
 ---
 
-## 📂 Detailed Directory Structure
+## 📂 Cấu trúc Thư mục Chi tiết
 
-A deeper look into the codebase organization to help developers navigate:
+Xem chi tiết cách tổ chức mã nguồn để giúp các nhà phát triển dễ dàng điều hướng:
 
 ```text
 ECOMMERCE_MOBILE_APP/
 │
 ├── ecommerce_backend/          # Node.js Express API
-│   ├── controllers/            # Request handlers (User/Admin separated)
-│   ├── models/                 # Mongoose schema definitions (8 distinct models)
-│   ├── routes/                 # API endpoint routing
-│   ├── services/               # Core business logic (e.g. chatBotService)
-│   ├── middleware/             # Auth, error handling, rate limiting
-│   └── worker.js               # Background task processor
+│   ├── controllers/            # Xử lý request (phân chia User/Admin)
+│   ├── models/                 # Định nghĩa Mongoose schema (8 models riêng biệt)
+│   ├── routes/                 # Điều hướng các API endpoint
+│   ├── services/               # Logic kinh doanh cốt lõi (ví dụ: chatBotService)
+│   ├── middleware/             # Xác thực auth, xử lý lỗi, giới hạn rate limit
+│   └── worker.js               # Xử lý tác vụ ngầm (background processor)
 │
-├── ecommerce_user_FE/          # Flutter Customer App
+├── ecommerce_user_FE/          # Ứng dụng Flutter cho Khách hàng
 │   ├── lib/
-│   │   ├── models/             # Dart data models
-│   │   ├── screens/            # UI Pages (Home, Cart, Profile, Checkout)
-│   │   ├── widgets/            # Reusable UI components (e.g. chatbot_widget)
-│   │   ├── services/           # API integration and local storage logic
-│   │   └── providers/          # Riverpod/Provider state management
+│   │   ├── models/             # Models dữ liệu Dart
+│   │   ├── screens/            # Giao diện chính (Home, Cart, Profile, Checkout)
+│   │   ├── widgets/            # Các component UI tái sử dụng (ví dụ: chatbot_widget)
+│   │   ├── services/           # Tích hợp API và logic lưu trữ cục bộ
+│   │   └── providers/          # Quản lý trạng thái với Riverpod/Provider
 │
-├── ecommerce_admin_FE/         # Vue 3 Admin Dashboard
+├── ecommerce_admin_FE/         # Bảng điều khiển Admin Vue 3
 │   ├── src/
-│   │   ├── views/              # Page components
-│   │   ├── components/         # Reusable UI widgets
-│   │   ├── router/             # Vue Router configuration
-│   │   └── style.css           # Vanilla CSS styling
+│   │   ├── views/              # Các trang giao diện (view components)
+│   │   ├── components/         # Các widget UI tái sử dụng
+│   │   ├── router/             # Cấu hình Vue Router
+│   │   └── style.css           # CSS thuần
 │
-└── docker-compose.local.yml    # Container orchestration for local dev
+└── docker-compose.local.yml    # Điều phối container cho môi trường phát triển cục bộ (local dev)
 ```
 
 ---
 
-## 🛡️ Security Best Practices Implemented
+## 🛡️ Thực thi Các Thực hành Bảo mật Tốt nhất
 
-S-Shop takes security seriously, protecting both customer data and store operations:
-- **JWT Authentication:** Short-lived access tokens combined with secure refresh token rotation handling directly in Vue Axios interceptors.
-- **Password Hashing:** `bcryptjs` with dynamic salt rounds.
-- **Rate Limiting:** IP-based request throttling on sensitive routes using `express-rate-limit`.
-- **CORS Configuration:** Strictly defined origins for the Admin Dashboard and Flutter App to prevent unauthorized cross-origin requests.
-- **Data Obfuscation:** Passwords and sensitive tokens are completely excluded from API responses using Mongoose `select: false`.
+S-Shop chú trọng hàng đầu đến vấn đề bảo mật, bảo vệ cả dữ liệu khách hàng lẫn vận hành của cửa hàng:
+- **Xác thực JWT:** Access token thời gian sống ngắn kết hợp với cơ chế xoay vòng Refresh Token an toàn được xử lý trực tiếp trong Axios interceptors của Vue.
+- **Mã hóa Mật khẩu:** `bcryptjs` với salt rounds động.
+- **Giới hạn Tần suất (Rate Limiting):** Tiết chế truy cập dựa trên IP đối với các tuyến đường nhạy cảm bằng `express-rate-limit`.
+- **Cấu hình CORS:** Giới hạn nghiêm ngặt các domain truy cập từ Admin Dashboard và App Flutter để ngăn chặn các request cross-origin không hợp lệ.
+- **Che giấu Dữ liệu (Data Obfuscation):** Mật khẩu và token nhạy cảm hoàn toàn được loại bỏ khỏi phản hồi API bằng tính năng `select: false` của Mongoose.
 
 ---
 
-## 🔌 Core API Endpoints
+## 🔌 Các API Endpoint Cốt lõi
 
-A quick reference to the most heavily used API boundaries:
+Tài liệu tham khảo nhanh cho các ranh giới API được sử dụng nhiều nhất:
 
-**Authentication:**
-- `POST /api/auth/login` - Authenticate and receive JWT
-- `POST /api/auth/register` - Create new customer account
-- `POST /api/auth/refresh` - Rotate access tokens
+**Xác thực (Authentication):**
+- `POST /api/auth/login` - Xác thực và nhận JWT
+- `POST /api/auth/register` - Tạo tài khoản khách hàng mới
+- `POST /api/auth/refresh` - Xoay vòng cấp mới access token
 
-**Products:**
-- `GET /api/products` - Fetch products with pagination and dynamic filters
-- `GET /api/products/:id` - Fetch detailed product view including variants
+**Sản phẩm (Products):**
+- `GET /api/products` - Lấy danh sách sản phẩm có phân trang và bộ lọc động
+- `GET /api/products/:id` - Lấy chi tiết sản phẩm bao gồm các biến thể
 
 **Chatbot AI:**
-- `POST /api/chatbot/search` - Parse natural language to MongoDB query
-- `GET /api/chatbot/loadmore` - Stateful pagination using Base64 Intent Strings
+- `POST /api/chatbot/search` - Phân tích ngôn ngữ tự nhiên thành truy vấn MongoDB
+- `GET /api/chatbot/loadmore` - Phân trang lưu trạng thái sử dụng Chuỗi Ý định Base64
 
-**Orders & Checkout:**
-- `POST /api/orders/create` - Lock stock and generate invoice
-- `POST /api/payments/webhook` - Secure listener for VNPay, ZaloPay, and PayOS callbacks
+**Đơn hàng & Thanh toán (Orders & Checkout):**
+- `POST /api/orders/create` - Khóa tồn kho và tạo hóa đơn
+- `POST /api/payments/webhook` - Bộ lắng nghe an toàn cho callback từ VNPay, ZaloPay và PayOS
 
 ---
 
-## 🚀 Getting Started & Installation
+## 🚀 Hướng dẫn Bắt đầu & Cài đặt
 
-### Prerequisites
-- Docker & Docker Compose (Recommended)
-- Node.js (v18+) - If running locally
-- Flutter SDK (v3.10+) - For compiling the mobile app
-- Redis Server - If running backend outside Docker
+### Yêu cầu Tiên quyết
+- Docker & Docker Compose (Khuyên dùng)
+- Node.js (v18+) - Nếu chạy trực tiếp trên máy cục bộ
+- Flutter SDK (v3.10+) - Để biên dịch ứng dụng di động
+- Redis Server - Nếu chạy backend ngoài Docker
 
-### 🐳 The Easy Way (Docker)
-This is the recommended approach to spin up the entire backend ecosystem (API, Redis, MongoDB, RabbitMQ, Workers).
+### 🐳 Cách Nhanh nhất (Docker)
+Đây là phương pháp được khuyến khích để khởi chạy toàn bộ hệ sinh thái backend (API, Redis, MongoDB, RabbitMQ, Workers).
 
 ```bash
-# 1. Clone the repository
+# 1. Clone repository
 git clone <repository-url>
 cd ecommerce_mobile_app
 
-# 2. Setup Environment Variables
+# 2. Thiết lập Biến Môi trường
 cp ./ecommerce_backend/.env.example ./ecommerce_backend/.env
-# (Make sure to fill in your GEMINI_API_KEY, CLOUDINARY_URL, and VNPay/ZaloPay/PayOS keys in the .env file)
+# (Hãy đảm bảo điền GEMINI_API_KEY, CLOUDINARY_URL và các key VNPay/ZaloPay/PayOS trong tệp .env)
 
-# 3. Spin up the entire infrastructure
+# 3. Khởi chạy toàn bộ hạ tầng
 docker-compose -f docker-compose.local.yml up -d --build
 
-# 4. Verify Services are running
+# 4. Kiểm tra các dịch vụ đang chạy
 docker ps
 ```
-The Backend API will be available at `http://localhost:5000`.
+Backend API sẽ sẵn sàng tại `http://localhost:5000`.
 
-### 📱 Running the Mobile App (Flutter)
+### 📱 Chạy Ứng dụng Di động (Flutter)
 ```bash
 cd ecommerce_user_FE
 flutter pub get
-# Connect a device or start an emulator
+# Kết nối thiết bị thật hoặc khởi chạy máy ảo emulator
 flutter run
 ```
 
-### 💻 Running the Admin Dashboard (Vue 3)
+### 💻 Chạy Bảng điều khiển Admin (Vue 3)
 ```bash
 cd ecommerce_admin_FE
 npm install
 npm run dev
 ```
-The Admin Dashboard will be available at `http://localhost:5173`.
+Admin Dashboard sẽ sẵn sàng tại `http://localhost:5173`.
 
 ---
 
-## 🧪 Testing & Quality Assurance
+## 🧪 Kiểm thử & Đảm bảo Chất lượng (QA)
 
-To maintain a high standard of reliability, S-Shop implements a testing strategy:
-- **Flutter Testing:** Utilizes `flutter_test` for widget and unit testing on the frontend.
-- **API Testing:** Endpoints are designed to be thoroughly tested with Postman collections to verify authentication, stock locking, and payment callbacks.
-- **Linting:** Standard `flutter_lints` applied to maintain Dart code quality.
+Để duy trì độ tin cậy cao, S-Shop áp dụng chiến lược kiểm thử:
+- **Kiểm thử Flutter:** Sử dụng `flutter_test` cho widget test và unit test trên frontend.
+- **Kiểm thử API:** Các endpoint được thiết kế để kiểm thử toàn diện qua bộ sưu tập Postman để xác minh xác thực, khóa tồn kho và callback thanh toán.
+- **Linting:** Áp dụng bộ quy chuẩn `flutter_lints` chuẩn để duy trì chất lượng code Dart.
 
 ---
 
-## 🤝 Contributing
-We welcome contributions! Please follow the standard GitFlow workflow:
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📄 License
-Distributed under the MIT License. See `LICENSE` for more information.
+## 🤝 Đóng góp (Contributing)
+Chúng tôi hoan nghênh mọi đóng góp! Vui lòng tuân theo quy trình GitFlow chuẩn:
+1. Fork repository
+2. Tạo nhánh feature của bạn (`git checkout -b feature/AmazingFeature`)
+3. Commit các thay đổi (`git commit -m 'Add some AmazingFeature'`)
+4. Push lên nhánh (`git push origin feature/AmazingFeature`)
+5. Mở một Pull Request
